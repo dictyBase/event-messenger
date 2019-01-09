@@ -38,7 +38,7 @@ func CreateIssue(c *cli.Context) error {
 // to nats server and then opening a channel
 func natsTest(subj string, ord *order.Order) string {
 	// connect subscriber to nats server
-	s, err := nats.NewSubscriber(gnats.DefaultURL) // replace with CLI string when added properly
+	s, err := nats.NewSubscriber(gnats.DefaultURL) // replace with CLI string
 	if err != nil {
 		log.Fatalf("cannot connect to nats for subscription %s\n", err)
 	}
