@@ -3,8 +3,10 @@ package main
 import (
 	"os"
 
-	"github.com/dictyBase/event-messenger/internal/app/server"
-	cli "gopkg.in/codegangsta/cli.v1"
+	"github.com/dictyBase/event-messenger/internal/app/validate"
+
+	commands "github.com/dictyBase/event-messenger/cmd/gh-issue"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 func main() {
@@ -28,7 +30,8 @@ func main() {
 		{
 			Name:   "gh-issue",
 			Usage:  "creates a github issue when a new stock order comes through",
-			Action: server.CreateIssue,
+			Action: commands.CreateIssue,
+			Before: validate.ValidateGithubIssueArgs,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "gh-token, ght",
