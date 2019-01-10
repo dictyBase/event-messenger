@@ -2,37 +2,71 @@ package commands
 
 import (
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/dictyBase/event-messenger/internal/message"
 
 	"github.com/dictyBase/event-messenger/internal/message/nats"
-	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 
-	gnats "github.com/nats-io/go-nats"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-// CreateIssue creates a Github issue when a new order comes through
+// CreateIssue creates a Github issue when a new stock order comes through
 func CreateIssue(c *cli.Context) error {
-
-	return nil
-}
-
-// natsTest is just an example function for connecting a subscriber
-// to nats server and then opening a channel
-func natsTest(subj string, ord *order.Order) string {
 	// connect subscriber to nats server
-	s, err := nats.NewSubscriber(gnats.DefaultURL) // replace with CLI string
+	s, err := nats.NewSubscriber(c.String("nats-host"), c.String("nats-port"))
 	if err != nil {
 		log.Fatalf("cannot connect to nats for subscription %s\n", err)
 	}
-	// start server to communicate using a channel
-	sc := s.Start(subj, ord)
-	if err := s.Err(); err != nil {
-		log.Fatalf("could not start subscription %s\n", err)
+
+	// need to add grpc dialers
+	// need to call Start function
+
+	logger := getLogger(c)
+	logger.Info("starting the Github issue creation subscriber messaging backend")
+	shutdown(s, logger)
+	return nil
+}
+
+func getLogger(c *cli.Context) *logrus.Entry {
+	log := logrus.New()
+	log.Out = os.Stderr
+	switch c.GlobalString("log-format") {
+	case "text":
+		log.Formatter = &logrus.TextFormatter{
+			TimestampFormat: "02/Jan/2006:15:04:05",
+		}
+	case "json":
+		log.Formatter = &logrus.JSONFormatter{
+			TimestampFormat: "02/Jan/2006:15:04:05",
+		}
 	}
-	// async, Start function is triggered
-	msg := <-sc
-	if err := s.Stop(); err != nil {
-		log.Fatalf("could not stop the subscription %s\n", err)
+	l := c.GlobalString("log-level")
+	switch l {
+	case "debug":
+		log.Level = logrus.DebugLevel
+	case "warn":
+		log.Level = logrus.WarnLevel
+	case "error":
+		log.Level = logrus.ErrorLevel
+	case "fatal":
+		log.Level = logrus.FatalLevel
+	case "panic":
+		log.Level = logrus.PanicLevel
 	}
-	return string(msg.Message())
+	return logrus.NewEntry(log)
+}
+
+func shutdown(r message.NatsSubscriber, logger *logrus.Entry) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
+	<-ch
+	logger.Info("received kill signal")
+	if err := r.Stop(); err != nil {
+		logger.Fatalf("unable to close the subscription %s\n", err)
+	}
+	logger.Info("closed the connections gracefully")
 }
