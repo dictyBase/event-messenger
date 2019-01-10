@@ -29,7 +29,7 @@ func NewSubscriber(host, port string, options ...gnats.Option) (message.NatsSubs
 }
 
 // Start starts the server and communicates using a channel
-func (n *natsSubscriber) Start(sub string, ord *order.Order) error {
+func (n *natsSubscriber) Start(sub string, client message.IssueTracker) error {
 	_, err := n.econn.Subscribe(sub, func(sub string, ord *order.Order) {
 		// this is where the issue needs to be created
 		// need get the obj from protocol buffer and then use that data
