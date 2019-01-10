@@ -1,7 +1,7 @@
 package nats
 
 import (
-	"github.com/dictyBase/event-messenger/message"
+	"github.com/dictyBase/event-messenger/internal/message"
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 

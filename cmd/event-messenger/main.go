@@ -3,8 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/dictyBase/event-messenger/commands"
-
+	"github.com/dictyBase/event-messenger/internal/app/server"
 	cli "gopkg.in/codegangsta/cli.v1"
 )
 
@@ -29,11 +28,11 @@ func main() {
 		{
 			Name:   "gh-issue",
 			Usage:  "creates a github issue when a new stock order comes through",
-			Action: commands.CreateIssue,
+			Action: server.CreateIssue,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "gh-token, ght",
-					Usage: "github personal access token file, defaults to ~/.credentials/github.json",
+					Usage: "Github personal access token file",
 				},
 				cli.StringFlag{
 					Name:  "repository, r",

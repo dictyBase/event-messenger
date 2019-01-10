@@ -1,10 +1,10 @@
-package commands
+package server
 
 import (
 	"fmt"
 	"log"
 
-	"github.com/dictyBase/event-messenger/message/nats"
+	"github.com/dictyBase/event-messenger/internal/message/nats"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 
 	gnats "github.com/nats-io/go-nats"
