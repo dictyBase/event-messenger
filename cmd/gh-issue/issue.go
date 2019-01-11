@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -8,7 +9,9 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/dictyBase/event-messenger/internal/message"
+	"google.golang.org/grpc"
 
+	gclient "github.com/dictyBase/event-messenger/internal/message/grpc-client"
 	"github.com/dictyBase/event-messenger/internal/message/nats"
 
 	cli "gopkg.in/urfave/cli.v1"
@@ -20,10 +23,27 @@ func CreateIssue(c *cli.Context) error {
 	if err != nil {
 		log.Fatalf("cannot connect to nats for subscription %s\n", err)
 	}
-
-	// need to add grpc dialers
-	// need to call Start function
-
+	// still need to add other grpc dialers (stock, annotation)
+	conn, err := grpc.Dial(
+		fmt.Sprintf("%s:%s", c.String("order-grpc-host"), c.String("order-grpc-port")),
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		return cli.NewExitError(
+			fmt.Sprintf("cannot connect to grpc server for order microservice %s", err),
+			2,
+		)
+	}
+	err = s.Start(
+		"OrderService.*",
+		gclient.NewOrderClient(conn),
+	)
+	if err != nil {
+		return cli.NewExitError(
+			fmt.Sprintf("cannot start the subscriber server %s", err),
+			2,
+		)
+	}
 	logger := getLogger(c)
 	logger.Info("starting the Github issue creation subscriber messaging backend")
 	shutdown(s, logger)

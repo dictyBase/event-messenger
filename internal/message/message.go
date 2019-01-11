@@ -7,7 +7,7 @@ import (
 // IssueTracker is the interface for methods related to the Github Issue Tracker.
 type IssueTracker interface {
 	// CreateIssue creates a new Github issue.
-	CreateIssue() (*order.Order, error)
+	CreateIssue(id string) (*order.Order, error)
 }
 
 // NatsSubscriber is an interface to encapsulate the behavior of subscribers.
