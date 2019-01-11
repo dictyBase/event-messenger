@@ -34,7 +34,7 @@ func NewSubscriber(host, port string, options ...gnats.Option) (message.Subscrib
 // Start starts the server and communicates using a channel
 func (n *natsSubscriber) Start(sub string, client issue.IssueTracker) error {
 	_, err := n.econn.Subscribe(sub, func(ord *order.Order) {
-		// issueCreator(ord)
+		client.CreateIssue(ord)
 	})
 	if err != nil {
 		return err

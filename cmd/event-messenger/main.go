@@ -30,7 +30,7 @@ func main() {
 		{
 			Name:   "gh-issue",
 			Usage:  "creates a github issue when a new stock order comes through",
-			Action: github.CreateIssue,
+			Action: github.RunCreateIssue,
 			Before: validate.GithubIssueArgs,
 			Flags: []cli.Flag{
 				cli.StringFlag{
