@@ -1,9 +1,14 @@
 package nats
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dictyBase/event-messenger/internal/message"
+	"github.com/google/go-github/github"
+	"golang.org/x/oauth2"
+	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 
@@ -30,9 +35,8 @@ func NewSubscriber(host, port string, options ...gnats.Option) (message.NatsSubs
 
 // Start starts the server and communicates using a channel
 func (n *natsSubscriber) Start(sub string, client message.IssueTracker) error {
-	_, err := n.econn.Subscribe(sub, func(sub string, ord *order.Order) {
-		// this is where the issue needs to be created
-		// need get the obj from protocol buffer and then use that data
+	_, err := n.econn.Subscribe(sub, func(c *cli.Context, ord *order.Order) {
+		issueCreator(c, ord)
 	})
 	if err != nil {
 		return err
@@ -49,5 +53,43 @@ func (n *natsSubscriber) Start(sub string, client message.IssueTracker) error {
 // Stop stops the server
 func (n *natsSubscriber) Stop() error {
 	n.econn.Close()
+	return nil
+}
+
+func issueCreator(c *cli.Context, ord *order.Order) error {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: c.String("gh-token")},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+
+	var labels []string
+	var body string
+	// Loop through items purchased.
+	// Right now it lists one item ID per line.
+	// It also adds labels based on whether item is strain or plasmid.
+	for _, a := range ord.Data.Attributes.Items {
+		body = fmt.Sprintf("Item: %s\n", a)
+		if strings.Contains(a, "DBS") {
+			labels = append(labels, "Strain Order")
+		}
+		if strings.Contains(a, "DBP") {
+			labels = append(labels, "Plasmid Order")
+		}
+	}
+	// Generate Github issue title
+	title := fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser)
+
+	input := &github.IssueRequest{
+		Title:  &title,
+		Body:   &body,
+		Labels: &labels,
+	}
+
+	_, _, err := client.Issues.Create(ctx, c.String("owner"), c.String("repository"), input)
+	if err != nil {
+		return fmt.Errorf("error in creating github issue %s", err)
+	}
 	return nil
 }
