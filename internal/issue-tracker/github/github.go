@@ -1,17 +1,21 @@
-package commands
+package github
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/dictyBase/event-messenger/internal/message"
-	"google.golang.org/grpc"
+	"github.com/dictyBase/go-genproto/dictybaseapis/order"
+	"github.com/google/go-github/github"
+	"golang.org/x/oauth2"
 
-	gclient "github.com/dictyBase/event-messenger/internal/message/grpc-client"
+	"github.com/Sirupsen/logrus"
+
 	"github.com/dictyBase/event-messenger/internal/message/nats"
 
 	cli "gopkg.in/urfave/cli.v1"
@@ -23,27 +27,16 @@ func CreateIssue(c *cli.Context) error {
 	if err != nil {
 		log.Fatalf("cannot connect to nats for subscription %s\n", err)
 	}
-	// still need to add other grpc dialers (stock, annotation)
-	conn, err := grpc.Dial(
-		fmt.Sprintf("%s:%s", c.String("order-grpc-host"), c.String("order-grpc-port")),
-		grpc.WithInsecure(),
-	)
-	if err != nil {
-		return cli.NewExitError(
-			fmt.Sprintf("cannot connect to grpc server for order microservice %s", err),
-			2,
-		)
-	}
-	err = s.Start(
-		"OrderService.*",
-		gclient.NewOrderClient(conn),
-	)
-	if err != nil {
-		return cli.NewExitError(
-			fmt.Sprintf("cannot start the subscriber server %s", err),
-			2,
-		)
-	}
+	// err = s.Start(
+	// 	"OrderService.*",
+	// 	issue.IssueTracker,
+	// )
+	// if err != nil {
+	// 	return cli.NewExitError(
+	// 		fmt.Sprintf("cannot start the subscriber server %s", err),
+	// 		2,
+	// 	)
+	// }
 	logger := getLogger(c)
 	logger.Info("starting the Github issue creation subscriber messaging backend")
 	shutdown(s, logger)
@@ -79,7 +72,7 @@ func getLogger(c *cli.Context) *logrus.Entry {
 	return logrus.NewEntry(log)
 }
 
-func shutdown(r message.NatsSubscriber, logger *logrus.Entry) {
+func shutdown(r message.Subscriber, logger *logrus.Entry) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
 	<-ch
@@ -88,4 +81,42 @@ func shutdown(r message.NatsSubscriber, logger *logrus.Entry) {
 		logger.Fatalf("unable to close the subscription %s\n", err)
 	}
 	logger.Info("closed the connections gracefully")
+}
+
+func issueCreator(c *cli.Context, ord *order.Order) error {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: c.String("gh-token")},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+
+	var labels []string
+	var body string
+	// Loop through items purchased.
+	// Right now it lists one item ID per line.
+	// It also adds labels based on whether item is strain or plasmid.
+	for _, a := range ord.Data.Attributes.Items {
+		body = fmt.Sprintf("Item: %s\n", a)
+		if strings.Contains(a, "DBS") {
+			labels = append(labels, "Strain Order")
+		}
+		if strings.Contains(a, "DBP") {
+			labels = append(labels, "Plasmid Order")
+		}
+	}
+	// Generate Github issue title
+	title := fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser)
+
+	input := &github.IssueRequest{
+		Title:  &title,
+		Body:   &body,
+		Labels: &labels,
+	}
+
+	_, _, err := client.Issues.Create(ctx, c.String("owner"), c.String("repository"), input)
+	if err != nil {
+		return fmt.Errorf("error in creating github issue %s", err)
+	}
+	return nil
 }

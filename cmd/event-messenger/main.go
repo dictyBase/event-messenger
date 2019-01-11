@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/dictyBase/event-messenger/internal/app/validate"
+	"github.com/dictyBase/event-messenger/internal/issue-tracker/github"
 
-	commands "github.com/dictyBase/event-messenger/cmd/gh-issue"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -30,7 +30,7 @@ func main() {
 		{
 			Name:   "gh-issue",
 			Usage:  "creates a github issue when a new stock order comes through",
-			Action: commands.CreateIssue,
+			Action: github.CreateIssue,
 			Before: validate.GithubIssueArgs,
 			Flags: []cli.Flag{
 				cli.StringFlag{
