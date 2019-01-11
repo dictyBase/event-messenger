@@ -31,7 +31,7 @@ func main() {
 			Name:   "gh-issue",
 			Usage:  "creates a github issue when a new stock order comes through",
 			Action: commands.CreateIssue,
-			Before: validate.ValidateGithubIssueArgs,
+			Before: validate.GithubIssueArgs,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "gh-token, ght",
@@ -54,6 +54,16 @@ func main() {
 					Name:   "nats-port",
 					EnvVar: "NATS_SERVICE_PORT",
 					Usage:  "nats messaging server port",
+				},
+				cli.StringFlag{
+					Name:   "order-grpc-host",
+					EnvVar: "ORDER_API_SERVICE_HOST",
+					Usage:  "grpc host address for order service",
+				},
+				cli.StringFlag{
+					Name:   "order-grpc-port",
+					EnvVar: "ORDER_API_SERVICE_PORT",
+					Usage:  "grpc port for order service",
 				},
 			},
 		},

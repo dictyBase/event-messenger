@@ -16,7 +16,6 @@ import (
 
 // CreateIssue creates a Github issue when a new stock order comes through
 func CreateIssue(c *cli.Context) error {
-	// connect subscriber to nats server
 	s, err := nats.NewSubscriber(c.String("nats-host"), c.String("nats-port"))
 	if err != nil {
 		log.Fatalf("cannot connect to nats for subscription %s\n", err)
