@@ -5,10 +5,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
 	gh "github.com/dictyBase/event-messenger/internal/issue-tracker/github"
 	"github.com/dictyBase/event-messenger/internal/message"
 	"github.com/dictyBase/event-messenger/internal/message/nats"
+	"github.com/sirupsen/logrus"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

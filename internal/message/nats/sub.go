@@ -3,9 +3,9 @@ package nats
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
 	"github.com/dictyBase/event-messenger/internal/message"
+	"github.com/sirupsen/logrus"
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 
