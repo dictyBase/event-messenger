@@ -61,6 +61,28 @@ func main() {
 				},
 			},
 		},
+		{
+			Name:  "send-email",
+			Usage: "sends an email when a new stock order comes through",
+			// Action: email.RunSendEmail,
+			Before: validate.SendEmailArgs,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "subject",
+					Usage: "Subject name for nats subscription",
+				},
+				cli.StringFlag{
+					Name:   "nats-host",
+					EnvVar: "NATS_SERVICE_HOST",
+					Usage:  "nats messaging server host",
+				},
+				cli.StringFlag{
+					Name:   "nats-port",
+					EnvVar: "NATS_SERVICE_PORT",
+					Usage:  "nats messaging server port",
+				},
+			},
+		},
 	}
 	app.Run(os.Args)
 }
