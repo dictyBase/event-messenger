@@ -37,9 +37,11 @@ func NewIssueCreator(token, owner, repository string, logger *logrus.Entry) issu
 // CreateIssue creates a new GitHub issue based on order data.
 func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 	var labels []string
-	var body string
+	var str strings.Builder
 	for _, a := range ord.Data.Attributes.Items {
-		body = fmt.Sprintf("Item: %s\n", a)
+		str.WriteString("Item: ")
+		str.WriteString(a)
+		str.WriteString("\n")
 		if strings.Contains(a, "DBS") {
 			labels = append(labels, "Strain Order")
 		}
@@ -48,6 +50,7 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		}
 	}
 	title := fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser)
+	body := str.String()
 	input := &github.IssueRequest{
 		Title:  &title,
 		Body:   &body,
