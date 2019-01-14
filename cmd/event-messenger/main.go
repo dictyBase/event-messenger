@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
+	"github.com/dictyBase/event-messenger/internal/app/app/github"
 	"github.com/dictyBase/event-messenger/internal/app/validate"
-	"github.com/dictyBase/event-messenger/internal/issue-tracker/github"
 
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -46,6 +46,10 @@ func main() {
 					Usage: "Github repository owner",
 				},
 				cli.StringFlag{
+					Name:  "subject",
+					Usage: "Subject name for nats subscription",
+				},
+				cli.StringFlag{
 					Name:   "nats-host",
 					EnvVar: "NATS_SERVICE_HOST",
 					Usage:  "nats messaging server host",
@@ -54,16 +58,6 @@ func main() {
 					Name:   "nats-port",
 					EnvVar: "NATS_SERVICE_PORT",
 					Usage:  "nats messaging server port",
-				},
-				cli.StringFlag{
-					Name:   "order-grpc-host",
-					EnvVar: "ORDER_API_SERVICE_HOST",
-					Usage:  "grpc host address for order service",
-				},
-				cli.StringFlag{
-					Name:   "order-grpc-port",
-					EnvVar: "ORDER_API_SERVICE_PORT",
-					Usage:  "grpc port for order service",
 				},
 			},
 		},

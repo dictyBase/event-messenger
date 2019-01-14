@@ -15,11 +15,11 @@ import (
 
 type natsSubscriber struct {
 	econn  *gnats.EncodedConn
-	logger *logrus.Logger
+	logger *logrus.Entry
 }
 
 // NewSubscriber connects to nats
-func NewSubscriber(host, port string, options ...gnats.Option) (message.Subscriber, error) {
+func NewSubscriber(host, port string, logger *logrus.Entry, options ...gnats.Option) (message.Subscriber, error) {
 	nc, err := gnats.Connect(fmt.Sprintf("nats://%s:%s", host, port), options...)
 	if err != nil {
 		return &natsSubscriber{}, err
@@ -28,13 +28,15 @@ func NewSubscriber(host, port string, options ...gnats.Option) (message.Subscrib
 	if err != nil {
 		return &natsSubscriber{}, err
 	}
-	return &natsSubscriber{econn: ec}, nil
+	return &natsSubscriber{econn: ec, logger: logger}, nil
 }
 
 // Start starts the server and communicates using a channel
 func (n *natsSubscriber) Start(sub string, client issue.IssueTracker) error {
 	_, err := n.econn.Subscribe(sub, func(ord *order.Order) {
-		client.CreateIssue(ord)
+		if err := client.CreateIssue(ord); err != nil {
+			n.logger.Error(err)
+		}
 	})
 	if err != nil {
 		return err
