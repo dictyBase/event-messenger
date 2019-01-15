@@ -81,6 +81,16 @@ func main() {
 					EnvVar: "NATS_SERVICE_PORT",
 					Usage:  "nats messaging server port",
 				},
+				cli.StringFlag{
+					Name:   "gmail-secret, gs",
+					EnvVar: "GMAIL_CREDENTIALS_FILE",
+					Usage:  "location of gmail client secret json file",
+				},
+				cli.StringFlag{
+					Name:   "cache-file, cf",
+					EnvVar: "CACHE_TOKEN_FILE",
+					Usage:  "location of cached gmail token file",
+				},
 			},
 		},
 	}
