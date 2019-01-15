@@ -34,9 +34,10 @@ func (g *gmailData) SendEmail(ord *order.Order) error {
 			"\r\n" + ord.Data.Attributes.PurchaseOrderNum + "")
 
 	message.Raw = base64.StdEncoding.EncodeToString(messageStr)
-	_, err = g.client.Users.Messages.Send("me", &message).Do()
+	_, err := g.client.Users.Messages.Send("me", &message).Do()
 	if err != nil {
 		log.Fatalf("Unable to send gmail message: %v", err)
 	}
+	g.logger.Infof("successfully sent gmail message to %s", g.sendto)
 	return nil
 }
