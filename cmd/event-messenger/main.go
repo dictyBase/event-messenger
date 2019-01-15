@@ -84,12 +84,20 @@ func main() {
 				cli.StringFlag{
 					Name:   "gmail-secret, gs",
 					EnvVar: "GMAIL_CREDENTIALS_FILE",
-					Usage:  "location of gmail client secret json file",
+					Usage:  "location of gmail client secret json file, defaults to ~/.credentials/gmail.json",
 				},
 				cli.StringFlag{
 					Name:   "cache-file, cf",
 					EnvVar: "CACHE_TOKEN_FILE",
 					Usage:  "location of cached gmail token file",
+				},
+				cli.StringFlag{
+					Name:  "reply-to",
+					Usage: "reply-to email address for sent messages",
+				},
+				cli.StringFlag{
+					Name:  "send-to",
+					Usage: "email address to send messages to",
 				},
 			},
 		},
