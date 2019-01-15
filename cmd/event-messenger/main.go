@@ -100,10 +100,6 @@ func main() {
 					Name:  "send-to",
 					Usage: "email address to send messages to",
 				},
-				cli.StringFlag{
-					Name:  "subject",
-					Usage: "Subject name for nats subscription",
-				},
 			},
 		},
 	}
