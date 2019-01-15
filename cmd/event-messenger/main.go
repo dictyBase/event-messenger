@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/dictyBase/event-messenger/internal/app/app/github"
+	"github.com/dictyBase/event-messenger/internal/app/app/gmail"
 	"github.com/dictyBase/event-messenger/internal/app/validate"
 
 	cli "gopkg.in/urfave/cli.v1"
@@ -62,9 +63,9 @@ func main() {
 			},
 		},
 		{
-			Name:  "send-email",
-			Usage: "sends an email when a new stock order comes through",
-			// Action: email.RunSendEmail,
+			Name:   "send-email",
+			Usage:  "sends an email when a new stock order comes through",
+			Action: gmail.RunSendEmail,
 			Before: validate.SendEmailArgs,
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -98,6 +99,10 @@ func main() {
 				cli.StringFlag{
 					Name:  "send-to",
 					Usage: "email address to send messages to",
+				},
+				cli.StringFlag{
+					Name:  "subject",
+					Usage: "Subject name for nats subscription",
 				},
 			},
 		},

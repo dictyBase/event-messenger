@@ -94,10 +94,6 @@ func GetGmailClient(c *cli.Context) (*gmail.Service, error) {
 	config, err := google.ConfigFromJSON(
 		cont,
 		gmail.GmailSendScope,
-		gmail.GmailComposeScope,
-		gmail.GmailLabelsScope,
-		gmail.GmailModifyScope,
-		gmail.MailGoogleComScope,
 	)
 	if err != nil {
 		return srv, fmt.Errorf("error unable to create oauth config from secret file %s\n", err)
