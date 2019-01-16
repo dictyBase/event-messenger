@@ -13,26 +13,26 @@ import (
 	"github.com/nats-io/go-nats/encoders/protobuf"
 )
 
-type natsSubscriber struct {
+type natsGithubSubscriber struct {
 	econn  *gnats.EncodedConn
 	logger *logrus.Entry
 }
 
-// NewSubscriber connects to nats
-func NewSubscriber(host, port string, logger *logrus.Entry, options ...gnats.Option) (message.Subscriber, error) {
+// NewGithubSubscriber connects to nats
+func NewGithubSubscriber(host, port string, logger *logrus.Entry, options ...gnats.Option) (message.GithubSubscriber, error) {
 	nc, err := gnats.Connect(fmt.Sprintf("nats://%s:%s", host, port), options...)
 	if err != nil {
-		return &natsSubscriber{}, err
+		return &natsGithubSubscriber{}, err
 	}
 	ec, err := gnats.NewEncodedConn(nc, protobuf.PROTOBUF_ENCODER)
 	if err != nil {
-		return &natsSubscriber{}, err
+		return &natsGithubSubscriber{}, err
 	}
-	return &natsSubscriber{econn: ec, logger: logger}, nil
+	return &natsGithubSubscriber{econn: ec, logger: logger}, nil
 }
 
-// Start starts the server and communicates using a channel
-func (n *natsSubscriber) Start(sub string, client issue.IssueTracker) error {
+// Start starts the subscription server and handles the incoming stock order data.
+func (n *natsGithubSubscriber) Start(sub string, client issue.IssueTracker) error {
 	_, err := n.econn.Subscribe(sub, func(ord *order.Order) {
 		if err := client.CreateIssue(ord); err != nil {
 			n.logger.Error(err)
@@ -51,7 +51,7 @@ func (n *natsSubscriber) Start(sub string, client issue.IssueTracker) error {
 }
 
 // Stop stops the server
-func (n *natsSubscriber) Stop() error {
+func (n *natsGithubSubscriber) Stop() error {
 	n.econn.Close()
 	return nil
 }

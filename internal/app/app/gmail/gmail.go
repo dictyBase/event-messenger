@@ -44,7 +44,7 @@ func getLogger(c *cli.Context) *logrus.Entry {
 // RunSendEmail connects to nats and sends an email based on received stock order data.
 func RunSendEmail(c *cli.Context) error {
 	l := getLogger(c)
-	s, err := nats.NewSubscriber(c.String("nats-host"), c.String("nats-port"), l)
+	s, err := nats.NewGmailSubscriber(c.String("nats-host"), c.String("nats-port"), l)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 2)
 	}
@@ -53,16 +53,16 @@ func RunSendEmail(c *cli.Context) error {
 		return cli.NewExitError(err.Error(), 2)
 	}
 	g := gm.NewEmailSender(c.String("secret"), c.String("reply-to"), c.String("send-to"), cl, l)
-	// err = s.Start(c.String("subject"), g)
-	// if err != nil {
-	// 	return cli.NewExitError(err.Error(), 2)
-	// }
-	l.Info("starting the Github issue creation subscriber messaging backend")
+	err = s.Start(c.String("subject"), g)
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
+	l.Info("starting the email sending subscriber backend")
 	shutdown(s, l)
 	return nil
 }
 
-func shutdown(r message.Subscriber, logger *logrus.Entry) {
+func shutdown(r message.GmailSubscriber, logger *logrus.Entry) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
 	<-ch

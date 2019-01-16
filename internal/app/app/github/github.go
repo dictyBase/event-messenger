@@ -44,7 +44,7 @@ func getLogger(c *cli.Context) *logrus.Entry {
 // RunCreateIssue connects to nats and creates a GitHub issue based on received order data.
 func RunCreateIssue(c *cli.Context) error {
 	l := getLogger(c)
-	s, err := nats.NewSubscriber(c.String("nats-host"), c.String("nats-port"), l)
+	s, err := nats.NewGithubSubscriber(c.String("nats-host"), c.String("nats-port"), l)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 2)
 	}
@@ -58,7 +58,7 @@ func RunCreateIssue(c *cli.Context) error {
 	return nil
 }
 
-func shutdown(r message.Subscriber, logger *logrus.Entry) {
+func shutdown(r message.GithubSubscriber, logger *logrus.Entry) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
 	<-ch
