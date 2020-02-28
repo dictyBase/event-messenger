@@ -4,36 +4,32 @@ import (
 	"fmt"
 
 	email "github.com/dictyBase/event-messenger/internal/send-email"
-
-	"github.com/dictyBase/event-messenger/internal/message"
-	"github.com/sirupsen/logrus"
-
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
-
 	gnats "github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats/encoders/protobuf"
+	"github.com/sirupsen/logrus"
 )
 
-type natsGmailSubscriber struct {
+type NatsGmailSubscriber struct {
 	econn  *gnats.EncodedConn
 	logger *logrus.Entry
 }
 
 // NewGmailSubscriber connects to nats
-func NewGmailSubscriber(host, port string, logger *logrus.Entry, options ...gnats.Option) (message.GmailSubscriber, error) {
+func NewGmailSubscriber(host, port string, logger *logrus.Entry, options ...gnats.Option) (*NatsGmailSubscriber, error) {
 	nc, err := gnats.Connect(fmt.Sprintf("nats://%s:%s", host, port), options...)
 	if err != nil {
-		return &natsGmailSubscriber{}, err
+		return &NatsGmailSubscriber{}, err
 	}
 	ec, err := gnats.NewEncodedConn(nc, protobuf.PROTOBUF_ENCODER)
 	if err != nil {
-		return &natsGmailSubscriber{}, err
+		return &NatsGmailSubscriber{}, err
 	}
-	return &natsGmailSubscriber{econn: ec, logger: logger}, nil
+	return &NatsGmailSubscriber{econn: ec, logger: logger}, nil
 }
 
 // Start starts the subscription server and handles the incoming stock order data.
-func (n *natsGmailSubscriber) Start(sub string, client email.EmailHandler) error {
+func (n *NatsGmailSubscriber) Start(sub string, client email.EmailHandler) error {
 	_, err := n.econn.Subscribe(sub, func(ord *order.Order) {
 		if err := client.SendEmail(ord); err != nil {
 			n.logger.Error(err)
@@ -52,7 +48,7 @@ func (n *natsGmailSubscriber) Start(sub string, client email.EmailHandler) error
 }
 
 // Stop stops the server
-func (n *natsGmailSubscriber) Stop() error {
+func (n *NatsGmailSubscriber) Stop() error {
 	n.econn.Close()
 	return nil
 }

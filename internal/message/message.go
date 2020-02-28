@@ -1,24 +1,26 @@
 package message
 
 import (
-	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
-	email "github.com/dictyBase/event-messenger/internal/send-email"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/sirupsen/logrus"
 )
 
-// Shutdown interface is for handling stopping of connection
-type Shutdown interface {
+// Subscriber is a generic interface for any kind of subscriber
+type Subscriber interface {
 	// Stop will initiate a graceful shutdown of the subscriber connection.
 	Stop() error
 }
 
-// GithubSubscriber is an interface to encapsulate the behavior of Github subscribers.
-type GithubSubscriber interface {
-	// Start will begin the subscription for creating Github issues for new stock orders.
-	Start(string, issue.IssueTracker) error
-}
-
-// GmailSubscriber is an interface to encapsulate the behavior of Gmail subscribers.
-type GmailSubscriber interface {
-	// Start will begin the subscription for sending an email when a new stock order is received.
-	Start(string, email.EmailHandler) error
+func Shutdown(r Subscriber, logger *logrus.Entry) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
+	<-ch
+	logger.Info("received kill signal")
+	if err := r.Stop(); err != nil {
+		logger.Fatalf("unable to close the subscription %s\n", err)
+	}
+	logger.Info("closed the connections gracefully")
 }
