@@ -7,7 +7,7 @@ import (
 	"github.com/dictyBase/event-messenger/internal/app/app/gmail"
 	"github.com/dictyBase/event-messenger/internal/app/validate"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 )
 
 func main() {

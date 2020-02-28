@@ -3,7 +3,7 @@ package validate
 import (
 	"fmt"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 )
 
 // GithubIssueArgs validates that the necessary flags for creating a Github issue are not missing

@@ -9,7 +9,7 @@ import (
 	"github.com/dictyBase/event-messenger/internal/message/nats"
 	gm "github.com/dictyBase/event-messenger/internal/send-email/gmail"
 	"github.com/sirupsen/logrus"
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 )
 
 func getLogger(c *cli.Context) *logrus.Entry {
