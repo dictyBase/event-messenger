@@ -3,6 +3,7 @@
 [![Technical debt](https://badgen.net/codeclimate/tech-debt/dictyBase/event-messenger)](https://codeclimate.com/github/dictyBase/event-messenger/trends/technical_debt)
 [![Issues](https://badgen.net/codeclimate/issues/dictyBase/event-messenger)](https://codeclimate.com/github/dictyBase/event-messenger/issues)
 [![Maintainability](https://api.codeclimate.com/v1/badges/b760838bd7baa776bffd/maintainability)](https://codeclimate.com/github/dictyBase/event-messenger/maintainability)
+[![BCH compliance](https://bettercodehub.com/edge/badge/dictyBase/event-messenger?branch=develop)](https://bettercodehub.com/)
 [![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=dictyBase/event-messenger)](https://dependabot.com)   
 ![Issues](https://badgen.net/github/issues/dictyBase/event-messenger)
 ![Open Issues](https://badgen.net/github/open-issues/dictyBase/event-messenger)
