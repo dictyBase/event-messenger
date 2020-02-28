@@ -28,6 +28,8 @@ github.com/mwitkow/go-proto-validators v0.0.0-20180403085117-0950a7990007 h1:28i
 github.com/mwitkow/go-proto-validators v0.0.0-20180403085117-0950a7990007/go.mod h1:m2XC9Qq0AlmmVksL6FktJCdTYyLk7V3fKyp0sl1yWQo=
 github.com/nats-io/go-nats v1.7.0 h1:oQOfHcLr8hb43QG8yeVyY2jtarIaTjOv41CGdF3tTvQ=
 github.com/nats-io/go-nats v1.7.0/go.mod h1:+t7RHT5ApZebkrQdnn6AhQJmhJJiKAvJUio1PiiCtj0=
+github.com/nats-io/go-nats v1.7.2 h1:cJujlwCYR8iMz5ofZSD/p2WLW8FabhkQ2lIEVbSvNSA=
+github.com/nats-io/go-nats v1.7.2/go.mod h1:+t7RHT5ApZebkrQdnn6AhQJmhJJiKAvJUio1PiiCtj0=
 github.com/nats-io/nkeys v0.0.2 h1:+qM7QpgXnvDDixitZtQUBDY9w/s9mu1ghS+JIbsrx6M=
 github.com/nats-io/nkeys v0.0.2/go.mod h1:dab7URMsZm6Z/jp9Z5UGa87Uutgc2mVpXLC4B7TDb/4=
 github.com/nats-io/nuid v1.0.0 h1:44QGdhbiANq8ZCbUkdn6W5bqtg+mHuDE4wOUuxxndFs=
