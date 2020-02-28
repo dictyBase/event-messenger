@@ -11,10 +11,11 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"github.com/urfave/cli"
+
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 // GetTokenFromWeb uses config to request a Token.
