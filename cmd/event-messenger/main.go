@@ -3,10 +3,6 @@ package main
 import (
 	"os"
 
-	"github.com/dictyBase/event-messenger/internal/app/app/github"
-	"github.com/dictyBase/event-messenger/internal/app/app/gmail"
-	"github.com/dictyBase/event-messenger/internal/app/validate"
-
 	"github.com/urfave/cli"
 )
 
@@ -18,7 +14,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "log-format",
-			Usage: "format of the logging out, either of json or text.",
+			Usage: "format of the logging, either of json or text.",
 			Value: "json",
 		},
 		cli.StringFlag{
@@ -28,80 +24,8 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
-		{
-			Name:   "gh-issue",
-			Usage:  "creates a github issue when a new stock order comes through",
-			Action: github.RunCreateIssue,
-			Before: validate.GithubIssueArgs,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "gh-token, ght",
-					Usage: "Github personal access token file",
-				},
-				cli.StringFlag{
-					Name:  "repository, r",
-					Usage: "Github repository",
-				},
-				cli.StringFlag{
-					Name:  "owner",
-					Usage: "Github repository owner",
-				},
-				cli.StringFlag{
-					Name:  "subject",
-					Usage: "Subject name for nats subscription",
-				},
-				cli.StringFlag{
-					Name:   "nats-host",
-					EnvVar: "NATS_SERVICE_HOST",
-					Usage:  "nats messaging server host",
-				},
-				cli.StringFlag{
-					Name:   "nats-port",
-					EnvVar: "NATS_SERVICE_PORT",
-					Usage:  "nats messaging server port",
-				},
-			},
-		},
-		{
-			Name:   "send-email",
-			Usage:  "sends an email when a new stock order comes through",
-			Action: gmail.RunSendEmail,
-			Before: validate.SendEmailArgs,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "subject",
-					Usage: "Subject name for nats subscription",
-				},
-				cli.StringFlag{
-					Name:   "nats-host",
-					EnvVar: "NATS_SERVICE_HOST",
-					Usage:  "nats messaging server host",
-				},
-				cli.StringFlag{
-					Name:   "nats-port",
-					EnvVar: "NATS_SERVICE_PORT",
-					Usage:  "nats messaging server port",
-				},
-				cli.StringFlag{
-					Name:   "gmail-secret, gs",
-					EnvVar: "GMAIL_CREDENTIALS_FILE",
-					Usage:  "location of gmail client secret json file, defaults to ~/.credentials/gmail.json",
-				},
-				cli.StringFlag{
-					Name:   "cache-file, cf",
-					EnvVar: "CACHE_TOKEN_FILE",
-					Usage:  "location of cached gmail token file",
-				},
-				cli.StringFlag{
-					Name:  "reply-to",
-					Usage: "reply-to email address for sent messages",
-				},
-				cli.StringFlag{
-					Name:  "send-to",
-					Usage: "email address to send messages to",
-				},
-			},
-		},
+		ghIssueCmd(),
+		sendEmailFlags(),
 	}
 	app.Run(os.Args)
 }
