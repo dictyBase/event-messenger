@@ -17,7 +17,7 @@ import (
 func RunCreateIssue(c *cli.Context) error {
 	l, err := logger.NewLogger(c)
 	if err != nil {
-		return err
+		return cli.NewExitError(err.Error(), 2)
 	}
 	s, err := nats.NewGithubSubscriber(c.String("nats-host"), c.String("nats-port"), l)
 	if err != nil {
