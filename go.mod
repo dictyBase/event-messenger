@@ -12,6 +12,6 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/urfave/cli v1.22.2
 	golang.org/x/oauth2 v0.0.0-20190111185915-36a7019397c4
-	google.golang.org/api v0.1.0
+	google.golang.org/api v0.19.0
 	google.golang.org/genproto v0.0.0-20190111180523-db91494dd46c // indirect
 )
