@@ -7,7 +7,9 @@ import (
 
 	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
 
+	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
+	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
@@ -21,17 +23,35 @@ type githubIssue struct {
 	repository string
 	client     *github.Client
 	logger     *logrus.Entry
+	aclient    annotation.TaggedAnnotationServiceClient
+	sclient    stock.StockServiceClient
+}
+
+type IssueParams struct {
+	Token       string
+	Owner       string
+	Repository  string
+	Logger      *logrus.Entry
+	AnnoClient  annotation.TaggedAnnotationServiceClient
+	StockClient stock.StockServiceClient
 }
 
 // NewIssueCreator acts as a constructor for Github issue creation
-func NewIssueCreator(token, owner, repository string, logger *logrus.Entry) issue.IssueTracker {
-	ctx := context.Background()
+func NewIssueCreator(args *IssueParams) issue.IssueTracker {
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
+		&oauth2.Token{AccessToken: args.Token},
 	)
-	tc := oauth2.NewClient(ctx, ts)
+	tc := oauth2.NewClient(context.Background(), ts)
 	client := github.NewClient(tc)
-	return &githubIssue{token: token, owner: owner, repository: repository, client: client, logger: logger}
+	return &githubIssue{
+		client:     client,
+		token:      args.Token,
+		owner:      args.Owner,
+		repository: args.Repository,
+		logger:     args.Logger,
+		aclient:    args.AnnoClient,
+		sclient:    args.StockClient,
+	}
 }
 
 // CreateIssue creates a new GitHub issue based on order data.
