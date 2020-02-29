@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/dictyBase/event-messenger/internal/app/github"
-	"github.com/dictyBase/event-messenger/internal/app/validate"
 	"github.com/urfave/cli"
 )
 
@@ -31,6 +30,35 @@ func ghRepoFlags() []cli.Flag {
 	}
 }
 
+func serviceFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:     "stock-grpc-host",
+			EnvVar:   "STOCK_API_SERVICE_HOST",
+			Usage:    "stock grpc host",
+			Required: true,
+		},
+		cli.StringFlag{
+			Name:     "stock-grpc-port",
+			EnvVar:   "STOCK_API_SERVICE_PORT",
+			Usage:    "stock grpc port",
+			Required: true,
+		},
+		cli.StringFlag{
+			Name:     "annotation-grpc-host",
+			EnvVar:   "ANNOTATION_API_SERVICE_HOST",
+			Usage:    "annotation grpc host",
+			Required: true,
+		},
+		cli.StringFlag{
+			Name:     "annotation-grpc-port",
+			EnvVar:   "ANNOTATION_API_SERVICE_PORT",
+			Usage:    "annotation grpc port",
+			Required: true,
+		},
+	}
+}
+
 func ghNatsFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
@@ -51,11 +79,11 @@ func ghNatsFlags() []cli.Flag {
 func ghIssueCmd() cli.Command {
 	flags := ghRepoFlags()
 	flags = append(flags, ghNatsFlags()...)
+	flags = append(flags, serviceFlags()...)
 	return cli.Command{
 		Name:   "gh-issue",
 		Usage:  "creates a github issue when a new stock order comes through",
 		Action: github.RunCreateIssue,
-		Before: validate.GithubIssueArgs,
 		Flags:  flags,
 	}
 }
