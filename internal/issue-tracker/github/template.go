@@ -3,7 +3,6 @@ package github
 import (
 	"strings"
 
-	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
@@ -12,9 +11,9 @@ import (
 type IssueContent struct {
 	Strains      []*stock.Strain
 	Plasmids     []*stock.Plasmid
-	StrainChar   map[string]*annotation.TaggedAnnotationCollection
-	StrainInv    map[string]*annotation.TaggedAnnotationCollection
-	PlasmidInv   map[string]*annotation.TaggedAnnotationCollection
+	StrainInv    [][]string
+	PlasmidInv   [][]string
+	StrainInfo   [][]string
 	Order        *order.Order
 	Shipper      *user.User
 	Payer        *user.User
@@ -66,38 +65,50 @@ func tjoin(elems []string, sep string) string {
 	return strings.Join(elems, sep)
 }
 
-func characteristics(tac *annotation.TaggedAnnotationCollection) string {
-	var schar []string
-	for _, tdata := range tac.Data {
-		schar = append(schar, tdata.Attributes.Tag)
-	}
-	return strings.Join(schar, ",")
-}
-
 const tmpl = `
-		# Shipping and billing information   
+ Shipping and billing information   
 
-		|	Shipping address									 |		  | Billing address	    						 |
-		: -------------------------------------------------------|--------|----------------------------------------------:
-		|   {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |   | {{- with .Payer.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |   | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Payment}} {{- end }} |
+|	Shipping address									 |		  | Billing address	    						 |
+: -------------------------------------------------------|--------|----------------------------------------------:
+|   {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |   | {{- with .Payer.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |   | {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Payment}} {{- end }} |
 
-		# Stocks ordered
+{{if .Strains}}
+# Stocks ordered
 
-		|	Item	|	Quantity 	     |	Unit price($)	  |	Total($)	       |
-		|-----------|--------------------|--------------------|--------------------|
-		|	Strain	| {{.StrainItems}}   | {{.StrainPrice}}   |  {{.StrainCost}}   |
-		|	Plasmid	| {{.PlasmidItems}}  | {{.PlasmidPrice}}  |  {{.PlasmidCost}}  |
-		|			|					 |					  |	 {{.TotalCost}}    |
+|	Item	|	Quantity 	     |	Unit price($)	  |	Total($)	       |
+|-----------|--------------------|--------------------|--------------------|
+|	Strain	| {{.StrainItems}}   | {{.StrainPrice}}   |  {{.StrainCost}}   |
+|	Plasmid	| {{.PlasmidItems}}  | {{.PlasmidPrice}}  |  {{.PlasmidCost}}  |
+|			|					 |					  |	 {{.TotalCost}}    |
 
-		# Strain information 
+# Strain information 
 
-		|  ID			|  Descriptor      |	Name(s)		            |	Systematic Name	|	Characteristics			                      |
-		|---------------|------------------|----------------------------|-------------------|----------------------------------------------- -|
-		{{- range .Strains }}
-		  {{- $attr := .Data.StrainAttributes -}}
-		| {{.Data.Id}}  | {{$attr.Label}}  | {{$attr.Names | join ","}} | {{.Data.Id}}     | {{characteristics (index .StrainChar .Data.Id)}} |
-		{{- end }}
-			
+|  ID			|  Descriptor      |	Name(s)		            |	Systematic Name	|	Characteristics			                      |
+|---------------|------------------|----------------------------|-------------------|----------------------------------------------- -|
+{{- range .Strains}}
+  {{- $attr := .Data.StrainAttributes -}}
+| {{.Data.Id}}  | {{$attr.Label}}  | {{$attr.Names | join ","}} | {{.Data.Id}}     | {{characteristics (index .StrainChar .Data.Id)}} |
+{{- end}}
+	
 
+# Strain storage
 
+|	Name		  |	Stored as       |	Location	 |	No. of vials    |	Color	|
+|-----------------|-----------------|----------------|------------------|-----------|
+{{- range $strain := .Strain}}
+  {{- $attr := $strain.Data.Attributes -}}
+| {{$attr.Label}} | {{range $tag := .StrainInvTags}} {{inventory $tag (index .StrainInv $strain.Data.Id)}} | {{end}}
+{{- end}}
+{{end}}
+
+{{if .Plasmids}}
+# Plasmid information and storage
+
+|	ID				   |	Name		     |	Stored as	     |	Location         |	Color	     |
+|----------------------|---------------------|-------------------|-------------------|---------------|
+{{- range $plasmid := .Plasmids}}
+  {{- $attr := $plasmid.Data.Attributes -}}
+| {{$plasmid.Data.Id}} | {{$attr.Name}}      | {{range $tag := .PlasmidInvTags}} {{inventory $tag (index .PlasmidInv $plasmid.Data.Id)}} | {{end}}
+{{- end}}
+{{end}}
 `
