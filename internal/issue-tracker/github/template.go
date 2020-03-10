@@ -115,4 +115,10 @@ const tmpl = `
 {{else}}
 # No plasmid inventories no order
 {{end}}
+
+{{if .Order.Data.Attributes.Comments}}
+# Comment
+{{.Order.Data.Attributes.Comments}}
+{{end}}
+
 `
