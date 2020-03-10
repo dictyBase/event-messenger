@@ -8,18 +8,27 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/dictyBase/event-messenger/internal/datasource"
 	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
 
-	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
-	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
 	"github.com/sirupsen/logrus"
 )
+
+type strainData struct {
+	strains []*stock.Strain
+	invs    [][]string
+	info    [][]string
+}
+
+type plasmidData struct {
+	plasmids []*stock.Plasmid
+	invs     [][]string
+}
 
 // githubIssue includes all of the data needed to create an issue.
 type githubIssue struct {
@@ -28,9 +37,9 @@ type githubIssue struct {
 	repository string
 	client     *github.Client
 	logger     *logrus.Entry
-	aclient    annotation.TaggedAnnotationServiceClient
-	sclient    stock.StockServiceClient
-	uclient    user.UserServiceClient
+	anno       *datasource.Annotation
+	stk        *datasource.Stock
+	usr        *datasource.User
 }
 
 type IssueParams struct {
@@ -38,18 +47,15 @@ type IssueParams struct {
 	Owner       string
 	Repository  string
 	Logger      *logrus.Entry
-	AnnoClient  annotation.TaggedAnnotationServiceClient
-	StockClient stock.StockServiceClient
-	UserClient  user.UserServiceClient
+	AnnoSource  *datasource.Annotation
+	StockSource *datasource.Stock
+	UserSource  *datasource.User
 }
 
 type postIssueParams struct {
 	title  string
 	body   string
-	owner  string
-	repo   string
 	labels []string
-	client *github.Client
 }
 
 // NewIssueCreator acts as a constructor for Github issue creation
@@ -64,31 +70,10 @@ func NewIssueCreator(args *IssueParams) issue.IssueTracker {
 		owner:      args.Owner,
 		repository: args.Repository,
 		logger:     args.Logger,
-		aclient:    args.AnnoClient,
-		sclient:    args.StockClient,
-		uclient:    args.UserClient,
+		anno:       args.AnnoSource,
+		stk:        args.StockSource,
+		usr:        args.UserSource,
 	}
-}
-
-func (gh *githubIssue) usersInOrder(ord *order.Order) (map[string]*user.User, error) {
-	m := make(map[string]*user.User)
-	pu, err := gh.uclient.GetUserByEmail(
-		context.Background(),
-		&jsonapi.GetEmailRequest{Email: ord.Data.Attributes.Payer},
-	)
-	if err != nil {
-		return m, err
-	}
-	su, err := gh.uclient.GetUserByEmail(
-		context.Background(),
-		&jsonapi.GetEmailRequest{Email: ord.Data.Attributes.Consumer},
-	)
-	if err != nil {
-		return m, err
-	}
-	m["payer"] = pu
-	m["shipper"] = su
-	return m, nil
 }
 
 // CreateIssue creates a new GitHub issue based on order data.
@@ -97,39 +82,30 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 	if err != nil {
 		gh.logger.Errorf("error in parsing template %s", err)
 		return fmt.Errorf("error in parsing template %s", err)
+	}
+	strData, err := gh.strains(ord)
+	if err != nil {
+		gh.logger.Error(err.Error())
 		return err
 	}
-	strains, err := getStrains(strainsFromItems(ord), gh.sclient)
+	plasData, err := gh.plasmids(ord)
 	if err != nil {
-		gh.logger.Errorf("error in getting strains %s", err)
-		return fmt.Errorf("error in getting strains %s", err)
+		gh.logger.Error(err.Error())
+		return err
 	}
-	strInvs, err := getStrainInv(strains, gh.aclient)
+	um, err := gh.usr.UsersInOrder(ord)
 	if err != nil {
-		gh.logger.Errorf("error in getting strain inventories %s", err)
-		return fmt.Errorf("error in getting strain inventories %s", err)
-	}
-	strInfo, err := getStrainInfo(strains, gh.aclient)
-	if err != nil {
-		gh.logger.Errorf("error in getting strain information %s", err)
-		return fmt.Errorf("error in getting strain information %s", err)
-	}
-	plasmids, err := getPlasmids(plasmidsFromItems(ord), gh.sclient)
-	if err != nil {
-		gh.logger.Errorf("error in getting plasmids %s", err)
-		return fmt.Errorf("error in getting plasmids %s", err)
-	}
-	plasInv, err := getPlasmidInv(plasmids, gh.aclient)
-	if err != nil {
-		gh.logger.Errorf("error in getting plasmid inventories %s", err)
-		return fmt.Errorf("error in getting plasmid inventories %s", err)
+		gh.logger.Error(err.Error())
+		return err
 	}
 	cont := &IssueContent{
-		Strains:    strains,
-		Plasmids:   plasmids,
-		StrainInv:  strInvs,
-		PlasmidInv: plasInv,
-		StrainInfo: strInfo,
+		Strains:    strData.strains,
+		Plasmids:   plasData.plasmids,
+		StrainInv:  strData.invs,
+		PlasmidInv: plasData.invs,
+		StrainInfo: strData.info,
+		Shipper:    um["shipper"],
+		Payer:      um["payer"],
 		Order:      ord,
 	}
 	var b bytes.Buffer
@@ -137,6 +113,16 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		gh.logger.Errorf("error in executing template %s", err)
 		return fmt.Errorf("error in executing template %s", err)
 	}
+	issue, err := gh.postIssue(&postIssueParams{
+		labels: gh.labels(strData.strains, plasData.plasmids),
+		body:   b.String(),
+		title:  fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser),
+	})
+	gh.logger.Infof("created a new issue with id %s", issue.GetHTMLURL())
+	return nil
+}
+
+func (gh *githubIssue) labels(strains []*stock.Strain, plasmids []*stock.Plasmid) []string {
 	var labels []string
 	if len(strains) > 0 {
 		labels = append(labels, "Strain")
@@ -144,32 +130,57 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 	if len(plasmids) > 0 {
 		labels = append(labels, "Plasmid")
 	}
-	issue, err := postIssue(&postIssueParams{
-		client: gh.client,
-		labels: labels,
-		body:   b.String(),
-		title:  fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser),
-		owner:  gh.owner,
-		repo:   gh.repository,
-	})
-
-	gh.logger.Infof("created a new issue with id %s", *iss.URL)
-	return nil
+	return labels
 }
 
-func postIssue(args *postIssueParams) (*github.Issue, error) {
+func (gh *githubIssue) postIssue(args *postIssueParams) (*github.Issue, error) {
 	input := &github.IssueRequest{
 		Title:  &args.title,
 		Body:   &args.body,
 		Labels: &args.labels,
 	}
-	iss, _, err := args.client.Issues.Create(
+	iss, _, err := gh.client.Issues.Create(
 		context.Background(),
-		args.owner,
-		args.repo,
+		gh.owner,
+		gh.repository,
 		input,
 	)
 	return iss, err
+}
+
+func (gh *githubIssue) strains(ord *order.Order) (*strainData, error) {
+	sd := &strainData{}
+	strains, err := gh.stk.GetStrains(gh.stk.StrainsFromItems(ord))
+	if err != nil {
+		return sd, fmt.Errorf("error in getting strains %s", err)
+	}
+	strInvs, err := gh.anno.GetStrainInv(strains)
+	if err != nil {
+		return sd, fmt.Errorf("error in getting strain inventories %s", err)
+	}
+	strInfo, err := gh.anno.GetStrainInfo(strains)
+	if err != nil {
+		return sd, fmt.Errorf("error in getting strain information %s", err)
+	}
+	sd.strains = strains
+	sd.invs = strInvs
+	sd.info = strInfo
+	return sd, nil
+}
+
+func (gh *githubIssue) plasmids(ord *order.Order) (*plasmidData, error) {
+	pd := &plasmidData{}
+	plasmids, err := gh.stk.GetPlasmids(gh.stk.PlasmidsFromItems(ord))
+	if err != nil {
+		return pd, fmt.Errorf("error in getting plasmids %s", err)
+	}
+	plasInv, err := gh.anno.GetPlasmidInv(plasmids)
+	if err != nil {
+		return pd, fmt.Errorf("error in getting plasmid inventories %s", err)
+	}
+	pd.plasmids = plasmids
+	pd.invs = plasInv
+	return pd, nil
 }
 
 func randNum(min, max int) int {
