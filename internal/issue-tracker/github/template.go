@@ -83,32 +83,36 @@ const tmpl = `
 
 # Strain information 
 
-|  ID			|  Descriptor      |	Name(s)		            |	Systematic Name	|	Characteristics			                      |
-|---------------|------------------|----------------------------|-------------------|----------------------------------------------- -|
-{{- range .Strains}}
-  {{- $attr := .Data.StrainAttributes -}}
-| {{.Data.Id}}  | {{$attr.Label}}  | {{$attr.Names | join ","}} | {{.Data.Id}}     | {{characteristics (index .StrainChar .Data.Id)}} |
+|  ID							  |  Descriptor					   |	Name(s)		               |	Systematic Name				   |	Characteristics			    | |---------------------------------|--------------------------------|-------------------------------|-----------------------------------|--------------------------------|
+{{- range $idx,$e := .StrainInfo}}
+| {{index $e 0}}    | {{index $e 1}}  | {{index $e 2}} |  {{index $e 3}}    |  {{index $e 4}} |
 {{- end}}
 	
 
 # Strain storage
+{{if .StrainInv}}
 
-|	Name		  |	Stored as       |	Location	 |	No. of vials    |	Color	|
-|-----------------|-----------------|----------------|------------------|-----------|
-{{- range $strain := .Strain}}
-  {{- $attr := $strain.Data.Attributes -}}
-| {{$attr.Label}} | {{range $tag := .StrainInvTags}} {{inventory $tag (index .StrainInv $strain.Data.Id)}} | {{end}}
+|	Name						 |	Stored as					 |	Location					|	No. of vials				|	Color					   |
+|--------------------------------|-------------------------------|------------------------------|-------------------------------|------------------------------|
+{{- range $idx,$e := .StrainInv}}
+| {{index $e 0}}    | {{index $e 1}}  | {{index $e 2}} |  {{index $e 3}}    |  {{index $e 4}} |
 {{- end}}
+{{else}}
+## No strain inventories, POP,CRAKLE,BOOM!!!!!
 {{end}}
 
-{{if .Plasmids}}
+{{end}}
+
+
+{{if and .Plasmids .PlasmidInv}}
 # Plasmid information and storage
 
 |	ID				   |	Name		     |	Stored as	     |	Location         |	Color	     |
 |----------------------|---------------------|-------------------|-------------------|---------------|
-{{- range $plasmid := .Plasmids}}
-  {{- $attr := $plasmid.Data.Attributes -}}
-| {{$plasmid.Data.Id}} | {{$attr.Name}}      | {{range $tag := .PlasmidInvTags}} {{inventory $tag (index .PlasmidInv $plasmid.Data.Id)}} | {{end}}
+{{- range $idx,$e := .PlasmidInv}}
+| {{index $e 0}}    | {{index $e 1}}  | {{index $e 2}} |  {{index $e 3}}    |  {{index $e 4}} |
 {{- end}}
+{{else}}
+# No plasmid inventories no order
 {{end}}
 `
