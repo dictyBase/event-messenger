@@ -170,7 +170,7 @@ func (gh *githubIssue) postIssue(args *postIssueParams) (*github.Issue, error) {
 
 func (gh *githubIssue) strains(ord *order.Order) (*strainData, error) {
 	sd := &strainData{}
-	strains, err := gh.stk.GetStrains(gh.stk.StrainsFromItems(ord))
+	strains, err := gh.stk.GetStrains(gh.stk.StocksFromItems(ord, "DBS"))
 	if err != nil {
 		return sd, fmt.Errorf("error in getting strains %s", err)
 	}
@@ -190,7 +190,7 @@ func (gh *githubIssue) strains(ord *order.Order) (*strainData, error) {
 
 func (gh *githubIssue) plasmids(ord *order.Order) (*plasmidData, error) {
 	pd := &plasmidData{}
-	plasmids, err := gh.stk.GetPlasmids(gh.stk.PlasmidsFromItems(ord))
+	plasmids, err := gh.stk.GetPlasmids(gh.stk.StocksFromItems(ord, "DBP"))
 	if err != nil {
 		return pd, fmt.Errorf("error in getting plasmids %s", err)
 	}
