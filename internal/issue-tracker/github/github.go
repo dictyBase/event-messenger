@@ -13,11 +13,18 @@ import (
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
+	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
 	"github.com/sirupsen/logrus"
 )
+
+type allData struct {
+	*strainData
+	*plasmidData
+	user map[string]*user.User
+}
 
 type strainData struct {
 	strains []*stock.Strain
@@ -83,29 +90,19 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		gh.logger.Errorf("error in parsing template %s", err)
 		return fmt.Errorf("error in parsing template %s", err)
 	}
-	strData, err := gh.strains(ord)
-	if err != nil {
-		gh.logger.Error(err.Error())
-		return err
-	}
-	plasData, err := gh.plasmids(ord)
-	if err != nil {
-		gh.logger.Error(err.Error())
-		return err
-	}
-	um, err := gh.usr.UsersInOrder(ord)
+	all, err := gh.orderData(ord)
 	if err != nil {
 		gh.logger.Error(err.Error())
 		return err
 	}
 	cont := &IssueContent{
-		Strains:    strData.strains,
-		Plasmids:   plasData.plasmids,
-		StrainInv:  strData.invs,
-		PlasmidInv: plasData.invs,
-		StrainInfo: strData.info,
-		Shipper:    um["shipper"],
-		Payer:      um["payer"],
+		Strains:    all.strainData.strains,
+		Plasmids:   all.plasmidData.plasmids,
+		StrainInv:  all.strainData.invs,
+		PlasmidInv: all.plasmidData.invs,
+		StrainInfo: all.strainData.info,
+		Shipper:    all.user["shipper"],
+		Payer:      all.user["payer"],
 		Order:      ord,
 	}
 	var b bytes.Buffer
@@ -114,12 +111,35 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		return fmt.Errorf("error in executing template %s", err)
 	}
 	issue, err := gh.postIssue(&postIssueParams{
-		labels: gh.labels(strData.strains, plasData.plasmids),
-		body:   b.String(),
-		title:  fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser),
+		labels: gh.labels(
+			all.strainData.strains,
+			all.plasmidData.plasmids,
+		),
+		body:  b.String(),
+		title: fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser),
 	})
 	gh.logger.Infof("created a new issue with id %s", issue.GetHTMLURL())
 	return nil
+}
+
+func (gh *githubIssue) orderData(ord *order.Order) (*allData, error) {
+	all := &allData{}
+	strData, err := gh.strains(ord)
+	if err != nil {
+		return all, err
+	}
+	plasData, err := gh.plasmids(ord)
+	if err != nil {
+		return all, err
+	}
+	um, err := gh.usr.UsersInOrder(ord)
+	if err != nil {
+		return all, err
+	}
+	all.user = um
+	all.strainData = strData
+	all.plasmidData = plasData
+	return all, nil
 }
 
 func (gh *githubIssue) labels(strains []*stock.Strain, plasmids []*stock.Plasmid) []string {
