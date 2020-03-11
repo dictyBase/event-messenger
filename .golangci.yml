@@ -1,6 +1,7 @@
 linters-settings:
    lll:
       line-length: 130
+      exclude: Shipper
 linters:
   # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
   disable-all: true
