@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"github.com/dictyBase/event-messenger/internal/app/github"
@@ -88,7 +88,7 @@ func ghNatsFlags() []cli.Flag {
 	}
 }
 
-func ghIssueCmd() cli.Command {
+func GhIssueCmd() cli.Command {
 	flags := ghRepoFlags()
 	flags = append(flags, ghNatsFlags()...)
 	flags = append(flags, serviceFlags()...)

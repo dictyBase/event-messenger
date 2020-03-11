@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"github.com/dictyBase/event-messenger/internal/app/gmail"
@@ -36,7 +36,7 @@ func emailParamFlags() []cli.Flag {
 	}
 }
 
-func sendEmailFlags() cli.Command {
+func SendEmailFlags() cli.Command {
 	flags := emailParamFlags()
 	flags = append(flags, ghNatsFlags()...)
 	return cli.Command{
