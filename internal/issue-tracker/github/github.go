@@ -116,6 +116,10 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		body:  b.String(),
 		title: fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser),
 	})
+	if err != nil {
+		gh.logger.Errorf("error in posting issue to github %s", err)
+		return fmt.Errorf("error in posting issue to github %s", err)
+	}
 	gh.logger.Infof("created a new issue with id %s", issue.GetHTMLURL())
 	return nil
 }
