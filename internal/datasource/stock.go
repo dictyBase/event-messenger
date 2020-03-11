@@ -12,24 +12,14 @@ type Stock struct {
 	Client stock.StockServiceClient
 }
 
-func (st *Stock) PlasmidsFromItems(ord *order.Order) []string {
-	var strains []string
+func (st *Stock) StocksFromItems(ord *order.Order, pattern string) []string {
+	var stocks []string
 	for _, item := range ord.Data.Attributes.Items {
-		if strings.Contains(item, "DBP") {
-			strains = append(strains, item)
+		if strings.Contains(item, pattern) {
+			stocks = append(stocks, item)
 		}
 	}
-	return strains
-}
-
-func (st *Stock) StrainsFromItems(ord *order.Order) []string {
-	var strains []string
-	for _, item := range ord.Data.Attributes.Items {
-		if strings.Contains(item, "DBS") {
-			strains = append(strains, item)
-		}
-	}
-	return strains
+	return stocks
 }
 
 func (st *Stock) GetStrains(ids []string) ([]*stock.Strain, error) {
