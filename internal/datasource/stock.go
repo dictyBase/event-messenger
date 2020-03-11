@@ -9,7 +9,7 @@ import (
 )
 
 type Stock struct {
-	client stock.StockServiceClient
+	Client stock.StockServiceClient
 }
 
 func (st *Stock) PlasmidsFromItems(ord *order.Order) []string {
@@ -35,7 +35,7 @@ func (st *Stock) StrainsFromItems(ord *order.Order) []string {
 func (st *Stock) GetStrains(ids []string) ([]*stock.Strain, error) {
 	var strains []*stock.Strain
 	for _, id := range ids {
-		str, err := st.client.GetStrain(context.Background(), &stock.StockId{Id: id})
+		str, err := st.Client.GetStrain(context.Background(), &stock.StockId{Id: id})
 		if err != nil {
 			return strains, err
 		}
@@ -47,7 +47,7 @@ func (st *Stock) GetStrains(ids []string) ([]*stock.Strain, error) {
 func (st *Stock) GetPlasmids(ids []string) ([]*stock.Plasmid, error) {
 	var plasmids []*stock.Plasmid
 	for _, id := range ids {
-		str, err := st.client.GetPlasmid(context.Background(), &stock.StockId{Id: id})
+		str, err := st.Client.GetPlasmid(context.Background(), &stock.StockId{Id: id})
 		if err != nil {
 			return plasmids, err
 		}

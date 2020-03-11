@@ -10,19 +10,19 @@ import (
 )
 
 type User struct {
-	client user.UserServiceClient
+	Client user.UserServiceClient
 }
 
 func (u *User) UsersInOrder(ord *order.Order) (map[string]*user.User, error) {
 	m := make(map[string]*user.User)
-	pu, err := u.client.GetUserByEmail(
+	pu, err := u.Client.GetUserByEmail(
 		context.Background(),
 		&jsonapi.GetEmailRequest{Email: ord.Data.Attributes.Payer},
 	)
 	if err != nil {
 		return m, fmt.Errorf("error in retrieving payer %s", err)
 	}
-	su, err := u.client.GetUserByEmail(
+	su, err := u.Client.GetUserByEmail(
 		context.Background(),
 		&jsonapi.GetEmailRequest{Email: ord.Data.Attributes.Consumer},
 	)
