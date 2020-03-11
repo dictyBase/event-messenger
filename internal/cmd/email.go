@@ -13,24 +13,23 @@ func emailParamFlags() []cli.Flag {
 			Required: true,
 		},
 		cli.StringFlag{
-			Name:   "gmail-secret, gs",
-			EnvVar: "GMAIL_CREDENTIALS_FILE",
-			Usage:  "location of gmail client secret json file, defaults to ~/.credentials/gmail.json",
-		},
-		cli.StringFlag{
-			Name:     "cache-file, cf",
-			EnvVar:   "CACHE_TOKEN_FILE",
-			Usage:    "location of cached gmail token file",
+			Name:     "domain",
+			Usage:    "email domain name",
 			Required: true,
 		},
 		cli.StringFlag{
-			Name:     "reply-to",
-			Usage:    "reply-to email address for sent messages",
+			Name:     "apiKey",
+			Usage:    "mailgun api key for that domain",
 			Required: true,
 		},
 		cli.StringFlag{
-			Name:     "send-to",
-			Usage:    "email address to send messages to",
+			Name:     "name",
+			Usage:    "Full name that will be used in the from header",
+			Required: true,
+		},
+		cli.StringFlag{
+			Name:     "from",
+			Usage:    "The first part of name that will be in the email header before @",
 			Required: true,
 		},
 	}
