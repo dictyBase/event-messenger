@@ -82,7 +82,7 @@ func GetGmailClient(c *cli.Context) (*gmail.Service, error) {
 	var srv *gmail.Service
 	cacheFile, err := TokenCacheFile(c)
 	if err != nil {
-		return srv, fmt.Errorf("error unable to set the token file path %s\n", err)
+		return srv, fmt.Errorf("error unable to set the token file path %s", err)
 	}
 	tok, err := TokenFromFile(cacheFile)
 	if err != nil {
@@ -90,19 +90,19 @@ func GetGmailClient(c *cli.Context) (*gmail.Service, error) {
 	}
 	cont, err := ioutil.ReadFile(c.String("gmail-secret"))
 	if err != nil {
-		return srv, fmt.Errorf("error unable to read the secret json file %s\n", err)
+		return srv, fmt.Errorf("error unable to read the secret json file %s", err)
 	}
 	config, err := google.ConfigFromJSON(
 		cont,
 		gmail.GmailSendScope,
 	)
 	if err != nil {
-		return srv, fmt.Errorf("error unable to create oauth config from secret file %s\n", err)
+		return srv, fmt.Errorf("error unable to create oauth config from secret file %s", err)
 	}
 	client := config.Client(context.Background(), tok)
 	srv, err = gmail.New(client)
 	if err != nil {
-		return srv, fmt.Errorf("error unable to set gmail client %s\n", err)
+		return srv, fmt.Errorf("error unable to set gmail client %s", err)
 	}
 	return srv, nil
 }
