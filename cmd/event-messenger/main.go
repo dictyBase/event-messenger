@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/dictyBase/event-messenger/internal/cmd"
 	"github.com/urfave/cli"
 )
 
@@ -25,8 +26,8 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
-		ghIssueCmd(),
-		sendEmailFlags(),
+		cmd.GhIssueCmd(),
+		cmd.SendEmailFlags(),
 	}
 	if err := app.Run(os.Args); err != nil {
 		log.Fatalf("error in running command %s", err)
