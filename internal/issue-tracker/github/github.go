@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	"math/rand"
-	"time"
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
@@ -201,9 +199,4 @@ func (gh *githubIssue) plasmids(ord *order.Order) (*plasmidData, error) {
 	pd.plasmids = plasmids
 	pd.invs = plasInv
 	return pd, nil
-}
-
-func randNum(min, max int) int {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return min + r.Intn(max-min)
 }

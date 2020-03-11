@@ -61,10 +61,6 @@ func (c *IssueContent) TotalCost() int {
 	return c.StrainCost() + c.PlasmidCost()
 }
 
-func tjoin(elems []string, sep string) string {
-	return strings.Join(elems, sep)
-}
-
 const tmpl = `
  Shipping and billing information   
 
