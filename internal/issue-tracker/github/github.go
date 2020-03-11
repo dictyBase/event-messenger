@@ -9,6 +9,7 @@ import (
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
 
+	tmpl "github.com/dictyBase/event-messenger/internal/template"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
@@ -121,7 +122,7 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 
 func (gh *githubIssue) runTemplate(cont *IssueContent) (bytes.Buffer, error) {
 	var b bytes.Buffer
-	t, err := template.New("stock-invoice").Parse(tmpl)
+	t, err := template.New("stock-invoice").Parse(tmpl.IssueTmpl)
 	if err != nil {
 		return b, fmt.Errorf("error in parsing template %s", err)
 	}
