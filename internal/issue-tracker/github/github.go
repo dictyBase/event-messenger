@@ -83,11 +83,6 @@ func NewIssueCreator(args *IssueParams) issue.IssueTracker {
 
 // CreateIssue creates a new GitHub issue based on order data.
 func (gh *githubIssue) CreateIssue(ord *order.Order) error {
-	t, err := template.New("stock-invoice").Parse(tmpl)
-	if err != nil {
-		gh.logger.Errorf("error in parsing template %s", err)
-		return fmt.Errorf("error in parsing template %s", err)
-	}
 	all, err := gh.orderData(ord)
 	if err != nil {
 		gh.logger.Error(err.Error())
@@ -103,10 +98,10 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		Payer:      all.user["payer"],
 		Order:      ord,
 	}
-	var b bytes.Buffer
-	if err := t.Execute(&b, cont); err != nil {
-		gh.logger.Errorf("error in executing template %s", err)
-		return fmt.Errorf("error in executing template %s", err)
+	b, err := gh.runTemplate(cont)
+	if err != nil {
+		gh.logger.Error(err.Error())
+		return err
 	}
 	issue, err := gh.postIssue(&postIssueParams{
 		labels: gh.labels(
@@ -122,6 +117,18 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 	}
 	gh.logger.Infof("created a new issue with id %s", issue.GetHTMLURL())
 	return nil
+}
+
+func (gh *githubIssue) runTemplate(cont *IssueContent) (bytes.Buffer, error) {
+	var b bytes.Buffer
+	t, err := template.New("stock-invoice").Parse(tmpl)
+	if err != nil {
+		return b, fmt.Errorf("error in parsing template %s", err)
+	}
+	if err := t.Execute(&b, cont); err != nil {
+		return b, fmt.Errorf("error in executing template %s", err)
+	}
+	return b, nil
 }
 
 func (gh *githubIssue) orderData(ord *order.Order) (*allData, error) {
