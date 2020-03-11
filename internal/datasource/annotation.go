@@ -13,7 +13,7 @@ import (
 )
 
 type Annotation struct {
-	client annotation.TaggedAnnotationServiceClient
+	Client annotation.TaggedAnnotationServiceClient
 }
 
 func (an *Annotation) GetStrainInfo(strains []*stock.Strain) ([][]string, error) {
@@ -54,7 +54,7 @@ func (an *Annotation) GetStrainInfo(strains []*stock.Strain) ([][]string, error)
 }
 
 func (an *Annotation) getAnnotations(query string) (*annotation.TaggedAnnotationCollection, error) {
-	tac, err := an.client.ListAnnotations(
+	tac, err := an.Client.ListAnnotations(
 		context.Background(),
 		&annotation.ListParameters{Filter: query},
 	)
@@ -90,7 +90,7 @@ func (an *Annotation) annoColl2Value(tac *annotation.TaggedAnnotationCollection)
 }
 
 func (an *Annotation) getSysName(id string) (string, error) {
-	ta, err := an.client.GetEntryAnnotation(
+	ta, err := an.Client.GetEntryAnnotation(
 		context.Background(),
 		&annotation.EntryAnnotationRequest{
 			Tag:      registry.SysnameTag,
@@ -106,7 +106,7 @@ func (an *Annotation) getSysName(id string) (string, error) {
 func (an *Annotation) GetStrainInv(strains []*stock.Strain) ([][]string, error) {
 	var allInv [][]string
 	for _, st := range strains {
-		gc, err := an.client.ListAnnotationGroups(
+		gc, err := an.Client.ListAnnotationGroups(
 			context.Background(),
 			&annotation.ListGroupParameters{
 				Filter: fmt.Sprintf(
@@ -144,7 +144,7 @@ func (an *Annotation) GetStrainInv(strains []*stock.Strain) ([][]string, error) 
 func (an *Annotation) GetPlasmidInv(plasmids []*stock.Plasmid) ([][]string, error) {
 	var allInv [][]string
 	for _, pls := range plasmids {
-		gc, err := an.client.ListAnnotationGroups(
+		gc, err := an.Client.ListAnnotationGroups(
 			context.Background(),
 			&annotation.ListGroupParameters{
 				Filter: fmt.Sprintf(
