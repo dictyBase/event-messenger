@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/urfave/cli"
@@ -27,5 +28,7 @@ func main() {
 		ghIssueCmd(),
 		sendEmailFlags(),
 	}
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		log.Fatalf("error in running command %s", err)
+	}
 }
