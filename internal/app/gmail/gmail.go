@@ -24,8 +24,8 @@ func RunSendEmail(c *cli.Context) error {
 	return nil
 }
 
-func setupGmail(c *cli.Context, logger *logrus.Entry) (*nats.NatsGmailSubscriber, error) {
-	s, err := nats.NewGmailSubscriber(c.String("nats-host"), c.String("nats-port"), logger)
+func setupGmail(c *cli.Context, logger *logrus.Entry) (*nats.NatsEmailSubscriber, error) {
+	s, err := nats.NewEmailSubscriber(c.String("nats-host"), c.String("nats-port"), logger)
 	if err != nil {
 		return s, err
 	}
