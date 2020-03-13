@@ -16,6 +16,33 @@ type Annotation struct {
 	Client annotation.TaggedAnnotationServiceClient
 }
 
+func (an *Annotation) GetBasicStrainInfo(strains []*stock.Strain) ([][]string, error) {
+	var allStrains [][]string
+	for _, st := range strains {
+		sysName, err := an.getSysName(st.Data.Id)
+		if err != nil {
+			return allStrains,
+				fmt.Errorf("error in getting systematic name for strain %s %s", st.Data.Id, err)
+		}
+		stNames, err := an.getAnnotations(
+			fmt.Sprintf(
+				"entry_id===%s;tag===%s;ontology===%s",
+				st.Data.Id, registry.SynTag, registry.DictyAnnoOntology,
+			))
+		if err != nil {
+			return allStrains,
+				fmt.Errorf("error in getting strain names for strain %s %s", st.Data.Id, err)
+		}
+		allStrains = append(allStrains, []string{
+			st.Data.Id,
+			st.Data.Attributes.Label,
+			strings.Join(an.annoColl2Value(stNames), "<br/>"),
+			sysName,
+		})
+	}
+	return allStrains, nil
+}
+
 func (an *Annotation) GetStrainInfo(strains []*stock.Strain) ([][]string, error) {
 	var allStrains [][]string
 	for _, st := range strains {
