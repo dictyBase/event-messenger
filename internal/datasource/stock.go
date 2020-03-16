@@ -22,6 +22,24 @@ func (st *Stock) StocksFromItems(ord *order.Order, pattern string) []string {
 	return stocks
 }
 
+func (st *Stock) GetBasicPlasmidInfo(plasmids []*stock.Plasmid) ([][]string, error) {
+	var pdata [][]string
+	for _, p := range plasmids {
+		pls, err := st.Client.GetPlasmid(
+			context.Background(),
+			&stock.StockId{Id: p.Data.Id},
+		)
+		if err != nil {
+			return pdata, err
+		}
+		pdata = append(pdata, []string{
+			pls.Data.Id,
+			pls.Data.Attributes.Name,
+		})
+	}
+	return pdata, nil
+}
+
 func (st *Stock) GetStrains(ids []string) ([]*stock.Strain, error) {
 	var strains []*stock.Strain
 	for _, id := range ids {
