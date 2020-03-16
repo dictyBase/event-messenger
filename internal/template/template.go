@@ -1,5 +1,60 @@
 package template
 
+import (
+	"strings"
+
+	"github.com/dictyBase/go-genproto/dictybaseapis/order"
+	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+)
+
+type Content struct {
+	Order        *order.Order
+	Shipper      *user.User
+	Payer        *user.User
+	StrainPrice  int
+	PlasmidPrice int
+}
+
+func (c *Content) IsPlasmid(str string) bool {
+	return strings.Contains(str, "DBP")
+}
+
+func (c *Content) IsStrain(str string) bool {
+	return strings.Contains(str, "DBS")
+}
+
+func (c *Content) PlasmidItems() int {
+	count := 0
+	for _, item := range c.Order.Data.Attributes.Items {
+		if c.IsPlasmid(item) {
+			count++
+		}
+	}
+	return count
+}
+
+func (c *Content) StrainItems() int {
+	count := 0
+	for _, item := range c.Order.Data.Attributes.Items {
+		if c.IsStrain(item) {
+			count++
+		}
+	}
+	return count
+}
+
+func (c *Content) PlasmidCost() int {
+	return c.PlasmidItems() * c.PlasmidPrice
+}
+
+func (c *Content) StrainCost() int {
+	return c.StrainItems() * c.StrainPrice
+}
+
+func (c *Content) TotalCost() int {
+	return c.StrainCost() + c.PlasmidCost()
+}
+
 const IssueTmpl = `
  Shipping and billing information   
 
