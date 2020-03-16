@@ -56,5 +56,4 @@ const IssueTmpl = `
 # Comment
 {{.Order.Data.Attributes.Comments}}
 {{end}}
-
 `
