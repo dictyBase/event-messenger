@@ -5,6 +5,7 @@ import (
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	emailer "github.com/dictyBase/event-messenger/internal/send-email"
+	"github.com/dictyBase/event-messenger/internal/template"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/mailgun/mailgun-go/v3"
@@ -30,20 +31,6 @@ type EmailerParams struct {
 	PubSource   *datasource.Publication
 }
 
-type strainRow struct {
-	Id         string
-	SysName    string
-	Names      string
-	Descriptor string
-	PubInfo    []*datasource.PubInfo
-}
-
-type plasmidRow struct {
-	Id      string
-	Name    string
-	PubInfo []*datasource.PubInfo
-}
-
 func NewMailgunEmailer(args *EmailerParams) emailer.EmailHandler {
 	return &mailgunEmailer{
 		logger: args.Loger,
@@ -60,8 +47,8 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 
 }
 
-func (email *mailgunEmailer) plasmids(ord *order.Order) ([]*plasmidRow, error) {
-	var prows []*plasmidRow
+func (email *mailgunEmailer) plasmids(ord *order.Order) ([]*template.PlasmidRow, error) {
+	var prows []*template.PlasmidRow
 	plasmids, err := email.stk.GetPlasmids(email.stk.StocksFromItems(ord, "DBP"))
 	if err != nil {
 		return prows, fmt.Errorf("error in getting plasmids %s", err)
@@ -77,14 +64,14 @@ func (email *mailgunEmailer) plasmids(ord *order.Order) ([]*plasmidRow, error) {
 	return prows, nil
 }
 
-func (email *mailgunEmailer) addPlasmidPub(strInfo [][]string, plasmids []*stock.Plasmid) ([]*plasmidRow, error) {
-	var prows []*plasmidRow
+func (email *mailgunEmailer) addPlasmidPub(strInfo [][]string, plasmids []*stock.Plasmid) ([]*template.PlasmidRow, error) {
+	var prows []*template.PlasmidRow
 	for i, pls := range plasmids {
 		pinfo, err := email.pubInfo(pls.Data.Attributes.Publications)
 		if err != nil {
 			return prows, err
 		}
-		prows = append(prows, &plasmidRow{
+		prows = append(prows, &template.PlasmidRow{
 			Id:      strInfo[i][0],
 			Name:    strInfo[i][2],
 			PubInfo: pinfo,
@@ -93,8 +80,8 @@ func (email *mailgunEmailer) addPlasmidPub(strInfo [][]string, plasmids []*stock
 	return prows, nil
 }
 
-func (email *mailgunEmailer) strains(ord *order.Order) ([]*strainRow, error) {
-	var srows []*strainRow
+func (email *mailgunEmailer) strains(ord *order.Order) ([]*template.StrainRow, error) {
+	var srows []*template.StrainRow
 	strains, err := email.stk.GetStrains(email.stk.StocksFromItems(ord, "DBS"))
 	if err != nil {
 		return srows, fmt.Errorf("error in getting strains %s", err)
@@ -110,14 +97,14 @@ func (email *mailgunEmailer) strains(ord *order.Order) ([]*strainRow, error) {
 	return srows, nil
 }
 
-func (email *mailgunEmailer) addStrainPub(strInfo [][]string, strains []*stock.Strain) ([]*strainRow, error) {
-	var srows []*strainRow
+func (email *mailgunEmailer) addStrainPub(strInfo [][]string, strains []*stock.Strain) ([]*template.StrainRow, error) {
+	var srows []*template.StrainRow
 	for i, str := range strains {
 		pinfo, err := email.pubInfo(str.Data.Attributes.Publications)
 		if err != nil {
 			return srows, err
 		}
-		srows = append(srows, &strainRow{
+		srows = append(srows, &template.StrainRow{
 			Id:         strInfo[i][0],
 			Descriptor: strInfo[i][1],
 			Names:      strInfo[i][2],
