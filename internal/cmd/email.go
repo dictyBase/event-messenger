@@ -24,12 +24,12 @@ func emailParamFlags() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:     "name",
-			Usage:    "Full name that will be used in the from header",
+			Usage:    "full name that will be used in the from header",
 			Required: true,
 		},
 		cli.StringFlag{
-			Name:     "from",
-			Usage:    "The first part of name that will be in the email header before @",
+			Name:     "sender",
+			Usage:    "sender including the domain name",
 			Required: true,
 		},
 	}
