@@ -37,6 +37,16 @@ func emailParamFlags() []cli.Flag {
 			Usage:    "publication api endpoint",
 			Required: true,
 		},
+		cli.IntFlag{
+			Name:  "strain-price",
+			Usage: "price of individual strain",
+			Value: 30,
+		},
+		cli.IntFlag{
+			Name:  "plasmid-price",
+			Usage: "price of individual plasmid",
+			Value: 15,
+		},
 	}
 }
 
