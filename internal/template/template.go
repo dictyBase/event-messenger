@@ -87,7 +87,7 @@ func OutputText(path string, cont interface{}) (*bytes.Buffer, error) {
 	if err != nil {
 		return b, err
 	}
-	t, err := txt.New("stock-invoice").Parse(string(b.String()))
+	t, err := txt.New("stock-invoice").Parse(b.String())
 	if err != nil {
 		return b, fmt.Errorf("error in parsing template %s", err)
 	}
