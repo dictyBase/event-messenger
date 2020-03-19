@@ -68,34 +68,48 @@ func NewMailgunEmailer(args *EmailerParams) emailer.EmailHandler {
 	}
 }
 
-func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
+func (email *mailgunEmailer) orderData(ord *order.Order) (*emailData, error) {
+	all := &emailData{}
 	strData, err := email.strains(ord)
 	if err != nil {
 		email.logger.Error(err)
-		return err
+		return all, err
 	}
 	plasData, err := email.plasmids(ord)
 	if err != nil {
-		return err
+		return all, err
 	}
 	um, err := email.usr.UsersInOrder(ord)
 	if err != nil {
+		return all, err
+	}
+	all.strains = strData
+	all.plasmids = plasData
+	all.user = um
+	return all, nil
+}
+
+func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
+	all, err := email.orderData(ord)
+	if err != nil {
+		email.logger.Error(err)
 		return err
 	}
 	body, err := template.OutputHtml(
 		"/assets/email.tmpl",
 		&template.EmailContent{
-			StrainData:  strData,
-			PlasmidData: plasData,
+			StrainData:  all.strains,
+			PlasmidData: all.plasmids,
 			Content: &template.Content{
 				Order:        ord,
-				Shipper:      um["shipper"],
-				Payer:        um["payer"],
+				Shipper:      all.user["shipper"],
+				Payer:        all.user["payer"],
 				StrainPrice:  email.strprice,
 				PlasmidPrice: email.plasprice,
 			},
 		})
 	if err != nil {
+		email.logger.Error(err)
 		return err
 	}
 	msg := email.client.NewMessage(
@@ -103,14 +117,14 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 		fmt.Sprintf(
 			"Order ID:%s %s %s",
 			ord.Data.Id,
-			um["shipper"].Data.Attributes.FirstName,
-			um["shipper"].Data.Attributes.LastName,
+			all.user["shipper"].Data.Attributes.FirstName,
+			all.user["shipper"].Data.Attributes.LastName,
 		),
 		etext,
 	)
-	msg.AddRecipient(um["shipper"].Data.Attributes.Email)
-	if um["shipper"].Data.Attributes.Email != um["payer"].Data.Attributes.Email {
-		msg.AddCC(um["payer"].Data.Attributes.Email)
+	msg.AddRecipient(all.user["shipper"].Data.Attributes.Email)
+	if all.user["shipper"].Data.Attributes.Email != all.user["payer"].Data.Attributes.Email {
+		msg.AddCC(all.user["payer"].Data.Attributes.Email)
 	}
 	msg.SetHtml(body.String())
 	_, id, err := email.client.Send(context.Background(), msg)
