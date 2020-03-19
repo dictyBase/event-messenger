@@ -50,7 +50,7 @@ type EmailerParams struct {
 	ApiKey       string
 	StrainPrice  int
 	PlasmidPrice int
-	Loger        *logrus.Entry
+	Logger       *logrus.Entry
 	AnnoSource   *datasource.Annotation
 	StockSource  *datasource.Stock
 	UserSource   *datasource.User
