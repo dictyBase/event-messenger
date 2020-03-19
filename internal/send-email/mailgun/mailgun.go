@@ -122,7 +122,11 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 		),
 		etext,
 	)
-	msg.AddRecipient(all.user["shipper"].Data.Attributes.Email)
+	err = msg.AddRecipient(all.user["shipper"].Data.Attributes.Email)
+	if err != nil {
+		email.logger.Error(err)
+		return err
+	}
 	if all.user["shipper"].Data.Attributes.Email != all.user["payer"].Data.Attributes.Email {
 		msg.AddCC(all.user["payer"].Data.Attributes.Email)
 	}
