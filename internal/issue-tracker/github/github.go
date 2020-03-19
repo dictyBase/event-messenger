@@ -1,15 +1,13 @@
 package github
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"html/template"
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
 
-	tmpl "github.com/dictyBase/event-messenger/internal/template"
+	"github.com/dictyBase/event-messenger/internal/template"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
@@ -89,17 +87,20 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		gh.logger.Error(err.Error())
 		return err
 	}
-	cont := &IssueContent{
-		Strains:    all.strainData.strains,
-		Plasmids:   all.plasmidData.plasmids,
-		StrainInv:  all.strainData.invs,
-		PlasmidInv: all.plasmidData.invs,
-		StrainInfo: all.strainData.info,
-		Shipper:    all.user["shipper"],
-		Payer:      all.user["payer"],
-		Order:      ord,
-	}
-	b, err := gh.runTemplate(cont)
+	b, err := template.OutputText(
+		"/assets/issue.tmpl",
+		&template.IssueContent{
+			Strains:    all.strainData.strains,
+			Plasmids:   all.plasmidData.plasmids,
+			StrainInv:  all.strainData.invs,
+			PlasmidInv: all.plasmidData.invs,
+			StrainInfo: all.strainData.info,
+			Content: &template.Content{
+				Shipper: all.user["shipper"],
+				Payer:   all.user["payer"],
+				Order:   ord,
+			},
+		})
 	if err != nil {
 		gh.logger.Error(err.Error())
 		return err
@@ -118,18 +119,6 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 	}
 	gh.logger.Infof("created a new issue with id %s", issue.GetHTMLURL())
 	return nil
-}
-
-func (gh *githubIssue) runTemplate(cont *IssueContent) (bytes.Buffer, error) {
-	var b bytes.Buffer
-	t, err := template.New("stock-invoice").Parse(tmpl.IssueTmpl)
-	if err != nil {
-		return b, fmt.Errorf("error in parsing template %s", err)
-	}
-	if err := t.Execute(&b, cont); err != nil {
-		return b, fmt.Errorf("error in executing template %s", err)
-	}
-	return b, nil
 }
 
 func (gh *githubIssue) orderData(ord *order.Order) (*allData, error) {
