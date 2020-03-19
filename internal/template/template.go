@@ -82,40 +82,38 @@ func (c *Content) TotalCost() int {
 	return c.StrainCost() + c.PlasmidCost()
 }
 
-func OutputText(path string, cont interface{}) (bytes.Buffer, error) {
-	var b bytes.Buffer
-	tb, err := ReadFromBundle(path)
+func OutputText(path string, cont interface{}) (*bytes.Buffer, error) {
+	b, err := ReadFromBundle(path)
 	if err != nil {
 		return b, err
 	}
-	t, err := txt.New("stock-invoice").Parse(string(tb))
+	t, err := txt.New("stock-invoice").Parse(string(b.String()))
 	if err != nil {
 		return b, fmt.Errorf("error in parsing template %s", err)
 	}
-	if err := t.Execute(&b, cont); err != nil {
+	if err := t.Execute(b, cont); err != nil {
 		return b, fmt.Errorf("error in executing template %s", err)
 	}
 	return b, nil
 }
 
-func OutputHtml(path string, cont interface{}) (bytes.Buffer, error) {
-	var b bytes.Buffer
-	tb, err := ReadFromBundle(path)
+func OutputHtml(path string, cont interface{}) (*bytes.Buffer, error) {
+	b, err := ReadFromBundle(path)
 	if err != nil {
 		return b, err
 	}
-	t, err := html.New("stock-invoice").Parse(string(tb))
+	t, err := html.New("stock-invoice").Parse(b.String())
 	if err != nil {
 		return b, fmt.Errorf("error in parsing template %s", err)
 	}
-	if err := t.Execute(&b, cont); err != nil {
+	if err := t.Execute(b, cont); err != nil {
 		return b, fmt.Errorf("error in executing template %s", err)
 	}
 	return b, nil
 }
 
-func ReadFromBundle(path string) ([]byte, error) {
-	var b []byte
+func ReadFromBundle(path string) (*bytes.Buffer, error) {
+	var b *bytes.Buffer
 	f, err := pkger.Open(path)
 	if err != nil {
 		return b, fmt.Errorf("error in template file %s", err)
@@ -125,5 +123,5 @@ func ReadFromBundle(path string) ([]byte, error) {
 	if err != nil {
 		return b, fmt.Errorf("error in reading template file content %s", err)
 	}
-	return tb, nil
+	return bytes.NewBuffer(tb), nil
 }
