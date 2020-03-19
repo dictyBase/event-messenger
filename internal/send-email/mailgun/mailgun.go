@@ -1,11 +1,8 @@
 package mailgun
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	html "html/template"
-	"io/ioutil"
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	emailer "github.com/dictyBase/event-messenger/internal/send-email"
@@ -14,7 +11,6 @@ import (
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/mailgun/mailgun-go/v3"
-	"github.com/markbates/pkger"
 	"github.com/sirupsen/logrus"
 )
 
@@ -63,7 +59,7 @@ func NewMailgunEmailer(args *EmailerParams) emailer.EmailHandler {
 		from:      args.Sender,
 		strprice:  args.StrainPrice,
 		plasprice: args.PlasmidPrice,
-		logger:    args.Loger,
+		logger:    args.Logger,
 		anno:      args.AnnoSource,
 		stk:       args.StockSource,
 		usr:       args.UserSource,
@@ -86,17 +82,19 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 	if err != nil {
 		return err
 	}
-	body, err := email.runTemplate(&template.EmailContent{
-		StrainData:  strData,
-		PlasmidData: plasData,
-		Content: &template.Content{
-			Order:        ord,
-			Shipper:      um["shipper"],
-			Payer:        um["payer"],
-			StrainPrice:  email.strprice,
-			PlasmidPrice: email.plasprice,
-		},
-	})
+	body, err := template.OutputHtml(
+		"/assets/email.tmpl",
+		&template.EmailContent{
+			StrainData:  strData,
+			PlasmidData: plasData,
+			Content: &template.Content{
+				Order:        ord,
+				Shipper:      um["shipper"],
+				Payer:        um["payer"],
+				StrainPrice:  email.strprice,
+				PlasmidPrice: email.plasprice,
+			},
+		})
 	if err != nil {
 		return err
 	}
@@ -122,36 +120,6 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 	}
 	email.logger.Infof("message send with id %s", id)
 	return nil
-}
-
-func (email *mailgunEmailer) runTemplate(cont *template.EmailContent) (bytes.Buffer, error) {
-	var b bytes.Buffer
-	tb, err := email.readTemplate("/assets/email.tmpl")
-	if err != nil {
-		return b, err
-	}
-	t, err := html.New("stock-invoice").Parse(string(tb))
-	if err != nil {
-		return b, fmt.Errorf("error in parsing template %s", err)
-	}
-	if err := t.Execute(&b, cont); err != nil {
-		return b, fmt.Errorf("error in executing template %s", err)
-	}
-	return b, nil
-}
-
-func (email *mailgunEmailer) readTemplate(path string) ([]byte, error) {
-	var b []byte
-	f, err := pkger.Open(path)
-	if err != nil {
-		return b, fmt.Errorf("error in template file %s", err)
-	}
-	defer f.Close()
-	tb, err := ioutil.ReadAll(f)
-	if err != nil {
-		return b, fmt.Errorf("error in reading template file content %s", err)
-	}
-	return tb, nil
 }
 
 func (email *mailgunEmailer) plasmids(ord *order.Order) ([]*template.PlasmidRows, error) {

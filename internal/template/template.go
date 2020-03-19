@@ -1,12 +1,18 @@
 package template
 
 import (
+	"bytes"
+	"fmt"
+	html "html/template"
+	"io/ioutil"
 	"strings"
+	txt "text/template"
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/markbates/pkger"
 )
 
 type StrainRows struct {
@@ -74,4 +80,50 @@ func (c *Content) StrainCost() int {
 
 func (c *Content) TotalCost() int {
 	return c.StrainCost() + c.PlasmidCost()
+}
+
+func OutputText(path string, cont interface{}) (bytes.Buffer, error) {
+	var b bytes.Buffer
+	tb, err := ReadFromBundle(path)
+	if err != nil {
+		return b, err
+	}
+	t, err := txt.New("stock-invoice").Parse(string(tb))
+	if err != nil {
+		return b, fmt.Errorf("error in parsing template %s", err)
+	}
+	if err := t.Execute(&b, cont); err != nil {
+		return b, fmt.Errorf("error in executing template %s", err)
+	}
+	return b, nil
+}
+
+func OutputHtml(path string, cont interface{}) (bytes.Buffer, error) {
+	var b bytes.Buffer
+	tb, err := ReadFromBundle(path)
+	if err != nil {
+		return b, err
+	}
+	t, err := html.New("stock-invoice").Parse(string(tb))
+	if err != nil {
+		return b, fmt.Errorf("error in parsing template %s", err)
+	}
+	if err := t.Execute(&b, cont); err != nil {
+		return b, fmt.Errorf("error in executing template %s", err)
+	}
+	return b, nil
+}
+
+func ReadFromBundle(path string) ([]byte, error) {
+	var b []byte
+	f, err := pkger.Open(path)
+	if err != nil {
+		return b, fmt.Errorf("error in template file %s", err)
+	}
+	defer f.Close()
+	tb, err := ioutil.ReadAll(f)
+	if err != nil {
+		return b, fmt.Errorf("error in reading template file content %s", err)
+	}
+	return tb, nil
 }
