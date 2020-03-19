@@ -32,6 +32,11 @@ func emailParamFlags() []cli.Flag {
 			Usage:    "sender including the domain name",
 			Required: true,
 		},
+		cli.StringFlag{
+			Name:     "publication-api, pub",
+			Usage:    "publication api endpoint",
+			Required: true,
+		},
 	}
 }
 
