@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/dictyBase/event-messenger/internal/app/gmail"
+	"github.com/dictyBase/event-messenger/internal/app/mailgun"
 	"github.com/urfave/cli"
 )
 
@@ -56,7 +56,7 @@ func SendEmailFlags() cli.Command {
 	return cli.Command{
 		Name:   "send-email",
 		Usage:  "sends an email when a new stock order comes through",
-		Action: gmail.RunSendEmail,
+		Action: mailgun.RunSendEmail,
 		Flags:  flags,
 	}
 }
