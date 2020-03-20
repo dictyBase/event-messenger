@@ -79,10 +79,10 @@ func NewPublication(base string) *Publication {
 func (p *Publication) ParsedInfo(id string) (*PubInfo, error) {
 	pinfo := new(PubInfo)
 	res, err := pubResp(fmt.Sprintf("%s/%s", p.apiBase, id))
-	defer res.Body.Close()
 	if err != nil {
 		return pinfo, err
 	}
+	defer res.Body.Close()
 	pub := new(dictyPub)
 	if err := json.NewDecoder(res.Request.Body).Decode(pub); err != nil {
 		return pinfo, fmt.Errorf("error in decoding json %s", err)
