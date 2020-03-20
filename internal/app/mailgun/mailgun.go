@@ -42,7 +42,7 @@ func setupEmail(c *cli.Context, logger *logrus.Entry) (*nats.NatsEmailSubscriber
 		Sender:       c.String("sender"),
 		SenderName:   c.String("name"),
 		Domain:       c.String("domain"),
-		ApiKey:       c.String("apiKey"),
+		APIKey:       c.String("apiKey"),
 		StrainPrice:  c.Int("strain-price"),
 		PlasmidPrice: c.Int("plasmid-price"),
 		Logger:       logger,
