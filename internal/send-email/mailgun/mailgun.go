@@ -1,6 +1,7 @@
 package mailgun
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -89,11 +90,11 @@ func (email *mailgunEmailer) orderData(ord *order.Order) (*emailData, error) {
 	return all, nil
 }
 
-func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
+func (email *mailgunEmailer) emailBody(ord *order.Order) (*emailData, *bytes.Buffer, error) {
+	var b *bytes.Buffer
 	all, err := email.orderData(ord)
 	if err != nil {
-		email.logger.Error(err)
-		return err
+		return all, b, err
 	}
 	body, err := template.OutputHTML(
 		"/assets/email.tmpl",
@@ -108,6 +109,11 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 				PlasmidPrice: email.plasprice,
 			},
 		})
+	return all, body, err
+}
+
+func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
+	all, body, err := email.emailBody(ord)
 	if err != nil {
 		email.logger.Error(err)
 		return err
@@ -131,13 +137,21 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 		msg.AddCC(all.user["payer"].Data.Attributes.Email)
 	}
 	msg.SetHtml(body.String())
-	_, id, err := email.client.Send(context.Background(), msg)
+	id, err := email.postEmail(msg)
 	if err != nil {
-		email.logger.Errorf("error in sending email %s", err)
-		return fmt.Errorf("error in sending email %s", err)
+		return err
 	}
 	email.logger.Infof("message send with id %s", id)
 	return nil
+}
+
+func (email *mailgunEmailer) postEmail(msg *mailgun.Message) (string, error) {
+	_, id, err := email.client.Send(context.Background(), msg)
+	if err != nil {
+		email.logger.Errorf("error in sending email %s", err)
+		return id, fmt.Errorf("error in sending email %s", err)
+	}
+	return id, nil
 }
 
 func (email *mailgunEmailer) plasmids(ord *order.Order) ([]*template.PlasmidRows, error) {
