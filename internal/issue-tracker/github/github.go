@@ -84,25 +84,12 @@ func NewIssueCreator(args *IssueParams) issue.IssueTracker {
 func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 	all, err := gh.orderData(ord)
 	if err != nil {
-		gh.logger.Error(err.Error())
+		gh.logger.Error(err)
 		return err
 	}
-	b, err := template.OutputText(
-		"/assets/issue.tmpl",
-		&template.IssueContent{
-			Strains:    all.strainData.strains,
-			Plasmids:   all.plasmidData.plasmids,
-			StrainInv:  all.strainData.invs,
-			PlasmidInv: all.plasmidData.invs,
-			StrainInfo: all.strainData.info,
-			Content: &template.Content{
-				Shipper: all.user["shipper"],
-				Payer:   all.user["payer"],
-				Order:   ord,
-			},
-		})
+	b, err := template.OutputText("/assets/issue.tmpl", getContent(all, ord))
 	if err != nil {
-		gh.logger.Error(err.Error())
+		gh.logger.Error(err)
 		return err
 	}
 	issue, err := gh.postIssue(&postIssueParams{
@@ -200,4 +187,19 @@ func (gh *githubIssue) plasmids(ord *order.Order) (*plasmidData, error) {
 	pd.plasmids = plasmids
 	pd.invs = plasInv
 	return pd, nil
+}
+
+func getContent(all *allData, ord *order.Order) *template.IssueContent {
+	return &template.IssueContent{
+		Strains:    all.strainData.strains,
+		Plasmids:   all.plasmidData.plasmids,
+		StrainInv:  all.strainData.invs,
+		PlasmidInv: all.plasmidData.invs,
+		StrainInfo: all.strainData.info,
+		Content: &template.Content{
+			Shipper: all.user["shipper"],
+			Payer:   all.user["payer"],
+			Order:   ord,
+		},
+	}
 }
