@@ -78,18 +78,10 @@ func NewPublication(base string) *Publication {
 
 func (p *Publication) ParsedInfo(id string) (*PubInfo, error) {
 	pinfo := new(PubInfo)
-	pubURL := fmt.Sprintf("%s/%s", p.apiBase, id)
-	parsedURL, err := url.Parse(pubURL)
-	if err != nil {
-		return pinfo, fmt.Errorf("error in parsing url %s %s", pubURL, err)
-	}
-	res, err := http.Get(parsedURL.String())
-	if err != nil {
-		return pinfo, fmt.Errorf("error in http get request with ID %s %s", id, err)
-	}
+	res, err := pubResp(fmt.Sprintf("%s/%s", p.apiBase, id))
 	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		return pinfo, fmt.Errorf("error fetching publication %s status code %d", id, res.StatusCode)
+	if err != nil {
+		return pinfo, err
 	}
 	pub := new(dictyPub)
 	if err := json.NewDecoder(res.Request.Body).Decode(pub); err != nil {
@@ -103,6 +95,22 @@ func (p *Publication) ParsedInfo(id string) (*PubInfo, error) {
 	pinfo.PubmedURL = pub.Data.Attributes.PubmedURL
 	pinfo.DoiURL = pub.Data.Attributes.FullTextURL
 	return pinfo, nil
+}
+
+func pubResp(pubURL string) (*http.Response, error) {
+	var r *http.Response
+	parsedURL, err := url.Parse(pubURL)
+	if err != nil {
+		return r, fmt.Errorf("error in parsing url %s %s", pubURL, err)
+	}
+	res, err := http.Get(parsedURL.String())
+	if err != nil {
+		return res, fmt.Errorf("error in http get request with %s", err)
+	}
+	if res.StatusCode != 200 {
+		return res, fmt.Errorf("error fetching publication status code %d", res.StatusCode)
+	}
+	return res, nil
 }
 
 func authorStr(a []*author) string {
