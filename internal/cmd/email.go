@@ -32,6 +32,11 @@ func emailParamFlags() []cli.Flag {
 			Usage:    "sender including the domain name",
 			Required: true,
 		},
+	}
+}
+
+func datasourceFlags() []cli.Flag {
+	return []cli.Flag{
 		cli.StringFlag{
 			Name:     "publication-api, pub",
 			Usage:    "publication api endpoint",
@@ -48,10 +53,12 @@ func emailParamFlags() []cli.Flag {
 			Value: 15,
 		},
 	}
+
 }
 
 func SendEmailFlags() cli.Command {
 	flags := emailParamFlags()
+	flags = append(flags, datasourceFlags()...)
 	flags = append(flags, ghNatsFlags()...)
 	return cli.Command{
 		Name:   "send-email",
