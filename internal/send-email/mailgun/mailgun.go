@@ -43,7 +43,7 @@ type EmailerParams struct {
 	Sender       string
 	SenderName   string
 	Domain       string
-	ApiKey       string
+	APIKey       string
 	StrainPrice  int
 	PlasmidPrice int
 	Logger       *logrus.Entry
@@ -64,7 +64,7 @@ func NewMailgunEmailer(args *EmailerParams) emailer.EmailHandler {
 		stk:       args.StockSource,
 		usr:       args.UserSource,
 		pub:       args.PubSource,
-		client:    getMailgunClient(args.Domain, args.ApiKey),
+		client:    getMailgunClient(args.Domain, args.APIKey),
 	}
 }
 
@@ -95,7 +95,7 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 		email.logger.Error(err)
 		return err
 	}
-	body, err := template.OutputHtml(
+	body, err := template.OutputHTML(
 		"/assets/email.tmpl",
 		&template.EmailContent{
 			StrainData:  all.strains,
@@ -165,7 +165,7 @@ func (email *mailgunEmailer) addPlasmidPub(strInfo [][]string, plasmids []*stock
 			return prows, err
 		}
 		prows = append(prows, &template.PlasmidRows{
-			Id:      strInfo[i][0],
+			ID:      strInfo[i][0],
 			Name:    strInfo[i][2],
 			PubInfo: pinfo,
 		})
@@ -198,7 +198,7 @@ func (email *mailgunEmailer) addStrainPub(strInfo [][]string, strains []*stock.S
 			return srows, err
 		}
 		srows = append(srows, &template.StrainRows{
-			Id:         strInfo[i][0],
+			ID:         strInfo[i][0],
 			Descriptor: strInfo[i][1],
 			Names:      strInfo[i][2],
 			SysName:    strInfo[i][3],

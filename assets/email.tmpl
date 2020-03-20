@@ -161,7 +161,7 @@
                     <tbody>
                         {{- range .StrainData}}
                             <tr>
-                                <td>{{.Id}}</td>
+                                <td>{{.ID}}</td>
                                 <td>{{.SysName}}</td>
                                 <td>{{.Names}}</td>
                                 <td>{{.Descriptor}}</td>
@@ -191,7 +191,7 @@
                     <tbody>
                         {{- range .PlasmidData}}
                             <tr>
-                                <td>{{.Id}}</td>
+                                <td>{{.ID}}</td>
                                 <td>{{.Name}}</td>
                                 {{- range $pub := .PubInfo}}
                                     {{$pub.AuthorStr}} &nbsp; <a href="{{$pub.PubmedURL}}">Pubmed</a> &nbsp; <a href="{{$pub.DoiURL}}">Full text</a> <br/>

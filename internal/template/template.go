@@ -16,7 +16,7 @@ import (
 )
 
 type StrainRows struct {
-	Id         string
+	ID         string
 	SysName    string
 	Names      string
 	Descriptor string
@@ -24,7 +24,7 @@ type StrainRows struct {
 }
 
 type PlasmidRows struct {
-	Id      string
+	ID      string
 	Name    string
 	PubInfo []*datasource.PubInfo
 }
@@ -97,7 +97,7 @@ func OutputText(path string, cont interface{}) (*bytes.Buffer, error) {
 	return b, nil
 }
 
-func OutputHtml(path string, cont interface{}) (*bytes.Buffer, error) {
+func OutputHTML(path string, cont interface{}) (*bytes.Buffer, error) {
 	b, err := ReadFromBundle(path)
 	if err != nil {
 		return b, err
