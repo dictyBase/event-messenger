@@ -53,7 +53,6 @@ func datasourceFlags() []cli.Flag {
 			Value: 15,
 		},
 	}
-
 }
 
 func SendEmailFlags() cli.Command {
