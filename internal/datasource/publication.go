@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -77,8 +78,12 @@ func NewPublication(base string) *Publication {
 
 func (p *Publication) ParsedInfo(id string) (*PubInfo, error) {
 	pinfo := new(PubInfo)
-	url := fmt.Sprintf("%s/%s", p.apiBase, id)
-	res, err := http.Get(url)
+	pubURL := fmt.Sprintf("%s/%s", p.apiBase, id)
+	parsedURL, err := url.Parse(pubURL)
+	if err != nil {
+		return pinfo, fmt.Errorf("error in parsing url %s %s", pubURL, err)
+	}
+	res, err := http.Get(parsedURL.String())
 	if err != nil {
 		return pinfo, fmt.Errorf("error in http get request with ID %s %s", id, err)
 	}
