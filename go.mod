@@ -1,14 +1,13 @@
 module github.com/dictyBase/event-messenger
 
 require (
-	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
+	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/markbates/pkger v0.15.0
@@ -18,9 +17,10 @@ require (
 	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/nats-io/nuid v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
+	github.com/stretchr/testify v1.5.1
 	github.com/urfave/cli v1.22.2
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
-	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa // indirect
+	golang.org/x/net v0.0.0-20200320220750-118fecf932d8 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 // indirect
 	golang.org/x/text v0.3.2 // indirect
