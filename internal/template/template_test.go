@@ -1,14 +1,14 @@
 package template
 
 import (
-	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func checkSubstr(b *bytes.Buffer, str []string, t *testing.T) {
+func checkSubstr(b fmt.Stringer, str []string, t *testing.T) {
 	assert := assert.New(t)
 	for _, s := range str {
 		assert.Truef(
