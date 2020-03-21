@@ -19,11 +19,8 @@ func checkSubstr(b fmt.Stringer, str []string, t *testing.T) {
 	}
 }
 
-func TestReadFromBundle(t *testing.T) {
-	b, err := ReadFromBundle("./../../assets", "email.tmpl")
-	assert := assert.New(t)
-	assert.NoError(err, "expect no error from reading email.tmpl template file")
-	str := []string{
+func emailSubstr() []string {
+	return []string{
 		"dsc-header",
 		"shipping-row",
 		"Order Confirmation",
@@ -39,10 +36,10 @@ func TestReadFromBundle(t *testing.T) {
 		"Comment",
 		"Payment information",
 	}
-	checkSubstr(b, str, t)
-	b2, err := ReadFromBundle("./../../assets", "issue.tmpl")
-	assert.NoError(err, "expect no error from reading issue.tmpl template file")
-	str2 := []string{
+}
+
+func issueSubstr() []string {
+	return []string{
 		"Shipping address",
 		"Billing address",
 		"Item",
@@ -56,5 +53,14 @@ func TestReadFromBundle(t *testing.T) {
 		"Color",
 		"Plasmid information and storage",
 	}
-	checkSubstr(b2, str2, t)
+}
+
+func TestReadFromBundle(t *testing.T) {
+	b, err := ReadFromBundle("./../../assets", "email.tmpl")
+	assert := assert.New(t)
+	assert.NoError(err, "expect no error from reading email.tmpl template file")
+	checkSubstr(b, emailSubstr(), t)
+	b2, err := ReadFromBundle("./../../assets", "issue.tmpl")
+	assert.NoError(err, "expect no error from reading issue.tmpl template file")
+	checkSubstr(b2, issueSubstr(), t)
 }
