@@ -87,7 +87,7 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		gh.logger.Error(err)
 		return err
 	}
-	b, err := template.OutputText("/assets/issue.tmpl", getContent(all, ord))
+	b, err := template.OutputText("./../../assets", "issue.tmpl", getContent(all, ord))
 	if err != nil {
 		gh.logger.Error(err)
 		return err

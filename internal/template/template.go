@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	html "html/template"
-	"io/ioutil"
 	"strings"
 	txt "text/template"
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/gobuffalo/packr/v2"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/markbates/pkger"
 )
 
 type StrainRows struct {
@@ -82,8 +81,8 @@ func (c *Content) TotalCost() int {
 	return c.StrainCost() + c.PlasmidCost()
 }
 
-func OutputText(path string, cont interface{}) (*bytes.Buffer, error) {
-	b, err := ReadFromBundle(path)
+func OutputText(path, file string, cont interface{}) (*bytes.Buffer, error) {
+	b, err := ReadFromBundle(path, file)
 	if err != nil {
 		return b, err
 	}
@@ -97,8 +96,8 @@ func OutputText(path string, cont interface{}) (*bytes.Buffer, error) {
 	return b, nil
 }
 
-func OutputHTML(path string, cont interface{}) (*bytes.Buffer, error) {
-	b, err := ReadFromBundle(path)
+func OutputHTML(path, file string, cont interface{}) (*bytes.Buffer, error) {
+	b, err := ReadFromBundle(path, file)
 	if err != nil {
 		return b, err
 	}
@@ -112,16 +111,13 @@ func OutputHTML(path string, cont interface{}) (*bytes.Buffer, error) {
 	return b, nil
 }
 
-func ReadFromBundle(path string) (*bytes.Buffer, error) {
+func ReadFromBundle(path, file string) (*bytes.Buffer, error) {
 	var b *bytes.Buffer
-	f, err := pkger.Open(path)
+	box := packr.New("html", "|")
+	box.ResolutionDir = path
+	tb, err := box.Find(file)
 	if err != nil {
-		return b, fmt.Errorf("error in template file %s", err)
-	}
-	defer f.Close()
-	tb, err := ioutil.ReadAll(f)
-	if err != nil {
-		return b, fmt.Errorf("error in reading template file content %s", err)
+		return b, fmt.Errorf("error in reading template file content from path %s %s", path, err)
 	}
 	return bytes.NewBuffer(tb), nil
 }
