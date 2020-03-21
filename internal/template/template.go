@@ -14,6 +14,12 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
+type OutputParams struct {
+	File    string
+	Path    string
+	Content interface{}
+}
+
 type StrainRows struct {
 	ID         string
 	SysName    string
@@ -81,8 +87,8 @@ func (c *Content) TotalCost() int {
 	return c.StrainCost() + c.PlasmidCost()
 }
 
-func OutputText(path, file string, cont interface{}) (*bytes.Buffer, error) {
-	b, err := ReadFromBundle(path, file)
+func OutputText(args *OutputParams) (*bytes.Buffer, error) {
+	b, err := ReadFromBundle(args.Path, args.File)
 	if err != nil {
 		return b, err
 	}
@@ -90,14 +96,14 @@ func OutputText(path, file string, cont interface{}) (*bytes.Buffer, error) {
 	if err != nil {
 		return b, fmt.Errorf("error in parsing template %s", err)
 	}
-	if err := t.Execute(b, cont); err != nil {
+	if err := t.Execute(b, args.Content); err != nil {
 		return b, fmt.Errorf("error in executing template %s", err)
 	}
 	return b, nil
 }
 
-func OutputHTML(path, file string, cont interface{}) (*bytes.Buffer, error) {
-	b, err := ReadFromBundle(path, file)
+func OutputHTML(args *OutputParams) (*bytes.Buffer, error) {
+	b, err := ReadFromBundle(args.Path, args.File)
 	if err != nil {
 		return b, err
 	}
@@ -105,7 +111,7 @@ func OutputHTML(path, file string, cont interface{}) (*bytes.Buffer, error) {
 	if err != nil {
 		return b, fmt.Errorf("error in parsing template %s", err)
 	}
-	if err := t.Execute(b, cont); err != nil {
+	if err := t.Execute(b, args.Content); err != nil {
 		return b, fmt.Errorf("error in executing template %s", err)
 	}
 	return b, nil

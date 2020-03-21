@@ -96,10 +96,10 @@ func (email *mailgunEmailer) emailBody(ord *order.Order) (*emailData, *bytes.Buf
 	if err != nil {
 		return all, b, err
 	}
-	body, err := template.OutputHTML(
-		"./../../assets",
-		"email.tmpl",
-		&template.EmailContent{
+	body, err := template.OutputHTML(&template.OutputParams{
+		Path: "./../../assets",
+		File: "email.tmpl",
+		Content: &template.EmailContent{
 			StrainData:  all.strains,
 			PlasmidData: all.plasmids,
 			Content: &template.Content{
@@ -109,7 +109,7 @@ func (email *mailgunEmailer) emailBody(ord *order.Order) (*emailData, *bytes.Buf
 				StrainPrice:  email.strprice,
 				PlasmidPrice: email.plasprice,
 			},
-		})
+		}})
 	return all, body, err
 }
 

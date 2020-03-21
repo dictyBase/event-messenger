@@ -87,25 +87,38 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		gh.logger.Error(err)
 		return err
 	}
-	b, err := template.OutputText("./../../assets", "issue.tmpl", getContent(all, ord))
+	b, err := template.OutputText(&template.OutputParams{
+		File:    "./../../assets",
+		Path:    "issue.tmpl",
+		Content: getContent(all, ord),
+	})
 	if err != nil {
 		gh.logger.Error(err)
 		return err
 	}
-	issue, err := gh.postIssue(&postIssueParams{
-		labels: gh.labels(
-			all.strainData.strains,
-			all.plasmidData.plasmids,
-		),
-		body:  b.String(),
-		title: fmt.Sprintf("Order ID:%s %s", ord.Data.Id, ord.Data.Attributes.Purchaser),
-	})
+	issueParams := gh.newPostIssueParams(all, ord)
+	issueParams.body = b.String()
+	issue, err := gh.postIssue(issueParams)
 	if err != nil {
 		gh.logger.Errorf("error in posting issue to github %s", err)
 		return fmt.Errorf("error in posting issue to github %s", err)
 	}
 	gh.logger.Infof("created a new issue with id %s", issue.GetHTMLURL())
 	return nil
+}
+
+func (gh *githubIssue) newPostIssueParams(all *allData, ord *order.Order) *postIssueParams {
+	return &postIssueParams{
+		labels: gh.labels(
+			all.strainData.strains,
+			all.plasmidData.plasmids,
+		),
+		title: fmt.Sprintf(
+			"Order ID:%s %s",
+			ord.Data.Id,
+			ord.Data.Attributes.Purchaser,
+		),
+	}
 }
 
 func (gh *githubIssue) orderData(ord *order.Order) (*allData, error) {
