@@ -1,6 +1,7 @@
 module github.com/dictyBase/event-messenger
 
 require (
+	github.com/PuerkitoBio/goquery v1.5.1
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/gogo/protobuf v1.3.1 // indirect
