@@ -7,9 +7,6 @@ import (
 	"github.com/dictyBase/event-messenger/internal/message/nats"
 	mg "github.com/dictyBase/event-messenger/internal/send-email/mailgun"
 	"github.com/dictyBase/event-messenger/internal/service"
-	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
-	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -46,16 +43,8 @@ func setupEmail(c *cli.Context, logger *logrus.Entry) (*nats.NatsEmailSubscriber
 		StrainPrice:  c.Int("strain-price"),
 		PlasmidPrice: c.Int("plasmid-price"),
 		Logger:       logger,
-		AnnoSource: &datasource.Annotation{
-			Client: annotation.NewTaggedAnnotationServiceClient(mc["annotation"]),
-		},
-		StockSource: &datasource.Stock{
-			Client: stock.NewStockServiceClient(mc["stock"]),
-		},
-		UserSource: &datasource.User{
-			Client: user.NewUserServiceClient(mc["user"]),
-		},
-		PubSource: datasource.NewPublication(c.String("publication-api")),
+		Sources:      datasource.GrpcSources(mc),
+		PubSource:    datasource.NewPublication(c.String("publication-api")),
 	})
 	return s, s.Start(c.String("subject"), mailer)
 }

@@ -48,10 +48,8 @@ type EmailerParams struct {
 	StrainPrice  int
 	PlasmidPrice int
 	Logger       *logrus.Entry
-	AnnoSource   *datasource.Annotation
-	StockSource  *datasource.Stock
-	UserSource   *datasource.User
 	PubSource    *datasource.Publication
+	*datasource.Sources
 }
 
 func NewMailgunEmailer(args *EmailerParams) emailer.EmailHandler {
