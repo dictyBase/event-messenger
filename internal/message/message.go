@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	gnats "github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,4 +24,14 @@ func Shutdown(r Subscriber, logger *logrus.Entry) {
 		logger.Fatalf("unable to close the subscription %s\n", err)
 	}
 	logger.Info("closed the connections gracefully")
+}
+
+func HandleConnection(econn *gnats.EncodedConn, err error) error {
+	if err != nil {
+		return err
+	}
+	if err := econn.Flush(); err != nil {
+		return err
+	}
+	return econn.LastError()
 }
