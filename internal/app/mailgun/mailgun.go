@@ -34,7 +34,7 @@ func setupEmail(c *cli.Context, logger *logrus.Entry) (*nats.NatsEmailSubscriber
 	if err != nil {
 		return s, err
 	}
-	mc, err := service.ServiceClients(c, []string{"stock", "annotation", "user"})
+	mc, err := service.ClientConn(c, []string{"stock", "annotation", "user"})
 	if err != nil {
 		return s, err
 	}

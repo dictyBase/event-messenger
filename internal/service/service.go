@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func ServiceClients(c *cli.Context, names []string) (map[string]*grpc.ClientConn, error) {
+func ClientConn(c *cli.Context, names []string) (map[string]*grpc.ClientConn, error) {
 	mc := make(map[string]*grpc.ClientConn)
 	for _, n := range names {
 		host := fmt.Sprintf("%s-grpc-host", n)
