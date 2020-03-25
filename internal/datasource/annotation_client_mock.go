@@ -21,10 +21,7 @@ type TaggedAnnotationServiceClient struct {
 
 // AddToAnnotationGroup provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) AddToAnnotationGroup(ctx context.Context, in *annotation.AnnotationGroupId, opts ...grpc.CallOption) (*annotation.TaggedAnnotationGroup, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -51,10 +48,7 @@ func (_m *TaggedAnnotationServiceClient) AddToAnnotationGroup(ctx context.Contex
 
 // CreateAnnotation provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) CreateAnnotation(ctx context.Context, in *annotation.NewTaggedAnnotation, opts ...grpc.CallOption) (*annotation.TaggedAnnotation, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -81,10 +75,7 @@ func (_m *TaggedAnnotationServiceClient) CreateAnnotation(ctx context.Context, i
 
 // CreateAnnotationGroup provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) CreateAnnotationGroup(ctx context.Context, in *annotation.AnnotationIdList, opts ...grpc.CallOption) (*annotation.TaggedAnnotationGroup, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -111,10 +102,7 @@ func (_m *TaggedAnnotationServiceClient) CreateAnnotationGroup(ctx context.Conte
 
 // DeleteAnnotation provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) DeleteAnnotation(ctx context.Context, in *annotation.DeleteAnnotationRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -141,10 +129,7 @@ func (_m *TaggedAnnotationServiceClient) DeleteAnnotation(ctx context.Context, i
 
 // DeleteAnnotationGroup provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) DeleteAnnotationGroup(ctx context.Context, in *annotation.GroupEntryId, opts ...grpc.CallOption) (*empty.Empty, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -171,10 +156,7 @@ func (_m *TaggedAnnotationServiceClient) DeleteAnnotationGroup(ctx context.Conte
 
 // GetAnnotation provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) GetAnnotation(ctx context.Context, in *annotation.AnnotationId, opts ...grpc.CallOption) (*annotation.TaggedAnnotation, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -201,10 +183,7 @@ func (_m *TaggedAnnotationServiceClient) GetAnnotation(ctx context.Context, in *
 
 // GetAnnotationGroup provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) GetAnnotationGroup(ctx context.Context, in *annotation.GroupEntryId, opts ...grpc.CallOption) (*annotation.TaggedAnnotationGroup, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -231,10 +210,7 @@ func (_m *TaggedAnnotationServiceClient) GetAnnotationGroup(ctx context.Context,
 
 // GetAnnotationTag provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) GetAnnotationTag(ctx context.Context, in *annotation.TagRequest, opts ...grpc.CallOption) (*annotation.AnnotationTag, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -261,10 +237,7 @@ func (_m *TaggedAnnotationServiceClient) GetAnnotationTag(ctx context.Context, i
 
 // GetEntryAnnotation provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) GetEntryAnnotation(ctx context.Context, in *annotation.EntryAnnotationRequest, opts ...grpc.CallOption) (*annotation.TaggedAnnotation, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
@@ -291,11 +264,8 @@ func (_m *TaggedAnnotationServiceClient) GetEntryAnnotation(ctx context.Context,
 
 // ListAnnotationGroups provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) ListAnnotationGroups(ctx context.Context, in *annotation.ListGroupParameters, opts ...grpc.CallOption) (*annotation.TaggedAnnotationGroupCollection, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
 	var _ca []interface{}
+	_va := ifaceToOpts(opts...)
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
@@ -321,11 +291,8 @@ func (_m *TaggedAnnotationServiceClient) ListAnnotationGroups(ctx context.Contex
 
 // ListAnnotations provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) ListAnnotations(ctx context.Context, in *annotation.ListParameters, opts ...grpc.CallOption) (*annotation.TaggedAnnotationCollection, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
 	var _ca []interface{}
+	_va := ifaceToOpts(opts...)
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
@@ -351,11 +318,11 @@ func (_m *TaggedAnnotationServiceClient) ListAnnotations(ctx context.Context, in
 
 // UpdateAnnotation provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) UpdateAnnotation(ctx context.Context, in *annotation.TaggedAnnotationUpdate, opts ...grpc.CallOption) (*annotation.TaggedAnnotation, error) {
+	var _ca []interface{}
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
 	}
-	var _ca []interface{}
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
@@ -377,4 +344,12 @@ func (_m *TaggedAnnotationServiceClient) UpdateAnnotation(ctx context.Context, i
 	}
 
 	return r0, r1
+}
+
+func ifaceToOpts(opts ...grpc.CallOption) []interface{} {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	return _va
 }
