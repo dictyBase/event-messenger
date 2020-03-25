@@ -47,13 +47,11 @@ type githubIssue struct {
 }
 
 type IssueParams struct {
-	Token       string
-	Owner       string
-	Repository  string
-	Logger      *logrus.Entry
-	AnnoSource  *datasource.Annotation
-	StockSource *datasource.Stock
-	UserSource  *datasource.User
+	Token      string
+	Owner      string
+	Repository string
+	Logger     *logrus.Entry
+	*datasource.Sources
 }
 
 type postIssueParams struct {

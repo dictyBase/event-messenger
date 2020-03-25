@@ -7,9 +7,6 @@ import (
 	"github.com/dictyBase/event-messenger/internal/message"
 	"github.com/dictyBase/event-messenger/internal/message/nats"
 	"github.com/dictyBase/event-messenger/internal/service"
-	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
-	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/urfave/cli"
 )
 
@@ -36,15 +33,7 @@ func RunCreateIssue(c *cli.Context) error {
 		Token:      c.String("token"),
 		Owner:      c.String("owner"),
 		Repository: c.String("repository"),
-		AnnoSource: &datasource.Annotation{
-			Client: annotation.NewTaggedAnnotationServiceClient(mc["annotation"]),
-		},
-		StockSource: &datasource.Stock{
-			Client: stock.NewStockServiceClient(mc["stock"]),
-		},
-		UserSource: &datasource.User{
-			Client: user.NewUserServiceClient(mc["user"]),
-		},
+		Sources:    datasource.GrpcSources(mc),
 	})
 	err = s.Start(c.String("subject"), g)
 	if err != nil {
