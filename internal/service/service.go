@@ -3,6 +3,9 @@ package service
 import (
 	"fmt"
 
+	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
+	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
+	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 )
@@ -22,4 +25,16 @@ func ClientConn(c *cli.Context, names []string) (map[string]*grpc.ClientConn, er
 		mc[n] = conn
 	}
 	return mc, nil
+}
+
+func UserClient(mc map[string]*grpc.ClientConn) user.UserServiceClient {
+	return user.NewUserServiceClient(mc["user"])
+}
+
+func StockClient(mc map[string]*grpc.ClientConn) stock.StockServiceClient {
+	return stock.NewStockServiceClient(mc["stock"])
+}
+
+func AnnoClient(mc map[string]*grpc.ClientConn) annotation.TaggedAnnotationServiceClient {
+	return annotation.NewTaggedAnnotationServiceClient(mc["annotation"])
 }
