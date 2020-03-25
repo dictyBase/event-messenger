@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
+	"github.com/dictyBase/event-messenger/internal/message"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	gnats "github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats/encoders/protobuf"
@@ -35,16 +36,7 @@ func (n *NatsGithubSubscriber) Start(sub string, client issue.IssueTracker) erro
 			n.logger.Error(err)
 		}
 	})
-	if err != nil {
-		return err
-	}
-	if err := n.econn.Flush(); err != nil {
-		return err
-	}
-	if err := n.econn.LastError(); err != nil {
-		return err
-	}
-	return nil
+	return message.HandleConnection(n.econn, err)
 }
 
 // Stop stops the server

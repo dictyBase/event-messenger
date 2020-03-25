@@ -3,6 +3,7 @@ package nats
 import (
 	"fmt"
 
+	"github.com/dictyBase/event-messenger/internal/message"
 	email "github.com/dictyBase/event-messenger/internal/send-email"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	gnats "github.com/nats-io/go-nats"
@@ -35,16 +36,7 @@ func (n *NatsEmailSubscriber) Start(sub string, client email.EmailHandler) error
 			n.logger.Error(err)
 		}
 	})
-	if err != nil {
-		return err
-	}
-	if err := n.econn.Flush(); err != nil {
-		return err
-	}
-	if err := n.econn.LastError(); err != nil {
-		return err
-	}
-	return nil
+	return message.HandleConnection(n.econn, err)
 }
 
 // Stop stops the server
