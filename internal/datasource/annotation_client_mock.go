@@ -319,10 +319,7 @@ func (_m *TaggedAnnotationServiceClient) ListAnnotations(ctx context.Context, in
 // UpdateAnnotation provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) UpdateAnnotation(ctx context.Context, in *annotation.TaggedAnnotationUpdate, opts ...grpc.CallOption) (*annotation.TaggedAnnotation, error) {
 	var _ca []interface{}
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
+	_va := ifaceToOpts(opts...)
 	_ca = append(_ca, ctx, in)
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
