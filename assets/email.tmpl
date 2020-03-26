@@ -146,6 +146,7 @@
                     href="https://testdb.dictybase.org/stockcenter/information/payment">DSC website</a>.
             </div>
         </div>
+        {{ if .StrainData}}
         <div class="card-panel">
             <h5 class="blue-text text-darken-4">Strain Information</h5>
             <div class="divider"></div>
@@ -178,6 +179,8 @@
                 </table>
             </div>
         </div>
+        {{end}}
+        {{ if .PlasmidData}}
         <div class="card-panel">
             <h5 class="blue-text text-darken-4">Plasmid Information</h5>
             <div class="divider"></div>
@@ -205,6 +208,7 @@
                 <p><strong>Thank you for citing the researchers who submitted the materials you ordered!</strong></p>
             </div>
         </div>
+        {{end}}
         <div class="card-panel">
             <h5 class="blue-text text-darken-4">Comment</h5>
             <div class="divider"></div>
