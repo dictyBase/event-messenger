@@ -75,30 +75,30 @@
             {{- $p := .Payer.Data.Attributes -}}
             <div class="row">
                 <div class="col s6">
-                    <div>{{$s.FirstName}} {{$s.LastaName}}</div>
+                    <div>{{$s.FirstName}} {{$s.LastName}}</div>
                     <div>{{$s.Organization}}</div>
                     <div>{{$s.FirstAddress}}</div>
                     <div>{{$s.SecondAddress}}</div>
-                    <div>{{$s.City}} {{$s.State}} {{$s.ZipCode}}</div>
+                    <div>{{$s.City}} {{$s.State}} {{$s.Zipcode}}</div>
                     <div>{{$s.Country}}</div>
                     <div>{{$s.Phone}}</div>
                     <div><a class="blue-text text-darken-1"
                             href="{{$s.Email}}">{{$s.Email}}</a>
                     </div>
-                    <div>{{$s.Courier}} {{$s.CourierAccount}}</div>
+                    <div>{{.Order.Data.Attributes.Courier}} {{.Order.Data.Attributes.CourierAccount}}</div>
                 </div>
                 <div class="col s6">
-                    <div>{{$p.FirstName}} {{$p.LastaName}}</div>
+                    <div>{{$p.FirstName}} {{$p.LastName}}</div>
                     <div>{{$p.Organization}}</div>
                     <div>{{$p.FirstAddress}}</div>
                     <div>{{$p.SecondAddress}}</div>
-                    <div>{{$p.City}} {{$s.State}} {{$p.ZipCode}}</div>
+                    <div>{{$p.City}} {{$s.State}} {{$p.Zipcode}}</div>
                     <div>{{$p.Country}}</div>
                     <div>{{$p.Phone}}</div>
                     <div><a class="blue-text text-darken-1"
                             href="{{$p.Email}}">{{$p.Email}}</a>
                     </div>
-                    <div>{{$p.Payment}}</div>
+                    <div>{{.Order.Data.Attributes.Payment}}</div>
                 </div>
             </div>
         </div>
