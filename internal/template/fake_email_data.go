@@ -98,12 +98,12 @@ func fakeConsumer() *user.User {
 
 func fakePub() []*datasource.PubInfo {
 	return []*datasource.PubInfo{
-		&datasource.PubInfo{
+		{
 			AuthorStr: "Basu S et al. (2015)",
 			PubmedURL: "https://pubmed.gov/26088819",
 			DoiURL:    "https://doi.org/10.1002/dvg.22867",
 		},
-		&datasource.PubInfo{
+		{
 			AuthorStr: "Tweedy L & Insall RH (2020)",
 			PubmedURL: "https://pubmed.gov/32195256",
 			DoiURL:    "https://doi.org/10.3389/fcell.2020.00133",
