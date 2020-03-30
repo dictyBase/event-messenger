@@ -10,6 +10,7 @@ import (
 const (
 	consumer = "pennpacker@dictycr.org"
 	payer    = "varnsen@dictycr.org"
+	orderId  = "3894333"
 )
 
 func fakeStrainItems() []string {
@@ -37,7 +38,7 @@ func fakeOrder() *order.Order {
 	return &order.Order{
 		Data: &order.Order_Data{
 			Type: "stocks",
-			Id:   "3894333",
+			Id:   orderId,
 			Attributes: &order.OrderAttributes{
 				Payer:          payer,
 				Consumer:       consumer,
