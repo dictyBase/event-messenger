@@ -58,7 +58,7 @@
                 <p><strong>Order #{{.Order.Data.Id}}</strong></p>
             </div>
         </div>
-        <div class="card-panel">
+        <div class="card-panel" id="billing">
             <div>
                 <h5 class="blue-text text-darken-4">Shipping and Billing Information</h5>
             </div>
@@ -102,7 +102,7 @@
                 </div>
             </div>
         </div>
-        <div class="card-panel">
+        <div class="card-panel" id="cost">
             <h5 class="blue-text text-darken-4">Stocks Ordered</h5>
             <div class="divider"></div>
             <div class="section">
@@ -138,7 +138,7 @@
                 </table>
             </div>
         </div>
-        <div class="card-panel">
+        <div class="card-panel" id="payment-info">
             <h5 class="blue-text text-darken-4">Payment Information</h5>
             <div class="divider"></div>
             <div class="section">
@@ -147,7 +147,7 @@
             </div>
         </div>
         {{ if .StrainData}}
-        <div class="card-panel">
+        <div class="card-panel" id="strain">
             <h5 class="blue-text text-darken-4">Strain Information</h5>
             <div class="divider"></div>
             <div class="section">
@@ -181,7 +181,7 @@
         </div>
         {{end}}
         {{ if .PlasmidData}}
-        <div class="card-panel">
+        <div class="card-panel" id="plasmid">
             <h5 class="blue-text text-darken-4">Plasmid Information</h5>
             <div class="divider"></div>
             <div class="section">
@@ -209,7 +209,7 @@
             </div>
         </div>
         {{end}}
-        <div class="card-panel">
+        <div class="card-panel id="comment">
             <h5 class="blue-text text-darken-4">Comment</h5>
             <div class="divider"></div>
             <div class="section">
