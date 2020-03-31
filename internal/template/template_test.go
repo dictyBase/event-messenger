@@ -101,7 +101,7 @@ func TestOutputHTML(t *testing.T) {
 		"Stock information",
 		doc.Find("h4").Text(),
 	)
-	th := doc.Find("thead>tr").Children().Map(thContent)
+	th := doc.Find("thead>tr").Children().Map(childrenContent)
 	assert.Lenf(th, 2, "expect %d th elements got %d", 2, len(th))
 	assert.Exactly(th[0], "ID", "expect first th value to be ID")
 	assert.Exactly(th[1], "Name", "expect second th value to be Name")
@@ -115,6 +115,6 @@ func TestOutputHTML(t *testing.T) {
 	})
 }
 
-func thContent(index int, html *goquery.Selection) string {
+func childrenContent(index int, html *goquery.Selection) string {
 	return html.Text()
 }
