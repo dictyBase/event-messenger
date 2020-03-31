@@ -116,18 +116,22 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {{ if .StrainData}}
                         <tr>
                             <td>Strain</td>
                             <td>{{.StrainItems}}</td>
                             <td>{{.StrainPrice}}</td>
                             <td>{{.StrainCost}}</td>
                         </tr>
+                        {{end}}
+                        {{ if .PlasmidData}}
                         <tr>
                             <td>Plasmid</td>
                             <td>{{.PlasmidItems}}</td>
                             <td>{{.PlasmidPrice}}</td>
                             <td>{{.PlasmidCost}}</td>
                         </tr>
+                        {{end}}
                         <tr>
                             <td>Total</td>
                             <td></td>
@@ -209,7 +213,7 @@
             </div>
         </div>
         {{end}}
-        <div class="card-panel id="comment">
+        <div class="card-panel" id="comment">
             <h5 class="blue-text text-darken-4">Comment</h5>
             <div class="divider"></div>
             <div class="section">
