@@ -25,6 +25,67 @@ func TestEmailStrainHtml(t *testing.T) {
 	testOrderAddress(t, doc, ec)
 	testOrderPayment(t, doc, ec)
 	testOrderPayStrain(t, doc, ec)
+	testStrainInfo(t, doc, ec)
+}
+
+func testStrainInfo(t *testing.T, doc *goquery.Document, ec *EmailContent) {
+	assert := assert.New(t)
+	assert.Exactly(
+		doc.Find("div#strain.card-panel>h5.blue-text").Text(),
+		"Strain Information",
+		"should match the strain information header",
+	)
+	th := doc.Find(
+		"div#strain.card-panel>div.section>table.striped>thead>tr",
+	).Children().Map(childrenContent)
+	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
+	assert.ElementsMatch(
+		th,
+		[]string{"ID", "Descriptor", "Name(s)", "Systematic Name", "Citation"},
+		"should match all header elements",
+	)
+	tr := doc.Find(
+		"div#strain.card-panel>div.section>table.striped>tbody",
+	).Children()
+	assert.Exactly(tr.Length(), 4, "should have 4 table rows")
+	assert.Exactly(tr.Children().Length(), 20, "should have total of 20 columns")
+	stItems := fakeStrainItems()
+	tr.Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Find("td:first-child").Text(),
+			stItems[idx],
+			"should match the strain Id",
+		)
+		assert.Exactly(
+			sel.Find("td:nth-child(2)").Text(),
+			"JB10",
+			"should match the strain systematic name",
+		)
+		assert.Exactly(
+			sel.Find("td:nth-child(3)").Text(),
+			"jb10ale<br/>jb10 ale<br/>jb10-ale",
+			"should match the strain name",
+		)
+		assert.Exactly(
+			sel.Find("td:nth-child(4)").Text(),
+			"gefA-",
+			"should match the strain descriptor",
+		)
+		assert.Exactly(
+			sel.Find("td:last-child>a:first-child").Text(),
+			"Pubmed",
+			"should match text of first link",
+		)
+		pubHref, _ := sel.Find("td:last-child>a:first-child").Attr("href")
+		assert.Exactly(pubHref, "https://pubmed.gov/26088819", "should match pubmed url")
+		assert.Exactly(
+			sel.Find("td:last-child>a:nth-child(2)").Text(),
+			"Full text",
+			"should match text of last link",
+		)
+		doiHref, _ := sel.Find("td:last-child>a:nth-child(2)").Attr("href")
+		assert.Exactly(doiHref, "https://doi.org/10.1002/dvg.22867", "should match doi url")
+	})
 }
 
 func testOrderHeader(t *testing.T, doc *goquery.Document, ec *EmailContent) {
@@ -42,7 +103,7 @@ func testOrderHeader(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 		"should match order timestamp",
 	)
 	assert.Exactly(
-		fmt.Sprintf("Order #%s", orderId),
+		fmt.Sprintf("Order #%s", orderID),
 		doc.Find("div.col.s12.right-align>p:last-child>strong").Text(),
 		"should match order id",
 	)
@@ -123,6 +184,19 @@ func testOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 		tdt[len(tdt)-1],
 		strconv.Itoa(ec.TotalCost()),
 		"should match the total cost of the order",
+	)
+	pdiv := doc.Find(
+		"div#payment-info.card-panel>div.section",
+	)
+	assert.Regexp(
+		regexp.MustCompile("Payment information"),
+		pdiv.Text(),
+		"should match payment information text",
+	)
+	assert.Exactly(
+		pdiv.Find("a.blue-text.text-darken-1").Text(),
+		"DSC website",
+		"should match the text for the link",
 	)
 }
 
