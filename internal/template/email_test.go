@@ -25,10 +25,10 @@ func TestEmailStrainHtml(t *testing.T) {
 	testOrderAddress(t, doc, ec)
 	testOrderPayment(t, doc, ec)
 	testOrderPayStrain(t, doc, ec)
-	testStrainInfo(t, doc, ec)
+	testStrainInfo(t, doc)
 }
 
-func testStrainInfo(t *testing.T, doc *goquery.Document, ec *EmailContent) {
+func testStrainInfo(t *testing.T, doc *goquery.Document) {
 	assert := assert.New(t)
 	assert.Exactly(
 		doc.Find("div#strain.card-panel>h5.blue-text").Text(),
