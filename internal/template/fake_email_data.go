@@ -128,15 +128,42 @@ func fakeStrain() []*StrainRows {
 	return rows
 }
 
-func fakeStrainOnlyEmailContent() *EmailContent {
+func fakePlasmid() []*PlasmidRows {
+	var rows []*PlasmidRows
+	for _, p := range fakePlasmidItems() {
+		rows = append(rows,
+			&PlasmidRows{
+				ID:      p,
+				PubInfo: fakePub(),
+				Name:    "pDV-fAR1-CYFP",
+			},
+		)
+	}
+	return rows
+}
+
+func fakeContent() *Content {
+	return &Content{
+		Order:   fakeOrder(),
+		Shipper: fakeConsumer(),
+		Payer:   fakePayer(),
+	}
+}
+
+func fakePlasmidOnlyEmailContent() *EmailContent {
+	c := fakeContent()
+	c.PlasmidPrice = 10
 	return &EmailContent{
-		Content: &Content{
-			StrainPrice:  10,
-			PlasmidPrice: 20,
-			Order:        fakeOrder(),
-			Shipper:      fakeConsumer(),
-			Payer:        fakePayer(),
-		},
+		PlasmidData: fakePlasmid(),
+		Content:     c,
+	}
+}
+
+func fakeStrainOnlyEmailContent() *EmailContent {
+	c := fakeContent()
+	c.StrainPrice = 10
+	return &EmailContent{
 		StrainData: fakeStrain(),
+		Content:    c,
 	}
 }
