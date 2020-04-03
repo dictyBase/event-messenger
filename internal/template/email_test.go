@@ -10,7 +10,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestEmailPlasmidHtml(t *testing.T) {
+	t.Parallel()
+	ec := fakePlasmidOnlyEmailContent()
+	b, err := OutputHTML(&OutputParams{
+		File:    "email.tmpl",
+		Path:    "./../../assets",
+		Content: ec,
+	})
+	assert := assert.New(t)
+	assert.NoError(err, "expect no error from rendering email template with plasmid data")
+	doc, err := goquery.NewDocumentFromReader(b)
+	assert.NoError(err, "expect no error from reading html output")
+	testOrderHeader(t, doc, ec)
+	testOrderAddress(t, doc, ec)
+	testOrderPayment(t, doc, ec)
+	testOrderPayPlasmid(t, doc, ec)
+	testPlasmidInfo(t, doc)
+}
+
 func TestEmailStrainHtml(t *testing.T) {
+	t.Parallel()
 	ec := fakeStrainOnlyEmailContent()
 	b, err := OutputHTML(&OutputParams{
 		File:    "email.tmpl",
@@ -45,10 +65,10 @@ func testPlasmidInfo(t *testing.T, doc *goquery.Document) {
 		"should match all header elements",
 	)
 	tr := doc.Find(
-		"div#strain.card-panel>div.section>table.striped>tbody",
+		"div#plasmid.card-panel>div.section>table.striped>tbody",
 	).Children()
-	assert.Exactly(tr.Length(), 4, "should have 4 table rows")
-	assert.Exactly(tr.Children().Length(), 12, "should have total of 20 columns")
+	assert.Exactly(tr.Length(), 3, "should have 3 table rows")
+	assert.Exactly(tr.Children().Length(), 9, "should have total of 9 columns")
 	stItems := fakePlasmidItems()
 	tr.Each(func(idx int, sel *goquery.Selection) {
 		assert.Exactly(
@@ -238,6 +258,24 @@ func testOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 		pdiv.Find("a.blue-text.text-darken-1").Text(),
 		"DSC website",
 		"should match the text for the link",
+	)
+}
+
+func testOrderPayPlasmid(t *testing.T, doc *goquery.Document, ec *EmailContent) {
+	assert := assert.New(t)
+	tds := doc.Find(
+		"div#cost.card-panel>div.section>table.striped>tbody>tr:nth-child(1)",
+	).Children().Map(childrenContent)
+	assert.Lenf(tds, 4, "expect %d got %d elements", 4, len(tds))
+	assert.ElementsMatch(
+		tds,
+		[]string{
+			"Plasmid",
+			strconv.Itoa(ec.PlasmidItems()),
+			strconv.Itoa(ec.PlasmidPrice),
+			strconv.Itoa(ec.PlasmidCost()),
+		},
+		"should match all plasmid cost elements",
 	)
 }
 
