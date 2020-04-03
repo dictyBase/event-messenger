@@ -28,6 +28,60 @@ func TestEmailStrainHtml(t *testing.T) {
 	testStrainInfo(t, doc)
 }
 
+func testPlasmidInfo(t *testing.T, doc *goquery.Document) {
+	assert := assert.New(t)
+	assert.Exactly(
+		doc.Find("div#plasmid.card-panel>h5.blue-text").Text(),
+		"Plasmid Information",
+		"should match the plasmid information header",
+	)
+	th := doc.Find(
+		"div#plasmid.card-panel>div.section>table.striped>thead>tr",
+	).Children().Map(childrenContent)
+	assert.Lenf(th, 3, "expect %d got %d elements", 3, len(th))
+	assert.ElementsMatch(
+		th,
+		[]string{"ID", "Plasmid Name", "Citation"},
+		"should match all header elements",
+	)
+	tr := doc.Find(
+		"div#strain.card-panel>div.section>table.striped>tbody",
+	).Children()
+	assert.Exactly(tr.Length(), 4, "should have 4 table rows")
+	assert.Exactly(tr.Children().Length(), 12, "should have total of 20 columns")
+	stItems := fakePlasmidItems()
+	tr.Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Find("td:first-child").Text(),
+			stItems[idx],
+			"should match the plasmid Id",
+		)
+		assert.Exactly(
+			sel.Find("td:nth-child(2)").Text(),
+			"pDV-fAR1-CYFP",
+			"should match the plasmid name",
+		)
+		testPubInfo(assert, sel)
+	})
+}
+
+func testPubInfo(assert *assert.Assertions, sel *goquery.Selection) {
+	assert.Exactly(
+		sel.Find("td:last-child>a:first-child").Text(),
+		"Pubmed",
+		"should match text of first link",
+	)
+	pubHref, _ := sel.Find("td:last-child>a:first-child").Attr("href")
+	assert.Exactly(pubHref, "https://pubmed.gov/26088819", "should match pubmed url")
+	assert.Exactly(
+		sel.Find("td:last-child>a:nth-child(2)").Text(),
+		"Full text",
+		"should match text of last link",
+	)
+	doiHref, _ := sel.Find("td:last-child>a:nth-child(2)").Attr("href")
+	assert.Exactly(doiHref, "https://doi.org/10.1002/dvg.22867", "should match doi url")
+}
+
 func testStrainInfo(t *testing.T, doc *goquery.Document) {
 	assert := assert.New(t)
 	assert.Exactly(
@@ -71,20 +125,7 @@ func testStrainInfo(t *testing.T, doc *goquery.Document) {
 			"gefA-",
 			"should match the strain descriptor",
 		)
-		assert.Exactly(
-			sel.Find("td:last-child>a:first-child").Text(),
-			"Pubmed",
-			"should match text of first link",
-		)
-		pubHref, _ := sel.Find("td:last-child>a:first-child").Attr("href")
-		assert.Exactly(pubHref, "https://pubmed.gov/26088819", "should match pubmed url")
-		assert.Exactly(
-			sel.Find("td:last-child>a:nth-child(2)").Text(),
-			"Full text",
-			"should match text of last link",
-		)
-		doiHref, _ := sel.Find("td:last-child>a:nth-child(2)").Attr("href")
-		assert.Exactly(doiHref, "https://doi.org/10.1002/dvg.22867", "should match doi url")
+		testPubInfo(assert, sel)
 	})
 }
 
