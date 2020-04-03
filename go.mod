@@ -20,7 +20,7 @@ require (
 	github.com/nats-io/nuid v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.5.1
-	github.com/urfave/cli v1.22.2
+	github.com/urfave/cli v1.22.4
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
 	golang.org/x/net v0.0.0-20200320220750-118fecf932d8 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
