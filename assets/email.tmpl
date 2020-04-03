@@ -202,9 +202,11 @@
                             <tr>
                                 <td>{{.ID}}</td>
                                 <td>{{.Name}}</td>
+                                <td>
                                 {{- range $pub := .PubInfo}}
                                     {{$pub.AuthorStr}} &nbsp; <a href="{{$pub.PubmedURL}}">Pubmed</a> &nbsp; <a href="{{$pub.DoiURL}}">Full text</a> <br/>
                                 {{- end}}
+                                </td>
                             </tr>
                         {{- end}}
                     </tbody>
