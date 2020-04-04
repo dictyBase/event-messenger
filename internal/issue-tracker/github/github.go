@@ -202,8 +202,6 @@ func (gh *githubIssue) plasmids(ord *order.Order) (*plasmidData, error) {
 
 func getContent(all *allData, ord *order.Order) *template.IssueContent {
 	return &template.IssueContent{
-		Strains:    all.strainData.strains,
-		Plasmids:   all.plasmidData.plasmids,
 		StrainInv:  all.strainData.invs,
 		PlasmidInv: all.plasmidData.invs,
 		StrainInfo: all.strainData.info,
