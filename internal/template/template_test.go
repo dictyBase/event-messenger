@@ -58,6 +58,7 @@ func issueSubstr() []string {
 }
 
 func TestReadFromBundle(t *testing.T) {
+	t.Parallel()
 	b, err := ReadFromBundle("./../../assets", "email.tmpl")
 	assert := assert.New(t)
 	assert.NoError(err, "expect no error from reading email.tmpl template file")
@@ -67,28 +68,23 @@ func TestReadFromBundle(t *testing.T) {
 	checkSubstr(b2, issueSubstr(), t)
 }
 
+func TestMarkdown(t *testing.T) {
+	t.Parallel()
+	_, err := OutputText(&OutputParams{
+		File:    "test_markdown.tmpl",
+		Path:    "./../../testdata",
+		Content: fakeTemplateData(),
+	})
+	assert := assert.New(t)
+	assert.NoError(err, "expect no error from reading test_html.tmpl template file")
+}
+
 func TestOutputHTML(t *testing.T) {
-	st := []struct {
-		ID   string
-		Name string
-	}{
-		{"DBS0236831", "tori"},
-		{"DBS0236415", "lori"},
-	}
-	ct := struct {
-		Header  string
-		Strains []struct {
-			ID   string
-			Name string
-		}
-	}{
-		"Stock information",
-		st,
-	}
+	t.Parallel()
 	b, err := OutputHTML(&OutputParams{
 		File:    "test_html.tmpl",
 		Path:    "./../../testdata",
-		Content: ct,
+		Content: fakeTemplateData(),
 	})
 	assert := assert.New(t)
 	assert.NoError(err, "expect no error from reading test_html.tmpl template file")
