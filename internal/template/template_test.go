@@ -1,6 +1,7 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strings"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 )
 
 func checkSubstr(b fmt.Stringer, str []string, t *testing.T) {
@@ -70,13 +73,18 @@ func TestReadFromBundle(t *testing.T) {
 
 func TestMarkdown(t *testing.T) {
 	t.Parallel()
-	_, err := OutputText(&OutputParams{
+	b, err := OutputText(&OutputParams{
 		File:    "test_markdown.tmpl",
 		Path:    "./../../testdata",
 		Content: fakeTemplateData(),
 	})
 	assert := assert.New(t)
 	assert.NoError(err, "expect no error from reading test_html.tmpl template file")
+	var out bytes.Buffer
+	md := goldmark.New(goldmark.WithExtensions(extension.GFM))
+	err = md.Convert(b.Bytes(), &out)
+	assert.NoError(err, "expect no error from markdown conversion")
+	testHTMLtree(assert, &out, "h1")
 }
 
 func TestOutputHTML(t *testing.T) {
@@ -88,14 +96,22 @@ func TestOutputHTML(t *testing.T) {
 	})
 	assert := assert.New(t)
 	assert.NoError(err, "expect no error from reading test_html.tmpl template file")
+	testHTMLtree(assert, b, "h4")
+}
+
+func childrenContent(index int, html *goquery.Selection) string {
+	return html.Text()
+}
+
+func testHTMLtree(assert *assert.Assertions, b *bytes.Buffer, tag string) {
 	doc, err := goquery.NewDocumentFromReader(b)
 	assert.NoError(err, "expect no error from reading html output")
 	assert.Exactlyf(
-		doc.Find("h4").Text(),
+		doc.Find(tag).Text(),
 		"Stock information",
 		"expected header %s got %s",
 		"Stock information",
-		doc.Find("h4").Text(),
+		doc.Find(tag).Text(),
 	)
 	th := doc.Find("thead>tr").Children().Map(childrenContent)
 	assert.Lenf(th, 2, "expect %d th elements got %d", 2, len(th))
@@ -109,8 +125,4 @@ func TestOutputHTML(t *testing.T) {
 	tr.Find("td:last-child").Each(func(i int, html *goquery.Selection) {
 		assert.Regexp(regexp.MustCompile("ori"), html.Text(), "expect the value of first child to match ori")
 	})
-}
-
-func childrenContent(index int, html *goquery.Selection) string {
-	return html.Text()
 }
