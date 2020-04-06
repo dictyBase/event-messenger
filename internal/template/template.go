@@ -96,10 +96,12 @@ func OutputText(args *OutputParams) (*bytes.Buffer, error) {
 	if err != nil {
 		return b, fmt.Errorf("error in parsing template %s", err)
 	}
-	if err := t.Execute(b, args.Content); err != nil {
-		return b, fmt.Errorf("error in executing template %s", err)
+	out := bytes.NewBuffer([]byte(""))
+	if err := t.Execute(out, args.Content); err != nil {
+		return out, fmt.Errorf("error in executing template %s", err)
+
 	}
-	return b, nil
+	return out, nil
 }
 
 func OutputHTML(args *OutputParams) (*bytes.Buffer, error) {

@@ -1,7 +1,9 @@
-#{{.Header}}
+# {{.Header}}
 
-|   ID  |   Name    |
-: ----- | ----------:
-{{- range .Strains}}
-| {{.ID}} |  {{.Name}}  |
-{{end}}
+
+|  ID  |  Name |
+| ----- | -------|   
+{{- range .Strains }}
+|  {{.ID}} | {{.Name}} |
+
+{{- end }}
