@@ -99,7 +99,6 @@ func OutputText(args *OutputParams) (*bytes.Buffer, error) {
 	out := bytes.NewBuffer([]byte(""))
 	if err := t.Execute(out, args.Content); err != nil {
 		return out, fmt.Errorf("error in executing template %s", err)
-
 	}
 	return out, nil
 }
