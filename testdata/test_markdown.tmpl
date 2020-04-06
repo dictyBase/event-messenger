@@ -1,0 +1,7 @@
+#{{.Header}}
+
+|   ID  |   Name    |
+: ----- | ----------:
+{{- range .Strains}}
+| {{.ID}} |  {{.Name}}  |
+{{end}}
