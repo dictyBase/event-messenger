@@ -3,6 +3,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 	"testing"
@@ -103,8 +104,8 @@ func childrenContent(index int, html *goquery.Selection) string {
 	return html.Text()
 }
 
-func testHTMLtree(assert *assert.Assertions, b *bytes.Buffer, tag string) {
-	doc, err := goquery.NewDocumentFromReader(b)
+func testHTMLtree(assert *assert.Assertions, r io.Reader, tag string) {
+	doc, err := goquery.NewDocumentFromReader(r)
 	assert.NoError(err, "expect no error from reading html output")
 	assert.Exactlyf(
 		doc.Find(tag).Text(),
