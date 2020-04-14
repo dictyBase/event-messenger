@@ -21,11 +21,11 @@ func TestEmailPlasmidHtml(t *testing.T) {
 	assert.NoError(err, "expect no error from rendering email template with plasmid data")
 	doc, err := goquery.NewDocumentFromReader(b)
 	assert.NoError(err, "expect no error from reading html output")
-	testOrderHeader(t, doc, ec)
-	testOrderAddress(t, doc, ec)
-	testOrderPayment(t, doc, ec)
-	testOrderPayPlasmid(t, doc, ec)
-	testPlasmidInfo(t, doc)
+	testHtmlOrderHeader(t, doc, ec)
+	testHtmlOrderAddress(t, doc, ec)
+	testHtmlOrderPayment(t, doc, ec)
+	testHtmlOrderPayPlasmid(t, doc, ec)
+	testHtmlPlasmidInfo(t, doc)
 }
 
 func TestEmailStrainHtml(t *testing.T) {
@@ -39,14 +39,14 @@ func TestEmailStrainHtml(t *testing.T) {
 	assert.NoError(err, "expect no error from rendering email template with strain data")
 	doc, err := goquery.NewDocumentFromReader(b)
 	assert.NoError(err, "expect no error from reading html output")
-	testOrderHeader(t, doc, ec)
-	testOrderAddress(t, doc, ec)
-	testOrderPayment(t, doc, ec)
-	testOrderPayStrain(t, doc, ec)
-	testStrainInfo(t, doc)
+	testHtmlOrderHeader(t, doc, ec)
+	testHtmlOrderAddress(t, doc, ec)
+	testHtmlOrderPayment(t, doc, ec)
+	testHtmlOrderPayStrain(t, doc, ec)
+	testHtmlStrainInfo(t, doc)
 }
 
-func testPlasmidInfo(t *testing.T, doc *goquery.Document) {
+func testHtmlPlasmidInfo(t *testing.T, doc *goquery.Document) {
 	assert := assert.New(t)
 	assert.Exactly(
 		doc.Find("div#plasmid.card-panel>h5.blue-text").Text(),
@@ -79,11 +79,11 @@ func testPlasmidInfo(t *testing.T, doc *goquery.Document) {
 			"pDV-fAR1-CYFP",
 			"should match the plasmid name",
 		)
-		testPubInfo(assert, sel)
+		testHtmlPubInfo(assert, sel)
 	})
 }
 
-func testPubInfo(assert *assert.Assertions, sel *goquery.Selection) {
+func testHtmlPubInfo(assert *assert.Assertions, sel *goquery.Selection) {
 	assert.Exactly(
 		sel.Find("td:last-child>a:first-child").Text(),
 		"Pubmed",
@@ -100,7 +100,7 @@ func testPubInfo(assert *assert.Assertions, sel *goquery.Selection) {
 	assert.Exactly(doiHref, "https://doi.org/10.1002/dvg.22867", "should match doi url")
 }
 
-func testStrainInfo(t *testing.T, doc *goquery.Document) {
+func testHtmlStrainInfo(t *testing.T, doc *goquery.Document) {
 	assert := assert.New(t)
 	assert.Exactly(
 		doc.Find("div#strain.card-panel>h5.blue-text").Text(),
@@ -143,11 +143,11 @@ func testStrainInfo(t *testing.T, doc *goquery.Document) {
 			"gefA-",
 			"should match the strain descriptor",
 		)
-		testPubInfo(assert, sel)
+		testHtmlPubInfo(assert, sel)
 	})
 }
 
-func testOrderHeader(t *testing.T, doc *goquery.Document, ec *EmailContent) {
+func testHtmlOrderHeader(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 	assert := assert.New(t)
 	assert.Regexpf(
 		regexp.MustCompile("Order Confirmation"),
@@ -168,7 +168,7 @@ func testOrderHeader(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 	)
 }
 
-func testOrderAddress(t *testing.T, doc *goquery.Document, ec *EmailContent) {
+func testHtmlOrderAddress(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 	assert := assert.New(t)
 	assert.Exactly(
 		"Shipping Address",
@@ -223,7 +223,7 @@ func testOrderAddress(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 	)
 }
 
-func testOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent) {
+func testHtmlOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 	assert := assert.New(t)
 	th := doc.Find(
 		"div#cost.card-panel>div.section>table.striped>thead>tr",
@@ -259,7 +259,7 @@ func testOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 	)
 }
 
-func testOrderPayPlasmid(t *testing.T, doc *goquery.Document, ec *EmailContent) {
+func testHtmlOrderPayPlasmid(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 	assert := assert.New(t)
 	tds := doc.Find(
 		"div#cost.card-panel>div.section>table.striped>tbody>tr:nth-child(1)",
@@ -277,7 +277,7 @@ func testOrderPayPlasmid(t *testing.T, doc *goquery.Document, ec *EmailContent) 
 	)
 }
 
-func testOrderPayStrain(t *testing.T, doc *goquery.Document, ec *EmailContent) {
+func testHtmlOrderPayStrain(t *testing.T, doc *goquery.Document, ec *EmailContent) {
 	assert := assert.New(t)
 	tds := doc.Find(
 		"div#cost.card-panel>div.section>table.striped>tbody>tr:first-child",
