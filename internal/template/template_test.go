@@ -72,7 +72,7 @@ func TestReadFromBundle(t *testing.T) {
 	checkSubstr(b2, issueSubstr(), t)
 }
 
-func TestMarkdown(t *testing.T) {
+func TestMarkdownOutput(t *testing.T) {
 	t.Parallel()
 	b, err := OutputText(&OutputParams{
 		File:    "test_markdown.tmpl",
@@ -88,7 +88,7 @@ func TestMarkdown(t *testing.T) {
 	testHTMLtree(assert, &out, "h1")
 }
 
-func TestOutputHTML(t *testing.T) {
+func TestHTMLOutput(t *testing.T) {
 	t.Parallel()
 	b, err := OutputHTML(&OutputParams{
 		File:    "test_html.tmpl",
