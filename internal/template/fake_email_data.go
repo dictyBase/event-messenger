@@ -150,6 +150,20 @@ func fakePlasmid() []*PlasmidRows {
 	return rows
 }
 
+func fakePlasmidInv() [][]string {
+	var rows [][]string
+	for _, p := range fakePlasmidItems() {
+		rows = append(rows, []string{
+			p,
+			"pDV-fAR1-CYFP",
+			"DH5α",
+			"12(45,54)",
+			"blue",
+		})
+	}
+	return rows
+}
+
 func fakeContent() *Content {
 	return &Content{
 		Order:   fakeOrder(),
@@ -164,6 +178,15 @@ func fakePlasmidOnlyEmailContent() *EmailContent {
 	return &EmailContent{
 		PlasmidData: fakePlasmid(),
 		Content:     c,
+	}
+}
+
+func fakePlasmidOnlyIssueContent() *IssueContent {
+	c := fakeContent()
+	c.PlasmidPrice = 10
+	return &IssueContent{
+		Content:    c,
+		PlasmidInv: fakePlasmidInv(),
 	}
 }
 
