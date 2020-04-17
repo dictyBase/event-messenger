@@ -7,8 +7,8 @@
 # Shipping and billing information   
 
 |	Shipping address |	  | Billing address	 |
-: -------------------|----|------------------:
-|  {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} {{- end }} |          | {{- with .Payer.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} <br/> {{$o.Payment}} {{- end }} |
+| -------------------|----|------------------|
+|  {{with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} {{- end }} |          | {{- with .Payer.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} <br/> {{$o.Payment}} {{- end }} |
 
 {{if or .StrainInv .PlasmidInv}}
 # Stocks ordered
@@ -18,7 +18,8 @@
 |	Strain	| {{.StrainItems}}   | {{.StrainPrice}}   |  {{.StrainCost}}   |
 |	Plasmid	| {{.PlasmidItems}}  | {{.PlasmidPrice}}  |  {{.PlasmidCost}}  |
 |			|					 |					  |	 {{.TotalCost}}    |
-{{end}}
+
+{{- end}}
 
 {{if .StrainInfo}}
 # Strain information 
@@ -27,7 +28,8 @@
 |-------|---------------|--- --------|--------------------|-----------------|
 {{- range $idx,$e := .StrainInfo}}
 | {{index $e 0}}  | {{index $e 1}}  | {{index $e 2}} | {{index $e 3}} | {{index $e 4}} |
-{{end}}
+
+{{- end}}
 {{end}}
 	
 
@@ -38,19 +40,21 @@
 |--------|------------|----------|---------------|----------|
 {{- range $idx,$e := .StrainInv}}
 | {{index $e 0}} | {{index $e 1}} | {{index $e 2}} |  {{index $e 3}} | {{index $e 4}} |
-{{end}}
+
+{{- end}}
 {{end}}
 
 
 
 {{if .PlasmidInv}}
-# Plasmid information and storage
+# Plasmid information and storage   
 
 | ID  |	Name  |	Stored as |	Location |	Color |
 |-----|-------|-----------|----------|--------|
 {{- range $idx,$e := .PlasmidInv}}
 | {{index $e 0}} | {{index $e 1}} | {{index $e 2}} | {{index $e 3}} | {{index $e 4}} |
-{{end}}
+
+{{- end}}
 {{end}}
 
 {{if .Order.Data.Attributes.Comments}}
