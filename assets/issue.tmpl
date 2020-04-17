@@ -1,13 +1,14 @@
 **Date:** {{.OrderTimestamp}}   
 
-**Order ID:** {{.Order.Data.Id}}
+**Order ID:** {{.Order.Data.Id}}   
 
+{{$o := .Order.Data.Attributes}}
 
- Shipping and billing information   
+# Shipping and billing information   
 
 |	Shipping address |	  | Billing address	 |
 : -------------------|----|------------------:
-|  {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} {{- end }} |          | {{- with .Payer.Data.Attributes }} {{.FirstName}} {{.LastaName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.ZipCode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{.Courier}} {{.CourierAccount}} <br/> {{.Payment}} {{- end }} |
+|  {{- with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} {{- end }} |          | {{- with .Payer.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} <br/> {{$o.Payment}} {{- end }} |
 
 {{if or .StrainInv .PlasmidInv}}
 # Stocks ordered
@@ -27,6 +28,7 @@
 {{- range $idx,$e := .StrainInfo}}
 | {{index $e 0}}  | {{index $e 1}}  | {{index $e 2}} | {{index $e 3}} | {{index $e 4}} |
 {{end}}
+{{end}}
 	
 
 {{if .StrainInv}}
@@ -36,6 +38,7 @@
 |--------|------------|----------|---------------|----------|
 {{- range $idx,$e := .StrainInv}}
 | {{index $e 0}} | {{index $e 1}} | {{index $e 2}} |  {{index $e 3}} | {{index $e 4}} |
+{{end}}
 {{end}}
 
 
@@ -48,9 +51,9 @@
 {{- range $idx,$e := .PlasmidInv}}
 | {{index $e 0}} | {{index $e 1}} | {{index $e 2}} | {{index $e 3}} | {{index $e 4}} |
 {{end}}
+{{end}}
 
 {{if .Order.Data.Attributes.Comments}}
 # Comment
 {{.Order.Data.Attributes.Comments}}
 {{end}}
-`
