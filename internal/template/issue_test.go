@@ -3,6 +3,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -33,6 +34,66 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 	assert.NoError(err, "expect no error from reading html output")
 	testMarkdownOrderHeader(t, doc, ic)
 	testMarkdownOrderAddress(t, doc, ic)
+	testMarkdownOrderPayment(t, doc, ic)
+	testMarkdownOrderPayPlasmid(t, doc, ic)
+}
+
+func testMarkdownOrderPayment(t *testing.T, doc *goquery.Document, ic *IssueContent) {
+	assert := assert.New(t)
+	th := doc.Find("table>thead").Eq(1).Find("tr").
+		Children().Map(childrenContent)
+	assert.Lenf(th, 4, "expect %d got %d elements", 4, len(th))
+	assert.ElementsMatch(
+		th,
+		[]string{"Item", "Quantity", "Unit price($)", "Total($)"},
+		"should match all header elements",
+	)
+	assert.Exactly(
+		doc.Find("table>tbody").Eq(1).
+			Find("tr:nth-child(3)>td:nth-child(4)").Text(),
+		strconv.Itoa(ic.TotalCost()),
+		"should match the total cost of the order",
+	)
+}
+
+func testMarkdownOrderPayPlasmid(t *testing.T, doc *goquery.Document, ic *IssueContent) {
+	assert := assert.New(t)
+	assert.ElementsMatch(
+		doc.Find("table>tbody").Eq(1).
+			Find("tr:nth-child(2)").
+			Children().Map(childrenContent),
+		[]string{
+			"Plasmid",
+			strconv.Itoa(ic.PlasmidItems()),
+			strconv.Itoa(ic.PlasmidPrice),
+			strconv.Itoa(ic.PlasmidCost()),
+		},
+		"should match plasmid row elements",
+	)
+
+	//tdt := doc.Find(
+	//"div#cost.card-panel>div.section>table.striped>tbody>tr:last-child",
+	//).Children().Map(childrenContent)
+	//assert.Lenf(tdt, 4, "expect %d got %d elements", 4, len(tdt))
+	//assert.Exactly(tdt[0], "Total", "should have total header")
+	//assert.Exactly(
+	//tdt[len(tdt)-1],
+	//strconv.Itoa(ec.TotalCost()),
+	//"should match the total cost of the order",
+	//)
+	//pdiv := doc.Find(
+	//"div#payment-info.card-panel>div.section",
+	//)
+	//assert.Regexp(
+	//regexp.MustCompile("Payment information"),
+	//pdiv.Text(),
+	//"should match payment information text",
+	//)
+	//assert.Exactly(
+	//pdiv.Find("a.blue-text.text-darken-1").Text(),
+	//"DSC website",
+	//"should match the text for the link",
+	//)
 }
 
 func testMarkdownOrderHeader(t *testing.T, doc *goquery.Document, ic *IssueContent) {
