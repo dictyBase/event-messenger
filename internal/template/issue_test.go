@@ -36,6 +36,76 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 	testMarkdownOrderAddress(t, doc, ic)
 	testMarkdownOrderPayment(t, doc, ic)
 	testMarkdownOrderPayPlasmid(t, doc, ic)
+	testMarkdownPlasmidInfo(t, doc)
+}
+
+func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
+	assert := assert.New(t)
+	assert.Exactly(
+		doc.Find("h1").Eq(2).Text(),
+		"Plasmid information and storage",
+		"should match the plasmid information header",
+	)
+	th := doc.Find("table>thead").Eq(2).Find("tr").
+		Children().Map(childrenContent)
+	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
+	assert.ElementsMatch(
+		th,
+		[]string{"ID", "Name", "Stored as", "Location", "Color"},
+		"should match all plasmid information header elements",
+	)
+	stItems := fakePlasmidItems()
+	rowLen := doc.Find("table>tbody").Eq(2).
+		Find("tr:nth-child(1)").Children().Length()
+	assert.Exactly(rowLen, 5, "should have 5 elements for every plasmid info row")
+	allTr := doc.Find("table>tbody").Eq(2).
+		Find("tr")
+	assert.Exactlyf(
+		allTr.Children().Length(),
+		len(stItems)*rowLen,
+		"should have %d table rows",
+		len(stItems)*rowLen,
+	)
+	testMarkdownPlasmidRow(allTr, t, stItems)
+}
+
+func testMarkdownPlasmidRow(all *goquery.Selection, t *testing.T, items []string) {
+	assert := assert.New(t)
+	all.Find("td:nth-child(1)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			items[idx],
+			"should match the plasmid Id",
+		)
+	})
+	all.Find("td:nth-child(2)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			"pDV-fAR1-CYFP",
+			"should match the plasmid name",
+		)
+	})
+	all.Find("td:nth-child(3)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			"DH5α",
+			"should match how the plasmid is stored",
+		)
+	})
+	all.Find("td:nth-child(4)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			"12(45,54)",
+			"should match how the plasmid location",
+		)
+	})
+	all.Find("td:nth-child(5)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			"blue",
+			"should match how the plasmid color",
+		)
+	})
 }
 
 func testMarkdownOrderPayment(t *testing.T, doc *goquery.Document, ic *IssueContent) {
@@ -70,30 +140,6 @@ func testMarkdownOrderPayPlasmid(t *testing.T, doc *goquery.Document, ic *IssueC
 		},
 		"should match plasmid row elements",
 	)
-
-	//tdt := doc.Find(
-	//"div#cost.card-panel>div.section>table.striped>tbody>tr:last-child",
-	//).Children().Map(childrenContent)
-	//assert.Lenf(tdt, 4, "expect %d got %d elements", 4, len(tdt))
-	//assert.Exactly(tdt[0], "Total", "should have total header")
-	//assert.Exactly(
-	//tdt[len(tdt)-1],
-	//strconv.Itoa(ec.TotalCost()),
-	//"should match the total cost of the order",
-	//)
-	//pdiv := doc.Find(
-	//"div#payment-info.card-panel>div.section",
-	//)
-	//assert.Regexp(
-	//regexp.MustCompile("Payment information"),
-	//pdiv.Text(),
-	//"should match payment information text",
-	//)
-	//assert.Exactly(
-	//pdiv.Find("a.blue-text.text-darken-1").Text(),
-	//"DSC website",
-	//"should match the text for the link",
-	//)
 }
 
 func testMarkdownOrderHeader(t *testing.T, doc *goquery.Document, ic *IssueContent) {
