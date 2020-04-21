@@ -14,6 +14,32 @@ import (
 	mr "github.com/yuin/goldmark/renderer/html"
 )
 
+func TestIssueStrainMkdown(t *testing.T) {
+	assert := assert.New(t)
+	ic := fakeStrainOnlyIssueContent()
+	b, err := OutputText(&OutputParams{
+		File:    "issue.tmpl",
+		Path:    "./../../assets",
+		Content: ic,
+	})
+	assert.NoError(err, "expect no error from rending issue content")
+	var out bytes.Buffer
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithRendererOptions(mr.WithUnsafe()),
+	)
+	err = md.Convert(b.Bytes(), &out)
+	t.Log(out.String())
+	assert.NoError(err, "expect no error from markdown conversion")
+	doc, err := goquery.NewDocumentFromReader(&out)
+	assert.NoError(err, "expect no error from reading html output")
+	testMarkdownOrderHeader(t, doc, ic)
+	testMrkdwnOrdAddr(t, doc, ic)
+	testMarkdownOrderPayment(t, doc, ic)
+	testMarkdownOrderPayStrain(t, doc, ic)
+	testMarkdownStrainInfo(t, doc)
+}
+
 func TestIssuePlasmidMkdown(t *testing.T) {
 	assert := assert.New(t)
 	ic := fakePlasmidOnlyIssueContent()
@@ -37,6 +63,36 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 	testMarkdownOrderPayment(t, doc, ic)
 	testMarkdownOrderPayPlasmid(t, doc, ic)
 	testMarkdownPlasmidInfo(t, doc)
+}
+
+func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
+	assert := assert.New(t)
+	assert.Exactly(
+		doc.Find("h1").Eq(2).Text(),
+		"Strain information",
+		"should match the strain information header",
+	)
+	th := doc.Find("table>thead").Eq(2).Find("tr").
+		Children().Map(childrenContent)
+	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
+	assert.ElementsMatch(
+		th,
+		[]string{"ID", "Descriptor", "Name(s)", "Systematic Name", "Characteristics"},
+		"should match all strain information header elements",
+	)
+	rowLen := doc.Find("table>tbody").Eq(2).
+		Find("tr:nth-child(1)").Children().Length()
+	assert.Exactly(rowLen, 5, "should have 5 elements for every strain info row")
+	allTr := doc.Find("table>tbody").Eq(2).
+		Find("tr")
+	stItems := fakeStrainItems()
+	assert.Exactlyf(
+		allTr.Children().Length(),
+		len(stItems)*rowLen,
+		"should have %d table rows",
+		len(stItems)*rowLen,
+	)
+	testMarkdownStrainRow(allTr, t, stItems)
 }
 
 func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
@@ -67,6 +123,45 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
 		len(stItems)*rowLen,
 	)
 	testMarkdownPlasmidRow(allTr, t, stItems)
+}
+
+func testMarkdownStrainRow(all *goquery.Selection, t *testing.T, items []string) {
+	assert := assert.New(t)
+	all.Find("td:nth-child(1)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			items[idx],
+			"should match the strain Id",
+		)
+	})
+	all.Find("td:nth-child(2)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			"talA-",
+			"should match the strain descriptor",
+		)
+	})
+	all.Find("td:nth-child(3)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			"talin-null talA-null",
+			"should match strain name(s)",
+		)
+	})
+	all.Find("td:nth-child(4)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			"HG1666",
+			"should match strain systematic name",
+		)
+	})
+	all.Find("td:nth-child(5)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			"blasticidin resistantneomycin resistant",
+			"should match strain characteristics",
+		)
+	})
 }
 
 func testMarkdownPlasmidRow(all *goquery.Selection, t *testing.T, items []string) {
@@ -123,6 +218,22 @@ func testMarkdownOrderPayment(t *testing.T, doc *goquery.Document, ic *IssueCont
 			Find("tr:nth-child(3)>td:nth-child(4)").Text(),
 		strconv.Itoa(ic.TotalCost()),
 		"should match the total cost of the order",
+	)
+}
+
+func testMarkdownOrderPayStrain(t *testing.T, doc *goquery.Document, ic *IssueContent) {
+	assert := assert.New(t)
+	assert.ElementsMatch(
+		doc.Find("table>tbody").Eq(1).
+			Find("tr:nth-child(1)").
+			Children().Map(childrenContent),
+		[]string{
+			"Strain",
+			strconv.Itoa(ic.StrainItems()),
+			strconv.Itoa(ic.StrainPrice),
+			strconv.Itoa(ic.StrainCost()),
+		},
+		"should match strain row elements",
 	)
 }
 
