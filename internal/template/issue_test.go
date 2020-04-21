@@ -33,7 +33,7 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 	doc, err := goquery.NewDocumentFromReader(&out)
 	assert.NoError(err, "expect no error from reading html output")
 	testMarkdownOrderHeader(t, doc, ic)
-	testMarkdownOrderAddress(t, doc, ic)
+	testMrkdwnOrdAddr(t, doc, ic)
 	testMarkdownOrderPayment(t, doc, ic)
 	testMarkdownOrderPayPlasmid(t, doc, ic)
 	testMarkdownPlasmidInfo(t, doc)
@@ -160,7 +160,7 @@ func testMarkdownOrderHeader(t *testing.T, doc *goquery.Document, ic *IssueConte
 	)
 }
 
-func testMarkdownOrderAddress(t *testing.T, doc *goquery.Document, ic *IssueContent) {
+func testMrkdwnOrdAddr(t *testing.T, doc *goquery.Document, ic *IssueContent) {
 	assert := assert.New(t)
 	assert.Exactly(
 		"Shipping address",
