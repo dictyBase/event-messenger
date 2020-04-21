@@ -164,6 +164,34 @@ func fakePlasmidInv() [][]string {
 	return rows
 }
 
+func fakeStrainInv() [][]string {
+	var rows [][]string
+	for i := 0; i < len(fakeStrainItems()); i++ {
+		rows = append(rows, []string{
+			"talA-",
+			"axenic cells",
+			"1-34(76-78)",
+			"9",
+			"pink",
+		})
+	}
+	return rows
+}
+
+func fakeStrainInfo() [][]string {
+	var rows [][]string
+	for _, s := range fakeStrainItems() {
+		rows = append(rows, []string{
+			s,
+			"talA-",
+			"talin-null talA-null",
+			"HG1666",
+			"blasticidin resistant<br/>neomycin resistant",
+		})
+	}
+	return rows
+}
+
 func fakeContent() *Content {
 	return &Content{
 		Order:   fakeOrder(),
@@ -187,6 +215,16 @@ func fakePlasmidOnlyIssueContent() *IssueContent {
 	return &IssueContent{
 		Content:    c,
 		PlasmidInv: fakePlasmidInv(),
+	}
+}
+
+func fakeStrainOnlyIssueContent() *IssueContent {
+	c := fakeContent()
+	c.StrainPrice = 10
+	return &IssueContent{
+		Content:    c,
+		StrainInfo: fakeStrainInfo(),
+		StrainInv:  fakeStrainInv(),
 	}
 }
 
