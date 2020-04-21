@@ -21,11 +21,11 @@
 
 {{- end}}
 
-{{if .StrainInfo}}
-# Strain information 
+{{ if .StrainInfo}}
+# Strain information
 
-|  ID	|  Descriptor   |	Name(s)  |	Systematic Name   |	Characteristics | 
-|-------|---------------|--- --------|--------------------|-----------------|
+|ID	|  Descriptor |	Name(s)  |	Systematic Name  |	Characteristics |
+|-------|---------------|-----------|--------------------|-----------------|
 {{- range $idx,$e := .StrainInfo}}
 | {{index $e 0}}  | {{index $e 1}}  | {{index $e 2}} | {{index $e 3}} | {{index $e 4}} |
 
