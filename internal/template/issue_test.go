@@ -146,7 +146,22 @@ func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
 		"should have %d table rows",
 		len(stItems)*rowLen,
 	)
-	testMarkdownStrainRow(allTr, t, stItems)
+	testStockIds(&testParams{
+		t:     t,
+		all:   allTr,
+		items: append(stItems, "should match the strain id"),
+	})
+	testStockRows(&testParams{
+		t:        t,
+		all:      allTr,
+		startIdx: 2,
+		records: []*assertData{
+			{"talA-", "should match the strain descriptor"},
+			{"talin-null talA-null", "should match strain name(s)"},
+			{"HG1666", "should match strain systematic name"},
+			{"blasticidin resistantneomycin resistant", "should match strain characteristics"},
+		},
+	})
 }
 
 func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
@@ -176,7 +191,23 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
 		"should have %d table rows",
 		len(stItems)*rowLen,
 	)
-	testMarkdownPlasmidRow(allTr, t, stItems)
+	//testMarkdownPlasmidRow(allTr, t, stItems)
+	testStockIds(&testParams{
+		t:     t,
+		all:   allTr,
+		items: append(stItems, "should match the plasmid id"),
+	})
+	testStockRows(&testParams{
+		t:        t,
+		all:      allTr,
+		startIdx: 2,
+		records: []*assertData{
+			{"pDV-fAR1-CYFP", "should match the plasmid name"},
+			{"DH5α", "should match how plasmid is stored"},
+			{"12(45,54)", "should match plasmid location in storage system"},
+			{"blue", "should match color of plasmid storage container"},
+		},
+	})
 }
 
 func testStockIds(args *testParams) {
@@ -185,7 +216,11 @@ func testStockIds(args *testParams) {
 		assert.Exactly(
 			sel.Text(),
 			args.items[idx],
-			args.items[len(args.items)-1],
+			fmt.Sprintf(
+				"%s %s",
+				args.items[len(args.items)-1],
+				args.items[idx],
+			),
 		)
 	})
 }
@@ -203,84 +238,6 @@ func testStockRows(args *testParams) {
 		})
 		args.startIdx += 1
 	}
-}
-
-func testMarkdownStrainRow(all *goquery.Selection, t *testing.T, items []string) {
-	assert := assert.New(t)
-	all.Find("td:nth-child(1)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			items[idx],
-			"should match the strain Id",
-		)
-	})
-	all.Find("td:nth-child(2)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			"talA-",
-			"should match the strain descriptor",
-		)
-	})
-	all.Find("td:nth-child(3)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			"talin-null talA-null",
-			"should match strain name(s)",
-		)
-	})
-	all.Find("td:nth-child(4)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			"HG1666",
-			"should match strain systematic name",
-		)
-	})
-	all.Find("td:nth-child(5)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			"blasticidin resistantneomycin resistant",
-			"should match strain characteristics",
-		)
-	})
-}
-
-func testMarkdownPlasmidRow(all *goquery.Selection, t *testing.T, items []string) {
-	assert := assert.New(t)
-	all.Find("td:nth-child(1)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			items[idx],
-			"should match the plasmid Id",
-		)
-	})
-	all.Find("td:nth-child(2)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			"pDV-fAR1-CYFP",
-			"should match the plasmid name",
-		)
-	})
-	all.Find("td:nth-child(3)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			"DH5α",
-			"should match how the plasmid is stored",
-		)
-	})
-	all.Find("td:nth-child(4)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			"12(45,54)",
-			"should match how the plasmid location",
-		)
-	})
-	all.Find("td:nth-child(5)").Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Text(),
-			"blue",
-			"should match how the plasmid color",
-		)
-	})
 }
 
 func testMarkdownOrderPayment(t *testing.T, doc *goquery.Document, ic *IssueContent) {
