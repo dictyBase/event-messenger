@@ -49,6 +49,11 @@ func TestIssueStockMkdown(t *testing.T) {
 	testMarkdownOrderHeader(t, doc, ic)
 	testMrkdwnOrdAddr(t, doc, ic)
 	testMarkdownOrderPayment(t, doc, ic)
+	testMarkdownOrderPayStrain(t, doc, ic)
+	testMarkdownOrderPayPlasmid(t, doc, ic)
+	testMarkdownStrainStorage(t, doc)
+	testMarkdownStrainInfo(t, doc)
+	testMarkdownPlasmidInfo(t, doc, 4)
 }
 
 func TestIssueStrainMkdown(t *testing.T) {
@@ -101,7 +106,7 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 	testMrkdwnOrdAddr(t, doc, ic)
 	testMarkdownOrderPayment(t, doc, ic)
 	testMarkdownOrderPayPlasmid(t, doc, ic)
-	testMarkdownPlasmidInfo(t, doc)
+	testMarkdownPlasmidInfo(t, doc, 2)
 }
 
 func testMarkdownStrainStorage(t *testing.T, doc *goquery.Document) {
@@ -190,14 +195,14 @@ func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
 	})
 }
 
-func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
+func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document, idx int) {
 	assert := assert.New(t)
 	assert.Exactly(
-		doc.Find("h1").Eq(2).Text(),
+		doc.Find("h1").Eq(idx).Text(),
 		"Plasmid information and storage",
 		"should match the plasmid information header",
 	)
-	th := doc.Find("table>thead").Eq(2).Find("tr").
+	th := doc.Find("table>thead").Eq(idx).Find("tr").
 		Children().Map(childrenContent)
 	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
 	assert.ElementsMatch(
@@ -206,10 +211,10 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
 		"should match all plasmid information header elements",
 	)
 	stItems := fakePlasmidItems()
-	rowLen := doc.Find("table>tbody").Eq(2).
+	rowLen := doc.Find("table>tbody").Eq(idx).
 		Find("tr:nth-child(1)").Children().Length()
 	assert.Exactly(rowLen, 5, "should have 5 elements for every plasmid info row")
-	allTr := doc.Find("table>tbody").Eq(2).
+	allTr := doc.Find("table>tbody").Eq(idx).
 		Find("tr")
 	assert.Exactlyf(
 		allTr.Children().Length(),
@@ -217,7 +222,6 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
 		"should have %d table rows",
 		len(stItems)*rowLen,
 	)
-	//testMarkdownPlasmidRow(allTr, t, stItems)
 	testStockIds(&testParams{
 		t:     t,
 		all:   allTr,
