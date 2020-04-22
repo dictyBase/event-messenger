@@ -27,7 +27,6 @@ linters:
     - lll
     - misspell
     - nakedret
-    - scopelint
     - staticcheck
     - structcheck
     - stylecheck
@@ -39,6 +38,7 @@ linters:
     - whitespace
 
   # don't enable:
+  # - scopelint (obsoloete)
   # - godox
   # - maligned,prealloc
   # - gochecknoglobals
