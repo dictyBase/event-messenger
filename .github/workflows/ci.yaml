@@ -4,15 +4,34 @@ on:
    branches:
      - develop
 jobs:
-  build:
+  test:
     runs-on: ubuntu-18.04
     steps:
       - name: set up golang
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2-beta
         with:
-            go-version: 1.13.8
+            go-version: 1.13.9
       - name: check out code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
+      - name: unit test
+        run: go test -covermode=atomic -coverprofile=profile.cov -v ./...
+        env:
+          GOPROXY: https://proxy.golang.org
+      - name: upload coverage to codecov
+        uses: codecov/codecov-action@v1.0.6
+        with:
+            file: ./profile.cov
+            token: ${{ secrets.CODECOV_TOKEN }}
+  build:
+    needs: test
+    runs-on: ubuntu-18.04
+    steps:
+      - name: set up golang
+        uses: actions/setup-go@v2-beta
+        with:
+            go-version: 1.13.9
+      - name: check out code
+        uses: actions/checkout@v2
       - name: build docker image
         run: docker build -t dictybase/event-messenger:develop-$(git rev-parse --short HEAD) -f build/package/Dockerfile .
       - name: login to docker hub
