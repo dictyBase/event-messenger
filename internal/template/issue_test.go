@@ -28,6 +28,7 @@ type testParams struct {
 }
 
 func TestIssueStrainMkdown(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
 	ic := fakeStrainOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
@@ -54,6 +55,7 @@ func TestIssueStrainMkdown(t *testing.T) {
 }
 
 func TestIssuePlasmidMkdown(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
 	ic := fakePlasmidOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
