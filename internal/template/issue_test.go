@@ -27,6 +27,30 @@ type testParams struct {
 	records  []*assertData
 }
 
+func TestIssueStockMkdown(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+	ic := fakeStockIssueContent()
+	b, err := OutputText(&OutputParams{
+		File:    "issue.tmpl",
+		Path:    "./../../assets",
+		Content: ic,
+	})
+	assert.NoError(err, "expect no error from rending issue content")
+	var out bytes.Buffer
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithRendererOptions(mr.WithUnsafe()),
+	)
+	err = md.Convert(b.Bytes(), &out)
+	assert.NoError(err, "expect no error from markdown conversion")
+	doc, err := goquery.NewDocumentFromReader(&out)
+	assert.NoError(err, "expect no error from reading html output")
+	testMarkdownOrderHeader(t, doc, ic)
+	testMrkdwnOrdAddr(t, doc, ic)
+	testMarkdownOrderPayment(t, doc, ic)
+}
+
 func TestIssueStrainMkdown(t *testing.T) {
 	t.Parallel()
 	assert := assert.New(t)
