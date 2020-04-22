@@ -14,6 +14,19 @@ import (
 	mr "github.com/yuin/goldmark/renderer/html"
 )
 
+type assertData struct {
+	content     string
+	description string
+}
+
+type testParams struct {
+	all      *goquery.Selection
+	t        *testing.T
+	startIdx int
+	items    []string
+	records  []*assertData
+}
+
 func TestIssueStrainMkdown(t *testing.T) {
 	assert := assert.New(t)
 	ic := fakeStrainOnlyIssueContent()
@@ -29,7 +42,6 @@ func TestIssueStrainMkdown(t *testing.T) {
 		goldmark.WithRendererOptions(mr.WithUnsafe()),
 	)
 	err = md.Convert(b.Bytes(), &out)
-	t.Log(out.String())
 	assert.NoError(err, "expect no error from markdown conversion")
 	doc, err := goquery.NewDocumentFromReader(&out)
 	assert.NoError(err, "expect no error from reading html output")
@@ -38,6 +50,7 @@ func TestIssueStrainMkdown(t *testing.T) {
 	testMarkdownOrderPayment(t, doc, ic)
 	testMarkdownOrderPayStrain(t, doc, ic)
 	testMarkdownStrainInfo(t, doc)
+	testMarkdownStrainStorage(t, doc)
 }
 
 func TestIssuePlasmidMkdown(t *testing.T) {
@@ -63,6 +76,47 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 	testMarkdownOrderPayment(t, doc, ic)
 	testMarkdownOrderPayPlasmid(t, doc, ic)
 	testMarkdownPlasmidInfo(t, doc)
+}
+
+func testMarkdownStrainStorage(t *testing.T, doc *goquery.Document) {
+	assert := assert.New(t)
+	assert.Exactly(
+		doc.Find("h1").Eq(3).Text(),
+		"Strain storage",
+		"should match the strain stoage header",
+	)
+	th := doc.Find("table>thead").Eq(3).Find("tr").
+		Children().Map(childrenContent)
+	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
+	assert.ElementsMatch(
+		th,
+		[]string{"Name", "Stored as", "Location", "No. of vials", "Color"},
+		"should match all strain storage header elements",
+	)
+	rowLen := doc.Find("table>tbody").Eq(3).
+		Find("tr:nth-child(1)").Children().Length()
+	assert.Exactly(rowLen, 5, "should have 5 elements for every strain info row")
+	allTr := doc.Find("table>tbody").Eq(3).
+		Find("tr")
+	stItems := fakeStrainItems()
+	assert.Exactlyf(
+		allTr.Children().Length(),
+		len(stItems)*rowLen,
+		"should have %d table rows",
+		len(stItems)*rowLen,
+	)
+	testStockRows(&testParams{
+		t:        t,
+		all:      allTr,
+		startIdx: 1,
+		records: []*assertData{
+			{"talA-", "should match the strain name"},
+			{"axenic cells", "should match how the strain is stored"},
+			{"1-34(76-78)", "should match strain location"},
+			{"9", "should match no of vials"},
+			{"pink", "should match color of storage container"},
+		},
+	})
 }
 
 func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
@@ -123,6 +177,32 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document) {
 		len(stItems)*rowLen,
 	)
 	testMarkdownPlasmidRow(allTr, t, stItems)
+}
+
+func testStockIds(args *testParams) {
+	assert := assert.New(args.t)
+	args.all.Find("td:nth-child(1)").Each(func(idx int, sel *goquery.Selection) {
+		assert.Exactly(
+			sel.Text(),
+			args.items[idx],
+			args.items[len(args.items)-1],
+		)
+	})
+}
+
+func testStockRows(args *testParams) {
+	assert := assert.New(args.t)
+	for i := 0; i < len(args.records); i++ {
+		q := fmt.Sprintf("td:nth-child(%d)", args.startIdx)
+		args.all.Find(q).Each(func(idx int, sel *goquery.Selection) {
+			assert.Exactly(
+				sel.Text(),
+				args.records[i].content,
+				args.records[i].description,
+			)
+		})
+		args.startIdx += 1
+	}
 }
 
 func testMarkdownStrainRow(all *goquery.Selection, t *testing.T, items []string) {
