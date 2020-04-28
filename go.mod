@@ -7,7 +7,6 @@ require (
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.0
-	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
