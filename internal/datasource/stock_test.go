@@ -36,7 +36,7 @@ func TestGetStrains(t *testing.T) {
 		len(ids), len(strains),
 	)
 	for _, st := range strains {
-		assert.Exactly(st.Data.Id, fake.StrainId, "should match the strain id")
+		assert.Exactly(st.Data.Id, fake.StrainID, "should match the strain id")
 		assert.Exactly(st.Data.Attributes.CreatedBy, fake.Consumer, "should match creator of the record")
 		assert.Exactly(st.Data.Attributes.Depositor, fake.Depositor, "should match depositor of the record")
 		assert.Exactly(
@@ -67,7 +67,7 @@ func TestPlasmids(t *testing.T) {
 	for _, pl := range plasmids {
 		assert.Exactly(
 			pl.Data.Id,
-			fake.PlasmidId,
+			fake.PlasmidID,
 			"should match the plasmid id",
 		)
 		assert.Exactly(
