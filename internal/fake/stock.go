@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	StrainId  = "DBS0235559"
-	PlasmidId = "DBP0000120"
+	StrainID  = "DBS0235559"
+	PlasmidID = "DBP0000120"
 )
 
 func StrainIds() []string {
@@ -31,7 +31,7 @@ func Strain() *stock.Strain {
 	return &stock.Strain{
 		Data: &stock.Strain_Data{
 			Type: "strain",
-			Id:   StrainId,
+			Id:   StrainID,
 			Attributes: &stock.StrainAttributes{
 				CreatedAt:       ptypes.TimestampNow(),
 				UpdatedAt:       ptypes.TimestampNow(),
@@ -50,14 +50,13 @@ func Strain() *stock.Strain {
 			},
 		},
 	}
-
 }
 
 func Plasmid() *stock.Plasmid {
 	return &stock.Plasmid{
 		Data: &stock.Plasmid_Data{
 			Type: "plasmid",
-			Id:   PlasmidId,
+			Id:   PlasmidID,
 			Attributes: &stock.PlasmidAttributes{
 				CreatedBy:       Consumer,
 				UpdatedBy:       Consumer,
