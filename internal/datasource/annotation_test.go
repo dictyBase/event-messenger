@@ -28,7 +28,7 @@ func mockSysNameAnno() *annotation.TaggedAnnotation {
 	}
 }
 
-func mockedClient() *TaggedAnnotationServiceClient {
+func mockedAnnoClient() *TaggedAnnotationServiceClient {
 	mockedAnnoClient := new(TaggedAnnotationServiceClient)
 	mockedAnnoClient.On(
 		"GetEntryAnnotation",
@@ -39,8 +39,9 @@ func mockedClient() *TaggedAnnotationServiceClient {
 }
 
 func TestGetsysName(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	ann := &Annotation{Client: mockedClient()}
+	ann := &Annotation{Client: mockedAnnoClient()}
 	name, err := ann.getSysName("DBS0236926")
 	assert.NoError(err, "expect no error from getting systematic name")
 	assert.Exactly(name, "DBS0236922", "should match systematic name")
