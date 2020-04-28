@@ -14,7 +14,12 @@ func mockedAnnoClient() *TaggedAnnotationServiceClient {
 		"GetEntryAnnotation",
 		mock.Anything,
 		mock.AnythingOfType("*annotation.EntryAnnotationRequest"),
-	).Return(fake.SysNameAnno(), nil)
+	).Return(fake.SysNameAnno(), nil).
+		On(
+			"ListAnnotationGroups",
+			mock.Anything,
+			mock.AnythingOfType("*annotation.ListGroupParameters"),
+		).Return(fake.StrainInvAnno(), nil)
 	return mockedAnnoClient
 }
 
