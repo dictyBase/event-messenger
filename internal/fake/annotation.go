@@ -23,3 +23,54 @@ func SysNameAnno() *annotation.TaggedAnnotation {
 		},
 	}
 }
+
+func StrainInvAnno() *annotation.TaggedAnnotationGroupCollection {
+	return &annotation.TaggedAnnotationGroupCollection{
+		Data: strainGroupCollData(),
+	}
+}
+
+func strainGroupData() []*annotation.TaggedAnnotationGroup_Data {
+	allData := []struct {
+		Tag   string
+		Value string
+	}{
+		{registry.InvStoredAsTag, "axenic cells"},
+		{registry.InvLocationTag, "2-9(55-57)"},
+		{registry.InvVialCountTag, "9"},
+		{registry.InvVialColorTag, "blue"},
+	}
+	var gd []*annotation.TaggedAnnotationGroup_Data
+	for _, a := range allData {
+		gd = append(gd, &annotation.TaggedAnnotationGroup_Data{
+			Type: "annotation",
+			Id:   "489483843",
+			Attributes: &annotation.TaggedAnnotationAttributes{
+				Version:   1,
+				EntryId:   StrainID,
+				CreatedBy: Consumer,
+				CreatedAt: ptypes.TimestampNow(),
+				Ontology:  registry.DictyAnnoOntology,
+				Tag:       a.Tag,
+				Value:     a.Value,
+			},
+		})
+	}
+	return gd
+}
+
+func strainGroupCollData() []*annotation.TaggedAnnotationGroupCollection_Data {
+	var gcd []*annotation.TaggedAnnotationGroupCollection_Data
+	for i := 0; i <= 3; i++ {
+		gcd = append(gcd, &annotation.TaggedAnnotationGroupCollection_Data{
+			Type: "annotation_group",
+			Group: &annotation.TaggedAnnotationGroup{
+				GroupId:   "4924132",
+				CreatedAt: ptypes.TimestampNow(),
+				UpdatedAt: ptypes.TimestampNow(),
+				Data:      strainGroupData(),
+			},
+		})
+	}
+	return gcd
+}
