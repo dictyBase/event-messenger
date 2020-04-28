@@ -61,7 +61,7 @@ func Plasmid() *stock.Plasmid {
 			Attributes: &stock.PlasmidAttributes{
 				CreatedBy:       Consumer,
 				UpdatedBy:       Consumer,
-				Depositor:       Consumer,
+				Depositor:       Depositor,
 				Summary:         "update this plasmid",
 				EditableSummary: "update this plasmid",
 				Publications:    []string{"1348970", "48493483"},
