@@ -8,6 +8,16 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func mockedAnnoPlasmidClient() *TaggedAnnotationServiceClient {
+	mockedAnnoClient := new(TaggedAnnotationServiceClient)
+	mockedAnnoClient.On(
+		"ListAnnotationGroups",
+		mock.Anything,
+		mock.AnythingOfType("*annotation.ListGroupParameters"),
+	).Return(fake.PlasmidInvAnno(), nil)
+	return mockedAnnoClient
+}
+
 func mockedAnnoClient() *TaggedAnnotationServiceClient {
 	mockedAnnoClient := new(TaggedAnnotationServiceClient)
 	mockedAnnoClient.On(
@@ -21,6 +31,26 @@ func mockedAnnoClient() *TaggedAnnotationServiceClient {
 			mock.AnythingOfType("*annotation.ListGroupParameters"),
 		).Return(fake.StrainInvAnno(), nil)
 	return mockedAnnoClient
+}
+
+func TestGetPlasmidInv(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+	stock := &Stock{Client: mockedStockClient()}
+	plasmids, err := stock.GetPlasmids(fake.PlasmidIds())
+	assert.NoError(err, "expect no error from getting plasmids")
+	ann := &Annotation{Client: mockedAnnoPlasmidClient()}
+	invList, err := ann.GetPlasmidInv(plasmids)
+	assert.NoError(err, "expect no error from getting strains")
+	assert.Len(invList, 12, "should match no of groups in collection")
+	for _, inv := range invList {
+		assert.Len(inv, 5, "should have 5 entries for each inventory")
+		assert.Exactly(inv[0], "DBP0000120", "should match the plasmid id")
+		assert.Exactly(inv[1], "p123456", "should match plasmid name")
+		assert.Exactly(inv[2], "DNA", "should match how plasmid is stored")
+		assert.Exactly(inv[3], "17(21-22)", "should match storage location of plasmid")
+		assert.Exactly(inv[4], "red", "should match color of vials")
+	}
 }
 
 func TestGetStrainInv(t *testing.T) {
