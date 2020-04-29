@@ -209,6 +209,8 @@ github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 github.com/yuin/goldmark v1.1.27 h1:nqDD4MMMQA0lmWq03Z2/myGPYLQoXtmi0rGVs95ntbo=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+github.com/yuin/goldmark v1.1.30 h1:j4d4Lw3zqZelDhBksEo3BnWg9xhXRQGJPPSL6OApZjI=
+github.com/yuin/goldmark v1.1.30/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 gitlab.com/golang-commonmark/html v0.0.0-20191124015941-a22733972181 h1:K+bMSIx9A7mLES1rtG+qKduLIXq40DAzYHtb0XuCukA=
 gitlab.com/golang-commonmark/html v0.0.0-20191124015941-a22733972181/go.mod h1:dzYhVIwWCtzPAa4QP98wfB9+mzt33MSmM8wsKiMi2ow=
 gitlab.com/golang-commonmark/linkify v0.0.0-20191026162114-a0c2df6c8f82 h1:oYrL81N608MLZhma3ruL8qTM4xcpYECGut8KSxRY59g=
