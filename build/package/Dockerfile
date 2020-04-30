@@ -1,4 +1,4 @@
-FROM golang:1.13.8-buster
+FROM golang:1.13.10-buster
 LABEL maintainer="Siddhartha Basu <siddhartha-basu@northwestern.edu>"
 ENV GOPROXY https://proxy.golang.org
 RUN mkdir -p /event-messenger
