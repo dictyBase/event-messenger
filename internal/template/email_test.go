@@ -14,7 +14,7 @@ func TestEmailPlasmidHtml(t *testing.T) {
 	ec := fakePlasmidOnlyEmailContent()
 	b, err := OutputHTML(&OutputParams{
 		File:    "email.tmpl",
-		Path:    "./../../assets",
+		Path:    "/",
 		Content: ec,
 	})
 	assert := assert.New(t)
@@ -32,7 +32,7 @@ func TestEmailStrainHtml(t *testing.T) {
 	ec := fakeStrainOnlyEmailContent()
 	b, err := OutputHTML(&OutputParams{
 		File:    "email.tmpl",
-		Path:    "./../../assets",
+		Path:    "/",
 		Content: ec,
 	})
 	assert := assert.New(t)
