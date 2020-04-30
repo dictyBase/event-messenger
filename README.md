@@ -1,10 +1,10 @@
 # event-messenger
 [![License](https://img.shields.io/badge/License-BSD%202--Clause-blue.svg)](LICENSE)   
-![GitHub action](https://github.com/dictyBase/event-messenger/workflows/Continuous%20integration/badge.svg)
+![Continuous build](https://github.com/dictyBase/event-messenger/workflows/Continuous%20build/badge.svg)
 [![codecov](https://codecov.io/gh/dictyBase/event-messenger/branch/develop/graph/badge.svg)](https://codecov.io/gh/dictyBase/event-messenger)   
 [![Technical debt](https://badgen.net/codeclimate/tech-debt/dictyBase/event-messenger)](https://codeclimate.com/github/dictyBase/event-messenger/trends/technical_debt)
 [![Issues](https://badgen.net/codeclimate/issues/dictyBase/event-messenger)](https://codeclimate.com/github/dictyBase/event-messenger/issues)
-[![Maintainability](https://api.codeclimate.com/v1/badges/b760838bd7baa776bffd/maintainability)](https://codeclimate.com/github/dictyBase/event-messenger/maintainability)
+[![Maintainability](https://api.codeclimate.com/v1/badges/b760838bd7baa776bffd/maintainability)](https://codeclimate.com/github/dictyBase/event-messenger/maintainability)   
 [![BCH compliance](https://bettercodehub.com/edge/badge/dictyBase/event-messenger?branch=develop)](https://bettercodehub.com/)
 [![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=dictyBase/event-messenger)](https://dependabot.com)   
 ![Issues](https://badgen.net/github/issues/dictyBase/event-messenger)
