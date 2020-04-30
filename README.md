@@ -1,7 +1,8 @@
 # event-messenger
 [![License](https://img.shields.io/badge/License-BSD%202--Clause-blue.svg)](LICENSE)   
 ![Continuous build](https://github.com/dictyBase/event-messenger/workflows/Continuous%20build/badge.svg)
-[![codecov](https://codecov.io/gh/dictyBase/event-messenger/branch/develop/graph/badge.svg)](https://codecov.io/gh/dictyBase/event-messenger)   
+[![codecov](https://codecov.io/gh/dictyBase/event-messenger/branch/develop/graph/badge.svg)](https://codecov.io/gh/dictyBase/event-messenger)
+[![docker image version](https://images.microbadger.com/badges/version/dictybase/event-messenger.svg)](https://hub.docker.com/r/dictybase/event-messenger/tags)   
 [![Technical debt](https://badgen.net/codeclimate/tech-debt/dictyBase/event-messenger)](https://codeclimate.com/github/dictyBase/event-messenger/trends/technical_debt)
 [![Issues](https://badgen.net/codeclimate/issues/dictyBase/event-messenger)](https://codeclimate.com/github/dictyBase/event-messenger/issues)
 [![Maintainability](https://api.codeclimate.com/v1/badges/b760838bd7baa776bffd/maintainability)](https://codeclimate.com/github/dictyBase/event-messenger/maintainability)   
