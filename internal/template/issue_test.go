@@ -33,7 +33,7 @@ func TestIssueStockMkdown(t *testing.T) {
 	ic := fakeStockIssueContent()
 	b, err := OutputText(&OutputParams{
 		File:    "issue.tmpl",
-		Path:    "./../../assets",
+		Path:    "/",
 		Content: ic,
 	})
 	assert.NoError(err, "expect no error from rending issue content")
@@ -62,7 +62,7 @@ func TestIssueStrainMkdown(t *testing.T) {
 	ic := fakeStrainOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
 		File:    "issue.tmpl",
-		Path:    "./../../assets",
+		Path:    "/",
 		Content: ic,
 	})
 	assert.NoError(err, "expect no error from rending issue content")
@@ -89,7 +89,7 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 	ic := fakePlasmidOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
 		File:    "issue.tmpl",
-		Path:    "./../../assets",
+		Path:    "/",
 		Content: ic,
 	})
 	assert.NoError(err, "expect no error from rending issue content")

@@ -2,7 +2,6 @@ package template
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"regexp"
 	"strings"
@@ -14,11 +13,11 @@ import (
 	"github.com/yuin/goldmark/extension"
 )
 
-func checkSubstr(b fmt.Stringer, str []string, t *testing.T) {
+func checkSubstr(str string, slice []string, t *testing.T) {
 	assert := assert.New(t)
-	for _, s := range str {
+	for _, s := range slice {
 		assert.Truef(
-			strings.Contains(b.String(), s),
+			strings.Contains(str, s),
 			"expect to have the pattern %s",
 			s,
 		)
@@ -63,20 +62,20 @@ func issueSubstr() []string {
 
 func TestReadFromBundle(t *testing.T) {
 	t.Parallel()
-	b, err := ReadFromBundle("./../../assets", "email.tmpl")
+	str, err := ReadFromBundle("/", "email.tmpl")
 	assert := assert.New(t)
 	assert.NoError(err, "expect no error from reading email.tmpl template file")
-	checkSubstr(b, emailSubstr(), t)
-	b2, err := ReadFromBundle("./../../assets", "issue.tmpl")
+	checkSubstr(str, emailSubstr(), t)
+	str2, err := ReadFromBundle("/", "issue.tmpl")
 	assert.NoError(err, "expect no error from reading issue.tmpl template file")
-	checkSubstr(b2, issueSubstr(), t)
+	checkSubstr(str2, issueSubstr(), t)
 }
 
 func TestMarkdownOutput(t *testing.T) {
 	t.Parallel()
 	b, err := OutputText(&OutputParams{
 		File:    "test_markdown.tmpl",
-		Path:    "./../../testdata",
+		Path:    "/",
 		Content: fakeTemplateData(),
 	})
 	assert := assert.New(t)
@@ -92,7 +91,7 @@ func TestHTMLOutput(t *testing.T) {
 	t.Parallel()
 	b, err := OutputHTML(&OutputParams{
 		File:    "test_html.tmpl",
-		Path:    "./../../testdata",
+		Path:    "/",
 		Content: fakeTemplateData(),
 	})
 	assert := assert.New(t)

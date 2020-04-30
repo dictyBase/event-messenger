@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"fmt"
 	html "html/template"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 	txt "text/template"
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
+	_ "github.com/dictyBase/event-messenger/internal/statik"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
-	"github.com/gobuffalo/packr/v2"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/rakyll/statik/fs"
 )
 
 type OutputParams struct {
@@ -88,15 +91,15 @@ func (c *Content) TotalCost() int {
 }
 
 func OutputText(args *OutputParams) (*bytes.Buffer, error) {
-	b, err := ReadFromBundle(args.Path, args.File)
-	if err != nil {
-		return b, err
-	}
-	t, err := txt.New("stock-invoice").Parse(b.String())
-	if err != nil {
-		return b, fmt.Errorf("error in parsing template %s", err)
-	}
 	out := bytes.NewBuffer([]byte(""))
+	ct, err := ReadFromBundle(args.Path, args.File)
+	if err != nil {
+		return out, err
+	}
+	t, err := txt.New("stock-invoice").Parse(ct)
+	if err != nil {
+		return out, fmt.Errorf("error in parsing template %s", err)
+	}
 	if err := t.Execute(out, args.Content); err != nil {
 		return out, fmt.Errorf("error in executing template %s", err)
 	}
@@ -104,28 +107,34 @@ func OutputText(args *OutputParams) (*bytes.Buffer, error) {
 }
 
 func OutputHTML(args *OutputParams) (*bytes.Buffer, error) {
-	b, err := ReadFromBundle(args.Path, args.File)
-	if err != nil {
-		return b, err
-	}
-	t, err := html.New("stock-invoice").Parse(b.String())
-	if err != nil {
-		return b, fmt.Errorf("error in parsing template %s", err)
-	}
 	out := bytes.NewBuffer([]byte(""))
+	ct, err := ReadFromBundle(args.Path, args.File)
+	if err != nil {
+		return out, err
+	}
+	t, err := html.New("stock-invoice").Parse(ct)
+	if err != nil {
+		return out, fmt.Errorf("error in parsing template %s", err)
+	}
 	if err := t.Execute(out, args.Content); err != nil {
 		return out, fmt.Errorf("error in executing template %s", err)
 	}
 	return out, nil
 }
 
-func ReadFromBundle(path, file string) (*bytes.Buffer, error) {
-	var b *bytes.Buffer
-	box := packr.New("html", "|")
-	box.ResolutionDir = path
-	tb, err := box.Find(file)
+func ReadFromBundle(path, file string) (string, error) {
+	statikFs, err := fs.New()
 	if err != nil {
-		return b, fmt.Errorf("error in reading template file content from path %s %s", path, err)
+		return "", fmt.Errorf("error in getting embedded filesystem %s", err)
 	}
-	return bytes.NewBuffer(tb), nil
+	input := filepath.Join(path, file)
+	r, err := statikFs.Open(input)
+	if err != nil {
+		return "", fmt.Errorf("error in reading template file from path %s %s", input, err)
+	}
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return "", fmt.Errorf("error in reading content of file %s", err)
+	}
+	return string(b), nil
 }
