@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "event-messenger-issue.fullname" . }}
+  labels:
+    app: {{ template "event-messenger-issue.fullname" . }}
+    chart: {{ template "event-messenger-issue.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "event-messenger-issue.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "event-messenger-issue.fullname" . }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [
+            "--log-level",
+            "{{ .Values.logLevel }}",
+            "gh-issue",
+            "--subject",
+            "{{ .Values.nats.subject }}",
+            {{- with .Values.github }}
+            "--gh-token",
+            "{{ .token }}",
+            "--repository",
+            "{{ .repository }}",
+            "--owner",
+            "{{ .owner }}",
+            {{- end }}
+          ]
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
