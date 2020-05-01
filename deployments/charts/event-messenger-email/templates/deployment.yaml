@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "event-messenger-email.fullname" . }}
+  labels:
+    app: {{ template "event-messenger-email.fullname" . }}
+    chart: {{ template "event-messenger-email.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "event-messenger-email.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "event-messenger-email.fullname" . }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [
+            "--log-level",
+            "{{ .Values.logLevel }}",
+            "send-email",
+            "--subject",
+            "{{ .Values.nats.subject }}",
+            {{- with .Values.email }}
+            "--domain",
+            "{{ .domain }}",
+            "--apiKey",
+            "{{ .apiKey }}",
+            "--name",
+            "{{ .senderName }}",
+            "--sender",
+            "{{ .sender }}"
+            {{- end }}
+            "--pub",
+            "{{ .Values.endpoint.publication }}"
+            "--strain-price",
+            {{ .Values.price.strain }},
+            "--plasmid-price",
+            {{ .Values.price.plasmid }}
+          ]
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
