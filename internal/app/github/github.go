@@ -29,11 +29,13 @@ func RunCreateIssue(c *cli.Context) error {
 		return cli.NewExitError(err.Error(), 2)
 	}
 	g := gh.NewIssueCreator(&gh.IssueParams{
-		Logger:     l,
-		Token:      c.String("token"),
-		Owner:      c.String("owner"),
-		Repository: c.String("repository"),
-		Sources:    datasource.GrpcSources(mc),
+		Logger:       l,
+		Token:        c.String("token"),
+		Owner:        c.String("owner"),
+		Repository:   c.String("repository"),
+		Sources:      datasource.GrpcSources(mc),
+		StrainPrice:  c.Int("strain-price"),
+		PlasmidPrice: c.Int("plasmid-price"),
 	})
 	err = s.Start(c.String("subject"), g)
 	if err != nil {
