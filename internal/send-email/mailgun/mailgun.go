@@ -95,7 +95,7 @@ func (email *mailgunEmailer) emailBody(ord *order.Order) (*emailData, *bytes.Buf
 		return all, b, err
 	}
 	body, err := template.OutputHTML(&template.OutputParams{
-		Path: "./../../assets",
+		Path: "/",
 		File: "email.tmpl",
 		Content: &template.EmailContent{
 			StrainData:  all.strains,

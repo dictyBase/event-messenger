@@ -86,8 +86,8 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		return err
 	}
 	b, err := template.OutputText(&template.OutputParams{
-		File:    "./../../assets",
-		Path:    "issue.tmpl",
+		File:    "issue.tmpl",
+		Path:    "/",
 		Content: getContent(all, ord),
 	})
 	if err != nil {
