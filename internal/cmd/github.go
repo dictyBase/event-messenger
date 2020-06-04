@@ -88,10 +88,26 @@ func ghNatsFlags() []cli.Flag {
 	}
 }
 
+func priceFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.IntFlag{
+			Name:  "strain-price",
+			Usage: "price of individual strain",
+			Value: 30,
+		},
+		cli.IntFlag{
+			Name:  "plasmid-price",
+			Usage: "price of individual plasmid",
+			Value: 15,
+		},
+	}
+}
+
 func GhIssueCmd() cli.Command {
 	flags := ghRepoFlags()
 	flags = append(flags, ghNatsFlags()...)
 	flags = append(flags, serviceFlags()...)
+	flags = append(flags, priceFlags()...)
 	return cli.Command{
 		Name:   "gh-issue",
 		Usage:  "creates a github issue when a new stock order comes through",
