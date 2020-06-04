@@ -26,7 +26,7 @@ func NewLogger(c *cli.Context) (*logrus.Entry, error) {
 
 func getLogLevel(c *cli.Context) (logrus.Level, error) {
 	var level logrus.Level
-	switch c.String("log-level") {
+	switch c.GlobalString("log-level") {
 	case "debug":
 		level = logrus.DebugLevel
 	case "info":
@@ -50,7 +50,7 @@ func getLogLevel(c *cli.Context) (logrus.Level, error) {
 
 func getLogFmt(c *cli.Context) (logrus.Formatter, error) {
 	var lfmt logrus.Formatter
-	switch c.String("log-format") {
+	switch c.GlobalString("log-format") {
 	case "text":
 		lfmt = &logrus.TextFormatter{
 			TimestampFormat: "02/Jan/2006:15:04:05",
