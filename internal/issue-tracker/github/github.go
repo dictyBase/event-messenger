@@ -44,13 +44,17 @@ type githubIssue struct {
 	anno       *datasource.Annotation
 	stk        *datasource.Stock
 	usr        *datasource.User
+	strprice   int
+	plasprice  int
 }
 
 type IssueParams struct {
-	Token      string
-	Owner      string
-	Repository string
-	Logger     *logrus.Entry
+	Token        string
+	Owner        string
+	Repository   string
+	StrainPrice  int
+	PlasmidPrice int
+	Logger       *logrus.Entry
 	*datasource.Sources
 }
 
@@ -75,6 +79,8 @@ func NewIssueCreator(args *IssueParams) issue.IssueTracker {
 		anno:       args.AnnoSource,
 		stk:        args.StockSource,
 		usr:        args.UserSource,
+		strprice:   args.StrainPrice,
+		plasprice:  args.PlasmidPrice,
 	}
 }
 
@@ -85,10 +91,13 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		gh.logger.Error(err)
 		return err
 	}
+	ct := getContent(all, ord)
+	ct.StrainPrice = gh.strprice
+	ct.PlasmidPrice = gh.plasprice
 	b, err := template.OutputText(&template.OutputParams{
 		File:    "issue.tmpl",
 		Path:    "/",
-		Content: getContent(all, ord),
+		Content: ct,
 	})
 	if err != nil {
 		gh.logger.Error(err)
