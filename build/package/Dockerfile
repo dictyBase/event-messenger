@@ -7,7 +7,7 @@ COPY go.sum ./
 RUN go mod download
 ADD cmd cmd
 ADD internal internal
-RUN go build -o app cmd/event-messenger/main.go
+RUN CGO_ENABLED=0 go build -o app cmd/event-messenger/main.go
 
 FROM gcr.io/distroless/static
 ARG BUILD_DATE
