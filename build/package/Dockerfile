@@ -1,4 +1,4 @@
-FROM golang:1.13.10-buster
+FROM golang:1.13.12-buster
 ENV GOPROXY https://proxy.golang.org
 RUN mkdir -p /event-messenger
 WORKDIR /event-messenger
