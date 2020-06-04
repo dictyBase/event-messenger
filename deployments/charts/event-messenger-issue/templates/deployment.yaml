@@ -28,7 +28,7 @@ spec:
             "--subject",
             "{{ .Values.nats.subject }}",
             {{- with .Values.github }}
-            "--gh-token",
+            "--token",
             "{{ .token }}",
             "--repository",
             "{{ .repository }}",

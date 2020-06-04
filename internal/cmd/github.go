@@ -8,7 +8,7 @@ import (
 func ghRepoFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
-			Name:     "gh-token, ght",
+			Name:     "token, ght",
 			Usage:    "Github personal access token file",
 			Required: true,
 		},
