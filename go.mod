@@ -20,7 +20,7 @@ require (
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/russross/blackfriday/v2 v2.0.1
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.6.0
+	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli v1.22.4
 	github.com/yuin/goldmark v1.1.32
 	gitlab.com/golang-commonmark/markdown v0.0.0-20191127184510-91b5b3c99c19
