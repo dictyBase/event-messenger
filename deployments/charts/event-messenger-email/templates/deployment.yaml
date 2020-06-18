@@ -35,14 +35,10 @@ spec:
             "--name",
             "{{ .senderName }}",
             "--sender",
-            "{{ .sender }}"
+            "{{ .sender }}",
             {{- end }}
             "--pub",
             "{{ .Values.endpoint.publication }}"
-            "--strain-price",
-            {{ .Values.price.strain }},
-            "--plasmid-price",
-            {{ .Values.price.plasmid }}
           ]
           # livenessProbe:
           #   httpGet:
