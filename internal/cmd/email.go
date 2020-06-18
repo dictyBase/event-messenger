@@ -59,6 +59,7 @@ func SendEmailFlags() cli.Command {
 	flags := emailParamFlags()
 	flags = append(flags, datasourceFlags()...)
 	flags = append(flags, ghNatsFlags()...)
+	flags = append(flags, serviceFlags()...)
 	return cli.Command{
 		Name:   "send-email",
 		Usage:  "sends an email when a new stock order comes through",
