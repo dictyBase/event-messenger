@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -54,7 +55,7 @@ type pubDate struct {
 }
 
 func (pd *pubDate) UnmarshalJSON(in []byte) error {
-	t, err := time.Parse("2006-01-02", string(in))
+	t, err := time.Parse("2006-01-02", strings.ReplaceAll(string(in), `"`, ""))
 	if err != nil {
 		return fmt.Errorf("error in parsing time %s", err)
 	}
