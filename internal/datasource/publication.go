@@ -108,7 +108,11 @@ func pubResp(pubURL string) (*http.Response, error) {
 		return res, fmt.Errorf("error in http get request with %s", err)
 	}
 	if res.StatusCode != 200 {
-		return res, fmt.Errorf("error fetching publication status code %d", res.StatusCode)
+		return res,
+			fmt.Errorf(
+				"error fetching publication %s status code %d",
+				parsedURL.String(), res.StatusCode,
+			)
 	}
 	return res, nil
 }
