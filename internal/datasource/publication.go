@@ -34,19 +34,19 @@ type pub struct {
 	Abstract      string    `json:"abstract"`
 	Doi           string    `json:"doi,omitempty"`
 	FullTextURL   string    `json:"full_text_url,omitempty"`
-	PubmedURL     string    `json:"pubmed_url"`
-	Journal       string    `json:"journal"`
+	PubmedURL     string    `json:"pubmed_url,omitempty"`
+	Journal       string    `json:"journal,omitempty"`
 	Issn          string    `json:"issn,omitempty"`
 	Page          string    `json:"page,omitempty"`
-	Pubmed        string    `json:"pubmed"`
-	Title         string    `json:"title"`
-	Source        string    `json:"source"`
-	Status        string    `json:"status"`
-	PubType       string    `json:"pub_type"`
-	Issue         string    `json:"issue"`
-	Volume        string    `json:"volume"`
-	PublishedDate *pubDate  `json:"publication_date"`
-	Authors       []*author `json:"authors"`
+	Pubmed        string    `json:"pubmed,omitempty"`
+	Title         string    `json:"title,omitempty"`
+	Source        string    `json:"source,omitempty"`
+	Status        string    `json:"status,omitempty"`
+	PubType       string    `json:"pub_type,omitempty"`
+	Issue         string    `json:"issue,omitempty"`
+	Volume        string    `json:"volume,omitempty"`
+	PublishedDate *pubDate  `json:"publication_date,omitempty"`
+	Authors       []*author `json:"authors,omitempty"`
 }
 
 type pubDate struct {
@@ -84,7 +84,7 @@ func (p *Publication) ParsedInfo(id string) (*PubInfo, error) {
 	}
 	defer res.Body.Close()
 	pub := new(dictyPub)
-	if err := json.NewDecoder(res.Request.Body).Decode(pub); err != nil {
+	if err := json.NewDecoder(res.Body).Decode(pub); err != nil {
 		return pinfo, fmt.Errorf("error in decoding json %s", err)
 	}
 	pinfo.AuthorStr = fmt.Sprintf(
