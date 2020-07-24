@@ -34,7 +34,9 @@ func pubHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprint(w, b)
+	if _, err := w.Write(b); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func TestParsedInfo(t *testing.T) {
