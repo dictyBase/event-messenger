@@ -173,15 +173,18 @@ func (email *mailgunEmailer) plasmids(ord *order.Order) ([]*template.PlasmidRows
 func (email *mailgunEmailer) addPlasmidPub(strInfo [][]string, plasmids []*stock.Plasmid) ([]*template.PlasmidRows, error) {
 	var prows []*template.PlasmidRows
 	for i, pls := range plasmids {
+		prows = append(prows, &template.PlasmidRows{
+			ID:   strInfo[i][0],
+			Name: strInfo[i][2],
+		})
+		if len(pls.Data.Attributes.Publications) == 0 {
+			continue
+		}
 		pinfo, err := email.pubInfo(pls.Data.Attributes.Publications)
 		if err != nil {
 			return prows, err
 		}
-		prows = append(prows, &template.PlasmidRows{
-			ID:      strInfo[i][0],
-			Name:    strInfo[i][2],
-			PubInfo: pinfo,
-		})
+		prows[i].PubInfo = pinfo
 	}
 	return prows, nil
 }
@@ -206,17 +209,20 @@ func (email *mailgunEmailer) strains(ord *order.Order) ([]*template.StrainRows, 
 func (email *mailgunEmailer) addStrainPub(strInfo [][]string, strains []*stock.Strain) ([]*template.StrainRows, error) {
 	var srows []*template.StrainRows
 	for i, str := range strains {
-		pinfo, err := email.pubInfo(str.Data.Attributes.Publications)
-		if err != nil {
-			return srows, err
-		}
 		srows = append(srows, &template.StrainRows{
 			ID:         strInfo[i][0],
 			Descriptor: strInfo[i][1],
 			Names:      strInfo[i][2],
 			SysName:    strInfo[i][3],
-			PubInfo:    pinfo,
 		})
+		if len(str.Data.Attributes.Publications) == 0 {
+			continue
+		}
+		pinfo, err := email.pubInfo(str.Data.Attributes.Publications)
+		if err != nil {
+			return srows, err
+		}
+		srows[i].PubInfo = pinfo
 	}
 	return srows, nil
 }
