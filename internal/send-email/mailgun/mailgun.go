@@ -118,7 +118,7 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 		return err
 	}
 	msg := email.client.NewMessage(
-		fmt.Sprintf("%s<%s>", email.name, email.from),
+		fmt.Sprintf("%s <%s>", email.name, email.from),
 		fmt.Sprintf(
 			"Order ID:%s %s %s",
 			ord.Data.Id,
