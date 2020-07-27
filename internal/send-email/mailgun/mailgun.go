@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	emailer "github.com/dictyBase/event-messenger/internal/send-email"
@@ -230,6 +231,9 @@ func (email *mailgunEmailer) addStrainPub(strInfo [][]string, strains []*stock.S
 func (email *mailgunEmailer) pubInfo(ids []string) ([]*datasource.PubInfo, error) {
 	var pinfo []*datasource.PubInfo
 	for _, pid := range ids {
+		if len(strings.TrimSpace(pid)) == 0 {
+			continue
+		}
 		pub, err := email.pub.ParsedInfo(pid)
 		if err != nil {
 			return pinfo, err
