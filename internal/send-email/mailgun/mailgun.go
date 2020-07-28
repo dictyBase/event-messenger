@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	etext = `In case no order information is available
-			 below read the pdf attachment
+	etext = `Hi %s %s,
+			 Thank you for your order (ID %s). It has been submitted to Dicty Stock Center(DSC).
+			 Please check the attached Pdf for invoice.
 			 `
 )
 
@@ -95,7 +96,7 @@ func (email *mailgunEmailer) emailBody(ord *order.Order) (*emailData, *bytes.Buf
 	if err != nil {
 		return all, b, err
 	}
-	body, err := template.OutputHTML(&template.OutputParams{
+	body, err := template.OutputPDF(&template.OutputParams{
 		Path: "/",
 		File: "email.tmpl",
 		Content: &template.EmailContent{
@@ -126,7 +127,12 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 			all.user["shipper"].Data.Attributes.FirstName,
 			all.user["shipper"].Data.Attributes.LastName,
 		),
-		etext,
+		fmt.Sprintf(
+			etext,
+			all.user["shipper"].Data.Attributes.FirstName,
+			all.user["shipper"].Data.Attributes.LastName,
+			ord.Data.Id,
+		),
 	)
 	err = msg.AddRecipient(all.user["shipper"].Data.Attributes.Email)
 	if err != nil {
@@ -136,7 +142,10 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 	if all.user["shipper"].Data.Attributes.Email != all.user["payer"].Data.Attributes.Email {
 		msg.AddCC(all.user["payer"].Data.Attributes.Email)
 	}
-	msg.SetHtml(body.String())
+	msg.AddBufferAttachment(
+		fmt.Sprintf("invoice-%s.pdf", ord.Data.Id),
+		body.Bytes(),
+	)
 	id, err := email.postEmail(msg)
 	if err != nil {
 		return err
