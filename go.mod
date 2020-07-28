@@ -2,6 +2,7 @@ module github.com/dictyBase/event-messenger
 
 require (
 	github.com/PuerkitoBio/goquery v1.5.1
+	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.6.0
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/mock v1.4.3
