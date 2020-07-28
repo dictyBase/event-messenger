@@ -23,7 +23,7 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.schema-version="1.0"
 RUN apt-get update \
     && apt-get -y install curl \
-    && curl -O /tmp/wkhtmltopdf.deb -L https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.buster_amd64.deb \
+    && curl -o /tmp/wkhtmltopdf.deb -L https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.buster_amd64.deb \
     && dpkg -i /tmp/wkhtmltopdf.deb || apt-get -y -f install
 COPY --from=0 /event-messenger/app /usr/local/bin/
 ENTRYPOINT ["/usr/local/bin/app"]
