@@ -185,7 +185,7 @@ func (email *mailgunEmailer) addPlasmidPub(strInfo [][]string, plasmids []*stock
 	for i, pls := range plasmids {
 		prows = append(prows, &template.PlasmidRows{
 			ID:   strInfo[i][0],
-			Name: strInfo[i][2],
+			Name: strInfo[i][1],
 		})
 		if len(pls.Data.Attributes.Publications) == 0 {
 			continue
