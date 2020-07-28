@@ -9,6 +9,7 @@ import (
 	"strings"
 	txt "text/template"
 
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	_ "github.com/dictyBase/event-messenger/internal/statik"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
@@ -104,6 +105,23 @@ func OutputText(args *OutputParams) (*bytes.Buffer, error) {
 		return out, fmt.Errorf("error in executing template %s", err)
 	}
 	return out, nil
+}
+
+func OutputPDF(args *OutputParams) (*bytes.Buffer, error) {
+	input, err := OutputHTML(args)
+	if err != nil {
+		return new(bytes.Buffer), err
+	}
+	pdfg, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		return new(bytes.Buffer), fmt.Errorf("error in creating pdf generator %s", err)
+	}
+	page := wkhtmltopdf.NewPageReader(input)
+	pdfg.AddPage(page)
+	if err := pdfg.Create(); err != nil {
+		return new(bytes.Buffer), fmt.Errorf("error in generating pdf %s", err)
+	}
+	return pdfg.Buffer(), nil
 }
 
 func OutputHTML(args *OutputParams) (*bytes.Buffer, error) {
