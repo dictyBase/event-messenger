@@ -48,7 +48,7 @@ type Content struct {
 
 func (c *Content) OrderTimestamp() string {
 	t, _ := ptypes.Timestamp(c.Order.Data.Attributes.CreatedAt)
-	return t.Format("Jan 02, 2006 15:04")
+	return t.Format("Jan 02, 2006")
 }
 
 func (c *Content) IsPlasmid(str string) bool {
