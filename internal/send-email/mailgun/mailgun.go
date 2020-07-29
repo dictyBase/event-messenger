@@ -17,10 +17,11 @@ import (
 )
 
 const (
-	etext = `Hi %s %s,
-			 Thank you for your order (ID %s). It has been submitted to Dicty Stock Center(DSC).
-			 Please check the attached Pdf for invoice.
-			 `
+	etext = `
+Hi %s %s,
+Thank you for your order (ID %s). It has been submitted to Dicty Stock Center(DSC).
+Please check the attached Pdf for invoice.
+`
 )
 
 type emailData struct {
