@@ -11,7 +11,7 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v3 v3.6.4
-	github.com/markbates/pkger v0.15.1
+	github.com/markbates/pkger v0.17.0
 	github.com/mwitkow/go-proto-validators v0.3.0 // indirect
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.7.2
