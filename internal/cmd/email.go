@@ -44,6 +44,7 @@ func datasourceFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:     "publication-api, pub",
 			Usage:    "publication api endpoint",
+			EnvVar:   "PUBLICATION_API_ENDPOINT",
 			Required: true,
 		},
 		cli.IntFlag{
