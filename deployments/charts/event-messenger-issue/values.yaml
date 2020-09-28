@@ -12,11 +12,14 @@ image:
 # Level of log
 logLevel: debug
 
-# github information
-#github:
-    #token:
-    #owner:
-    #repository:
+dictybaseConfiguration:
+  configMap:
+    name: dictybase-configuration
+    githubRepo: eventMessenger.github.repo
+    githubOwner: eventMessenger.github.owner
+  secrets:
+    name: dictybase-configuration
+    githubToken: eventMessenger.github.token
 
 # nats server options
 nats:
