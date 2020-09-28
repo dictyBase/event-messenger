@@ -37,7 +37,7 @@ spec:
           env:
           - name: GITHUB_TOKEN
             valueFrom:
-              configMapKeyRef:
+              secretKeyRef:
                 name: "{{ .Values.dictybaseConfiguration.secrets.name }}"
                 key: "{{ .Values.dictybaseConfiguration.secrets.githubToken }}"
           - name: GITHUB_OWNER
@@ -47,7 +47,7 @@ spec:
                 key: "{{ .Values.dictybaseConfiguration.configMap.githubOwner }}"
           - name: GITHUB_REPOSITORY
             valueFrom:
-              secretKeyRef:
+              configMapKeyRef:
                 name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
                 key: "{{ .Values.dictybaseConfiguration.configMap.githubRepo }}"
           # livenessProbe:
