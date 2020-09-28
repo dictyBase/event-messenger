@@ -27,15 +27,29 @@ spec:
             "gh-issue",
             "--subject",
             "{{ .Values.nats.subject }}",
-            {{- with .Values.github }}
             "--token",
-            "{{ .token }}",
+            $(GITHUB_TOKEN),
             "--repository",
-            "{{ .repository }}",
+            $(GITHUB_REPOSITORY),
             "--owner",
-            "{{ .owner }}",
-            {{- end }}
+            $(GITHUB_OWNER),
           ]
+          env:
+          - name: GITHUB_TOKEN
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.secrets.name }}"
+                key: "{{ .Values.dictybaseConfiguration.secrets.githubToken }}"
+          - name: GITHUB_OWNER
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
+                key: "{{ .Values.dictybaseConfiguration.configMap.githubOwner }}"
+          - name: GITHUB_REPOSITORY
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
+                key: "{{ .Values.dictybaseConfiguration.configMap.githubRepo }}"
           # livenessProbe:
           #   httpGet:
           #     path: /
