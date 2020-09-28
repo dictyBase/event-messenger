@@ -27,19 +27,43 @@ spec:
             "send-email",
             "--subject",
             "{{ .Values.nats.subject }}",
-            {{- with .Values.email }}
             "--domain",
-            "{{ .domain }}",
+            $(EMAIL_DOMAIN),
             "--apiKey",
-            "{{ .apiKey }}",
+            $(MAILGUN_API_KEY),
             "--name",
-            "{{ .senderName }}",
+            $(SENDER_NAME),
             "--sender",
-            "{{ .sender }}",
-            {{- end }}
+            $(SENDER),
             "--pub",
-            "{{ .Values.endpoint.publication }}"
+            $(PUBLICATION_API_ENDPOINT),
           ]
+          env:
+          - name: MAILGUN_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.secrets.name }}"
+                key: "{{ .Values.dictybaseConfiguration.secrets.apiKey }}"
+          - name: EMAIL_DOMAIN
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
+                key: "{{ .Values.dictybaseConfiguration.configMap.domain }}"
+          - name: EMAIL_SENDER_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
+                key: "{{ .Values.dictybaseConfiguration.configMap.senderName }}"
+          - name: EMAIL_SENDER
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
+                key: "{{ .Values.dictybaseConfiguration.configMap.sender }}"
+          - name: PUBLICATION_API_ENDPOINT
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
+                key: "{{ .Values.dictybaseConfiguration.configMap.publication }}"
           # livenessProbe:
           #   httpGet:
           #     path: /

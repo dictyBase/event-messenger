@@ -16,21 +16,21 @@ logLevel: debug
 nats:
     subject: "OrderService.Create"
 
-# email options
-#email:
-    #domain:
-    #apiKey:
-    #sender:
-    #senderName:
-
-# api endpoints
-#endpoint:
-    #publication:
+dictybaseConfiguration:
+  configMap:
+    name: dictybase-configuration
+    domain: eventMessenger.email.domain
+    sender: eventMessenger.email.sender
+    senderName: eventMessenger.email.senderName
+    publication: endpoints.publication
+  secrets:
+    name: dictybase-configuration
+    apiKey: eventMessenger.email.apiKey
 
 # price of individual strain and plasmid
 #price:
-    #strain:
-    #plasmid:
+  #strain:
+  #plasmid:
 
 resources:
   {}
