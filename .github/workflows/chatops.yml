@@ -28,6 +28,10 @@ jobs:
           comment-id: ${{ github.event.comment.id }}
           body: |
             > ${{ steps.deploy.outputs.error-message }}
+            > 
+            > **Note:** all commands require the `chart-name` to be specified (`event-messenger-email` or `event-messenger-issue`)
+            > 
             > For /deploy commands used in GitHub Issues, you need to specify either specify a `commit` or `branch` to deploy.
             > Example: `/deploy cluster=erickube branch=feature/new-command`
+            >
             > For /deploy commands used in pull requests, you can optionally specify a `commit`.
