@@ -15,21 +15,25 @@ func emailParamFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:     "domain",
 			Usage:    "email domain name",
+			EnvVar:   "EMAIL_DOMAIN",
 			Required: true,
 		},
 		cli.StringFlag{
 			Name:     "apiKey",
 			Usage:    "mailgun api key for that domain",
+			EnvVar:   "MAILGUN_API_KEY",
 			Required: true,
 		},
 		cli.StringFlag{
 			Name:     "name",
 			Usage:    "full name that will be used in the from header",
+			EnvVar:   "EMAIL_SENDER_NAME",
 			Required: true,
 		},
 		cli.StringFlag{
 			Name:     "sender",
 			Usage:    "sender including the domain name",
+			EnvVar:   "EMAIL_SENDER",
 			Required: true,
 		},
 	}

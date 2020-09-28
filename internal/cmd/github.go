@@ -10,16 +10,19 @@ func ghRepoFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:     "token, ght",
 			Usage:    "Github personal access token file",
+			EnvVar:   "GITHUB_TOKEN",
 			Required: true,
 		},
 		cli.StringFlag{
 			Name:     "repository, r",
 			Usage:    "Github repository",
+			EnvVar:   "GITHUB_REPOSITORY",
 			Required: true,
 		},
 		cli.StringFlag{
 			Name:     "owner",
 			Usage:    "Github repository owner",
+			EnvVar:   "GITHUB_OWNER",
 			Required: true,
 		},
 		cli.StringFlag{
