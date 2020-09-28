@@ -15,7 +15,7 @@ logLevel: debug
 dictybaseConfiguration:
   configMap:
     name: dictybase-configuration
-    githubRepo: eventMessenger.github.repo
+    githubRepo: eventMessenger.github.repository
     githubOwner: eventMessenger.github.owner
   secrets:
     name: dictybase-configuration
