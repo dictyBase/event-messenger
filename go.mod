@@ -9,7 +9,7 @@ require (
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
-	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/google/go-github/v32 v32.1.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/markbates/pkger v0.17.1
