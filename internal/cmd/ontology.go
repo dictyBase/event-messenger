@@ -2,6 +2,7 @@ package cmd
 
 import (
 	arangoflag "github.com/dictyBase/arangomanager/command/flag"
+	"github.com/dictyBase/event-messenger/internal/app/webhook"
 	"github.com/urfave/cli"
 )
 
@@ -38,8 +39,9 @@ func WebhookOntoLoadCmd() cli.Command {
 		arangoflag.ArangodbFlags()...,
 	)
 	return cli.Command{
-		Name:  "start-onto-server",
-		Usage: "starts the webhook server for loading ontologies",
-		Flags: flags,
+		Name:   "start-onto-server",
+		Usage:  "starts the webhook server for loading ontologies",
+		Flags:  flags,
+		Action: webhook.RunOntoServer,
 	}
 }

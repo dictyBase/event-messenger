@@ -5,6 +5,8 @@ require (
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.6.0
 	github.com/dictyBase/arangomanager v0.2.0
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
+	github.com/dictyBase/go-obograph v1.0.5
+	github.com/go-chi/chi v4.0.0+incompatible
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.2
@@ -32,7 +34,6 @@ require (
 	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 // indirect
 	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/grpc v1.32.0
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 	rsc.io/sampler v1.99.99 // indirect
 )
