@@ -20,7 +20,7 @@ require (
 	github.com/rakyll/statik v0.1.7
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/russross/blackfriday/v2 v2.0.1
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli v1.22.4
 	github.com/yuin/goldmark v1.2.1
