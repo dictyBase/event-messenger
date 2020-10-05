@@ -32,9 +32,9 @@ spec:
             "--apiKey",
             $(MAILGUN_API_KEY),
             "--name",
-            $(SENDER_NAME),
+            $(EMAIL_SENDER_NAME),
             "--sender",
-            $(SENDER),
+            $(EMAIL_SENDER),
             "--pub",
             $(PUBLICATION_API_ENDPOINT),
           ]
