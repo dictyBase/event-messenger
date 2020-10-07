@@ -56,7 +56,9 @@ func (s *OntoServer) DeploymentWebhookHandler(w http.ResponseWriter, r *http.Req
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte(msg))
+	if _, err := w.Write([]byte(msg)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (s *OntoServer) setDeploymentStatus(d *github.DeploymentEvent, err error) (string, bool) {
@@ -90,7 +92,7 @@ func (s *OntoServer) setDeploymentStatus(d *github.DeploymentEvent, err error) (
 			err,
 		), false
 	}
-	return "success in loading file", false
+	return "success in loading file", true
 }
 
 func (s *OntoServer) fetchAndLoadFiles(files []string, d *github.DeploymentEvent) error {
