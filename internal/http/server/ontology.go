@@ -129,22 +129,22 @@ func (s *OntoServer) loadFiles(contents []*github.RepositoryContent) error {
 		if err != nil {
 			return fmt.Errorf("error in getting content for %s %s", c.GetPath(), err)
 		}
-		g, err := graph.BuildGraph(strings.NewReader(ct))
-		if err != nil {
-			return fmt.Errorf("error in building graph from %s %s", c.GetPath(), err)
-		}
-		ds := s.DataSource
-		if !ds.ExistsOboGraph(g) {
-			if err := s.loadNewGraph(g, c); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := s.loadExistingGraph(g, c); err != nil {
+		if err := s.loadGraph(c, ct); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (s *OntoServer) loadGraph(c *github.RepositoryContent, ct string) error {
+	g, err := graph.BuildGraph(strings.NewReader(ct))
+	if err != nil {
+		return fmt.Errorf("error in building graph from %s %s", c.GetPath(), err)
+	}
+	if !s.DataSource.ExistsOboGraph(g) {
+		return s.loadNewGraph(g, c)
+	}
+	return s.loadExistingGraph(g, c)
 }
 
 func (s *OntoServer) loadNewGraph(g graph.OboGraph, c *github.RepositoryContent) error {
