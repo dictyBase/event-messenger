@@ -46,7 +46,7 @@ func RunOntoServer(c *cli.Context) error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Post("/ontologies", server.DeploymentWebhookHandler)
-	if err := http.ListenAndServe(":9945", r); err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", c.String("port")), r); err != nil {
 		return cli.NewExitError(
 			fmt.Sprintf("error in running webhook server %s", err),
 			2,
