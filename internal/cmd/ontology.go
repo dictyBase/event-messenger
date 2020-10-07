@@ -35,6 +35,11 @@ func WebhookOntoLoadCmd() cli.Command {
 				EnvVar:   "GITHUB_TOKEN",
 				Required: true,
 			},
+			cli.StringFlag{
+				Name:     "port",
+				Usage:    "port at which the server will run",
+				Required: true,
+			},
 		},
 		arangoflag.ArangodbFlags()...,
 	)
