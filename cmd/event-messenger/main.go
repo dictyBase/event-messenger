@@ -28,6 +28,7 @@ func main() {
 	app.Commands = []cli.Command{
 		cmd.GhIssueCmd(),
 		cmd.SendEmailFlags(),
+		cmd.WebhookOntoLoadCmd(),
 	}
 	if err := app.Run(os.Args); err != nil {
 		log.Fatalf("error in running command %s", err)
