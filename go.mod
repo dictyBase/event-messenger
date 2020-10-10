@@ -6,7 +6,7 @@ require (
 	github.com/dictyBase/arangomanager v0.2.2
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
 	github.com/dictyBase/go-obograph v1.0.6
-	github.com/go-chi/chi v4.0.0+incompatible
+	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github/v32 v32.1.0
