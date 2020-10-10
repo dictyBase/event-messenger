@@ -1,7 +1,7 @@
 module github.com/dictyBase/event-messenger
 
 require (
-	github.com/PuerkitoBio/goquery v1.5.1
+	github.com/PuerkitoBio/goquery v1.6.0
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.6.0
 	github.com/dictyBase/arangomanager v0.2.0
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
@@ -9,7 +9,6 @@ require (
 	github.com/go-chi/chi v4.0.0+incompatible
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2
-	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v32 v32.1.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v3 v3.6.4
