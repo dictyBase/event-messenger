@@ -6,10 +6,9 @@ require (
 	github.com/dictyBase/arangomanager v0.2.0
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
 	github.com/dictyBase/go-obograph v1.0.6
-	github.com/go-chi/chi v4.0.0+incompatible
+	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2
-	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v32 v32.1.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v3 v3.6.4
