@@ -5,8 +5,7 @@
 [![codecov](https://codecov.io/gh/dictyBase/event-messenger/branch/develop/graph/badge.svg)](https://codecov.io/gh/dictyBase/event-messenger)
 [![Maintainability](https://api.codeclimate.com/v1/badges/b760838bd7baa776bffd/maintainability)](https://codeclimate.com/github/dictyBase/event-messenger/maintainability)   
 ![Last commit](https://badgen.net/github/last-commit/dictyBase/event-messenger/develop)   
-[![Funding](https://badgen.net/badge/NIGMS/Rex%20L%20Chisholm,dictyBase/yellow?list=|)](https://projectreporter.nih.gov/project_info_description.cfm?aid=9476993)
-[![Funding](https://badgen.net/badge/NIGMS/Rex%20L%20Chisholm,DSC/yellow?list=|)](https://projectreporter.nih.gov/project_info_description.cfm?aid=9438930)
+[![Funding](https://badgen.net/badge/Funding/Rex%20L%20Chisholm,dictyBase,DCR/yellow?list=|)](https://projectreporter.nih.gov/project_info_description.cfm?aid=10024726&icde=0)
 
 dictyBase server to handle events as a subscriber through Nats messaging.
 
