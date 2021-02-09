@@ -1,17 +1,17 @@
 # event-messenger
 
-[![License](https://img.shields.io/badge/License-BSD%202--Clause-blue.svg)](LICENSE)   
-![Continuous integration](https://github.com/dictyBase/event-messenger/workflows/Continuous%20integration/badge.svg?branch=develop)
+[![License](https://img.shields.io/badge/License-BSD%202--Clause-blue.svg)](LICENSE)  
+![Continuous integration](https://github.com/dictyBase/event-messenger/workflows/Build/badge.svg?branch=develop)
 [![codecov](https://codecov.io/gh/dictyBase/event-messenger/branch/develop/graph/badge.svg)](https://codecov.io/gh/dictyBase/event-messenger)
-[![Maintainability](https://api.codeclimate.com/v1/badges/b760838bd7baa776bffd/maintainability)](https://codeclimate.com/github/dictyBase/event-messenger/maintainability)   
-![Last commit](https://badgen.net/github/last-commit/dictyBase/event-messenger/develop)   
+[![Maintainability](https://api.codeclimate.com/v1/badges/b760838bd7baa776bffd/maintainability)](https://codeclimate.com/github/dictyBase/event-messenger/maintainability)  
+![Last commit](https://badgen.net/github/last-commit/dictyBase/event-messenger/develop)  
 [![Funding](https://badgen.net/badge/Funding/Rex%20L%20Chisholm,dictyBase,DCR/yellow?list=|)](https://projectreporter.nih.gov/project_info_description.cfm?aid=10024726&icde=0)
 
 dictyBase server to handle events as a subscriber through Nats messaging.
 
-# Available commands
+## Available commands
 
-```
+```bash
 NAME:
    event-messenger - Handle events from nats messaging
 
@@ -34,7 +34,8 @@ GLOBAL OPTIONS:
    --version, -v       print the version
 ```
 
-# Misc. badges
+## Misc badges
+
 ![Issues](https://badgen.net/github/issues/dictyBase/event-messenger)
 ![Open Issues](https://badgen.net/github/open-issues/dictyBase/event-messenger)
 ![Closed Issues](https://badgen.net/github/closed-issues/dictyBase/event-messenger)  
@@ -47,4 +48,4 @@ GLOBAL OPTIONS:
 ![Tags](https://badgen.net/github/tags/dictyBase/event-messenger/?color=cyan)  
 ![GitHub repo size](https://img.shields.io/github/repo-size/dictyBase/event-messenger?style=plastic)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/dictyBase/event-messenger?style=plastic)
-[![Lines of Code](https://badgen.net/codeclimate/loc/dictyBase/event-messenger)](https://codeclimate.com/github/dictyBase/event-messenger/code)  
+[![Lines of Code](https://badgen.net/codeclimate/loc/dictyBase/event-messenger)](https://codeclimate.com/github/dictyBase/event-messenger/code)
