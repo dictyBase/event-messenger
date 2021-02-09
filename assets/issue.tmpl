@@ -8,7 +8,7 @@
 
 |	Shipping address |	  | Billing address	 |
 | -------------------|----|------------------|
-|  {{with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} {{- end }} |          | {{- with .Payer.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} <br/> {{$o.Payment}} {{- end }} |
+|  {{with .Shipper.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} {{- end }} |          | {{- with .Payer.Data.Attributes }} {{.FirstName}} {{.LastName}} <br/> {{.Organization}}	<br/> {{.FirstAddress}} <br/> {{.SecondAddress}} <br/> {{.City}} {{.State}} {{.Zipcode}} <br/> {{.Country}} <br/> Phone: {{.Phone}} <br/> {{.Email}} <br/> {{$o.Courier}} {{$o.CourierAccount}} <br/> {{$o.Payment}} ${{$o.PurchaseOrderNum}} {{- end }} |
 
 {{if or .StrainInv .PlasmidInv}}
 # Stocks ordered
