@@ -35,6 +35,8 @@ spec:
             $(EMAIL_SENDER_NAME),
             "--sender",
             $(EMAIL_SENDER),
+            "--cc",
+            $(EMAIL_CC),
             "--pub",
             $(PUBLICATION_API_ENDPOINT),
           ]
@@ -59,6 +61,11 @@ spec:
               configMapKeyRef:
                 name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
                 key: "{{ .Values.dictybaseConfiguration.configMap.sender }}"
+          - name: EMAIL_CC
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
+                key: "{{ .Values.dictybaseConfiguration.configMap.cc }}"
           - name: PUBLICATION_API_ENDPOINT
             valueFrom:
               configMapKeyRef:
