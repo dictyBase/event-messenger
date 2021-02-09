@@ -25,7 +25,7 @@ require (
 	github.com/yuin/goldmark v1.3.2
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/appengine v1.5.0 // indirect
-	google.golang.org/grpc v1.33.2
+	google.golang.org/grpc v1.35.0
 )
 
 go 1.13
