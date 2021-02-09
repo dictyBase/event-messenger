@@ -207,7 +207,7 @@ func testHTMLOrderAddress(t *testing.T, doc *goquery.Document, ec *EmailContent)
 	)
 	assert.Exactly(
 		selLast.Last().Text(),
-		ec.Order.Data.Attributes.Payment,
+		fmt.Sprintf("%s %s", ec.Order.Data.Attributes.Payment, ec.Order.Data.Attributes.PurchaseOrderNum),
 		"should match payment information",
 	)
 	selHref := doc.Find("div.row>div.col.s6>div>a.blue-text.text-darken-1")

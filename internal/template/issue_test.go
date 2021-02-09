@@ -403,7 +403,7 @@ func testMrkdwnOrdAddr(t *testing.T, doc *goquery.Document, ic *IssueContent) {
 				Find("tr>td:nth-child(3)").Contents().
 				Last().Text(),
 			" "),
-		ic.Order.Data.Attributes.Payment,
+		fmt.Sprintf("%s %s", ic.Order.Data.Attributes.Payment, ic.Order.Data.Attributes.PurchaseOrderNum),
 		"should match payment information",
 	)
 }
