@@ -19,8 +19,10 @@ import (
 const (
 	etext = `
 Hi %s %s,
-Thank you for your order (ID %s). It has been submitted to Dicty Stock Center(DSC).
-Please check the attached Pdf for invoice.
+
+Thank you for your order (ID %s). It has been submitted to the Dicty Stock Center (DSC).
+
+Please check the attached PDF for your invoice.
 `
 )
 
@@ -41,6 +43,7 @@ type mailgunEmailer struct {
 	plasprice int
 	from      string
 	name      string
+	cc        string
 }
 
 type EmailerParams struct {
@@ -48,6 +51,7 @@ type EmailerParams struct {
 	SenderName   string
 	Domain       string
 	APIKey       string
+	EmailCC      string
 	StrainPrice  int
 	PlasmidPrice int
 	Logger       *logrus.Entry
@@ -59,6 +63,7 @@ func NewMailgunEmailer(args *EmailerParams) emailer.EmailHandler {
 	return &mailgunEmailer{
 		name:      args.SenderName,
 		from:      args.Sender,
+		cc:        args.EmailCC,
 		strprice:  args.StrainPrice,
 		plasprice: args.PlasmidPrice,
 		logger:    args.Logger,
@@ -140,6 +145,7 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 		email.logger.Error(err)
 		return err
 	}
+	msg.AddCC(email.cc)
 	if all.user["shipper"].Data.Attributes.Email != all.user["payer"].Data.Attributes.Email {
 		msg.AddCC(all.user["payer"].Data.Attributes.Email)
 	}
@@ -151,7 +157,7 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 	if err != nil {
 		return err
 	}
-	email.logger.Infof("message send with id %s", id)
+	email.logger.Infof("message sent with id %s", id)
 	return nil
 }
 

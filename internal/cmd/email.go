@@ -36,6 +36,12 @@ func emailParamFlags() []cli.Flag {
 			EnvVar:   "EMAIL_SENDER",
 			Required: true,
 		},
+		cli.StringFlag{
+			Name:     "cc",
+			Usage:    "email address to use as CC for all sent emails",
+			EnvVar:   "EMAIL_CC",
+			Required: true,
+		},
 	}
 }
 
