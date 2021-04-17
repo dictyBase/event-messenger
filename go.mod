@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli v1.22.5
-	github.com/yuin/goldmark v1.3.3
+	github.com/yuin/goldmark v1.3.5
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/grpc v1.36.0
