@@ -3,9 +3,9 @@ module github.com/dictyBase/event-messenger
 require (
 	github.com/PuerkitoBio/goquery v1.6.1
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.6.1
-	github.com/dictyBase/arangomanager v0.2.4
+	github.com/dictyBase/arangomanager v0.3.1
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
-	github.com/dictyBase/go-obograph v1.0.7
+	github.com/dictyBase/go-obograph v1.1.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.5.2
@@ -26,6 +26,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/grpc v1.36.0
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
 
 go 1.13
