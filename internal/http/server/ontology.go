@@ -175,11 +175,11 @@ func (s *OntoServer) loadExistingGraph(g graph.OboGraph, c *github.RepositoryCon
 	if err := ds.UpdateOboGraphInfo(g); err != nil {
 		return fmt.Errorf("error in updating graph information %s", err)
 	}
-	it, ut, err := ds.SaveOrUpdateTerms(g)
+	stats, err := ds.SaveOrUpdateTerms(g)
 	if err != nil {
 		return fmt.Errorf("error in updating terms %s", err)
 	}
-	logger.Infof("saved: %d and updated: %d terms", it, ut)
+	logger.Infof("saved: %d and updated: %d terms", stats.Created, stats.Updated)
 	ur, err := ds.SaveNewRelationships(g)
 	if err != nil {
 		return fmt.Errorf("error in saving relationships %s", err)
