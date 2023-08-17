@@ -3,7 +3,7 @@ package fake
 import (
 	"github.com/dictyBase/event-messenger/internal/registry"
 	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type groupDataFn func() []*annotation.TaggedAnnotationGroup_Data
@@ -22,7 +22,7 @@ func SysNameAnno() *annotation.TaggedAnnotation {
 				Value:     "DBS0236922",
 				EntryId:   "DBS0236922",
 				CreatedBy: "dsc@dictycr.org",
-				CreatedAt: ptypes.TimestampNow(),
+				CreatedAt: timestamppb.Now(),
 				Tag:       registry.SysnameTag,
 				Ontology:  registry.DictyAnnoOntology,
 				Version:   1,
@@ -43,15 +43,17 @@ func PlasmidInvAnno() *annotation.TaggedAnnotationGroupCollection {
 	}
 }
 
-func stockGroupCollData(gfn groupDataFn) []*annotation.TaggedAnnotationGroupCollection_Data {
+func stockGroupCollData(
+	gfn groupDataFn,
+) []*annotation.TaggedAnnotationGroupCollection_Data {
 	var gcd []*annotation.TaggedAnnotationGroupCollection_Data
 	for i := 0; i <= 3; i++ {
 		gcd = append(gcd, &annotation.TaggedAnnotationGroupCollection_Data{
 			Type: "annotation_group",
 			Group: &annotation.TaggedAnnotationGroup{
 				GroupId:   "4924132",
-				CreatedAt: ptypes.TimestampNow(),
-				UpdatedAt: ptypes.TimestampNow(),
+				CreatedAt: timestamppb.Now(),
+				UpdatedAt: timestamppb.Now(),
 				Data:      gfn(),
 			},
 		})
@@ -59,7 +61,10 @@ func stockGroupCollData(gfn groupDataFn) []*annotation.TaggedAnnotationGroupColl
 	return gcd
 }
 
-func groupData(all []propValue, id string) []*annotation.TaggedAnnotationGroup_Data {
+func groupData(
+	all []propValue,
+	id string,
+) []*annotation.TaggedAnnotationGroup_Data {
 	var gd []*annotation.TaggedAnnotationGroup_Data
 	for _, a := range all {
 		gd = append(gd, &annotation.TaggedAnnotationGroup_Data{
@@ -69,7 +74,7 @@ func groupData(all []propValue, id string) []*annotation.TaggedAnnotationGroup_D
 				Version:   1,
 				EntryId:   id,
 				CreatedBy: Consumer,
-				CreatedAt: ptypes.TimestampNow(),
+				CreatedAt: timestamppb.Now(),
 				Ontology:  registry.DictyAnnoOntology,
 				Tag:       a.Tag,
 				Value:     a.Value,
