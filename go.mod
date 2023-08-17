@@ -20,7 +20,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli v1.22.14
-	github.com/yuin/goldmark v1.4.13
+	github.com/yuin/goldmark v1.5.6
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/grpc v1.44.0
