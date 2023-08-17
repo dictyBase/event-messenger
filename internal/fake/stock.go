@@ -2,7 +2,7 @@ package fake
 
 import (
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -33,20 +33,27 @@ func Strain() *stock.Strain {
 			Type: "strain",
 			Id:   StrainID,
 			Attributes: &stock.StrainAttributes{
-				CreatedAt:       ptypes.TimestampNow(),
-				UpdatedAt:       ptypes.TimestampNow(),
+				CreatedAt:       timestamppb.Now(),
+				UpdatedAt:       timestamppb.Now(),
 				CreatedBy:       Consumer,
 				UpdatedBy:       Consumer,
 				Depositor:       Depositor,
 				Summary:         "Radiation-sensitive mutant.",
 				EditableSummary: "Radiation-sensitive mutant.",
-				Dbxrefs:         []string{"5466867", "4536935", "d2578", "d0319", "d2020/1033268", "d2580"},
-				Genes:           []string{"DDB_G0348394", "DDB_G098058933"},
-				Publications:    []string{"4849343943", "48394394"},
-				Label:           "yS13",
-				Species:         "Dictyostelium discoideum",
-				Plasmid:         "DBP0000027",
-				Names:           []string{"gammaS13", "gammaS-13", "γS-13"},
+				Dbxrefs: []string{
+					"5466867",
+					"4536935",
+					"d2578",
+					"d0319",
+					"d2020/1033268",
+					"d2580",
+				},
+				Genes:        []string{"DDB_G0348394", "DDB_G098058933"},
+				Publications: []string{"4849343943", "48394394"},
+				Label:        "yS13",
+				Species:      "Dictyostelium discoideum",
+				Plasmid:      "DBP0000027",
+				Names:        []string{"gammaS13", "gammaS-13", "γS-13"},
 			},
 		},
 	}

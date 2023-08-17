@@ -14,7 +14,6 @@ import (
 	_ "github.com/dictyBase/event-messenger/internal/statik"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/rakyll/statik/fs"
 )
 
@@ -47,8 +46,7 @@ type Content struct {
 }
 
 func (c *Content) OrderTimestamp() string {
-	t, _ := ptypes.Timestamp(c.Order.Data.Attributes.CreatedAt)
-	return t.Format("Jan 02, 2006")
+	return c.Order.Data.Attributes.CreatedAt.AsTime().Format("Jan 02, 2006")
 }
 
 func (c *Content) IsPlasmid(str string) bool {
@@ -114,7 +112,12 @@ func OutputPDF(args *OutputParams) (*bytes.Buffer, error) {
 	}
 	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
-		return new(bytes.Buffer), fmt.Errorf("error in creating pdf generator %s", err)
+		return new(
+				bytes.Buffer,
+			), fmt.Errorf(
+				"error in creating pdf generator %s",
+				err,
+			)
 	}
 	page := wkhtmltopdf.NewPageReader(input)
 	pdfg.AddPage(page)
@@ -148,7 +151,11 @@ func ReadFromBundle(path, file string) (string, error) {
 	input := filepath.Join(path, file)
 	r, err := statikFs.Open(input)
 	if err != nil {
-		return "", fmt.Errorf("error in reading template file from path %s %s", input, err)
+		return "", fmt.Errorf(
+			"error in reading template file from path %s %s",
+			input,
+			err,
+		)
 	}
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
