@@ -18,6 +18,7 @@ RUN go build \
 	-tags netgo \
 	-o /bin/app \ 
 	cmd/event-messenger/main.go
+RUN upx -q -9 /bin/app
 
 FROM debian:11.7-slim
 RUN apt-get update \
