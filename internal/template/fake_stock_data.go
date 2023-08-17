@@ -4,7 +4,7 @@ import (
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -55,7 +55,7 @@ func fakeOrder() *order.Order {
 				Comments:         "Power",
 				CourierAccount:   "48934393",
 				Courier:          "Fedex",
-				CreatedAt:        ptypes.TimestampNow(),
+				CreatedAt:        timestamppb.Now(),
 				Items:            fakeStockItems(),
 			},
 		},
@@ -78,7 +78,7 @@ func fakePayer() *user.User {
 				Zipcode:      "100009",
 				Country:      "US",
 				Phone:        "212-555-0109",
-				CreatedAt:    ptypes.TimestampNow(),
+				CreatedAt:    timestamppb.Now(),
 			},
 		},
 	}
@@ -100,7 +100,7 @@ func fakeConsumer() *user.User {
 				Zipcode:      "100001",
 				Country:      "US",
 				Phone:        "212-555-0171",
-				CreatedAt:    ptypes.TimestampNow(),
+				CreatedAt:    timestamppb.Now(),
 			},
 		},
 	}
