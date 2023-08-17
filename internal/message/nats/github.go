@@ -17,8 +17,14 @@ type NatsGithubSubscriber struct {
 }
 
 // NewGithubSubscriber connects to nats
-func NewGithubSubscriber(host, port string, logger *logrus.Entry, options ...gnats.Option) (*NatsGithubSubscriber, error) {
-	nc, err := gnats.Connect(fmt.Sprintf("nats://%s:%s", host, port), options...)
+func NewGithubSubscriber(
+	host, port string,
+	logger *logrus.Entry,
+	options ...gnats.Option,
+) (*NatsGithubSubscriber, error) {
+	nc, err := gnats.Connect(
+		fmt.Sprintf("nats://%s:%s", host, port),
+		options...)
 	if err != nil {
 		return &NatsGithubSubscriber{}, err
 	}
@@ -30,7 +36,10 @@ func NewGithubSubscriber(host, port string, logger *logrus.Entry, options ...gna
 }
 
 // Start starts the subscription server and handles the incoming stock order data.
-func (n *NatsGithubSubscriber) Start(sub string, client issue.IssueTracker) error {
+func (n *NatsGithubSubscriber) Start(
+	sub string,
+	client issue.IssueTracker,
+) error {
 	_, err := n.econn.Subscribe(sub, func(ord *order.Order) {
 		if err := client.CreateIssue(ord); err != nil {
 			n.logger.Error(err)
