@@ -17,8 +17,14 @@ type NatsEmailSubscriber struct {
 }
 
 // NewEmailSubscriber connects to nats
-func NewEmailSubscriber(host, port string, logger *logrus.Entry, options ...gnats.Option) (*NatsEmailSubscriber, error) {
-	nc, err := gnats.Connect(fmt.Sprintf("nats://%s:%s", host, port), options...)
+func NewEmailSubscriber(
+	host, port string,
+	logger *logrus.Entry,
+	options ...gnats.Option,
+) (*NatsEmailSubscriber, error) {
+	nc, err := gnats.Connect(
+		fmt.Sprintf("nats://%s:%s", host, port),
+		options...)
 	if err != nil {
 		return &NatsEmailSubscriber{}, err
 	}
@@ -30,7 +36,10 @@ func NewEmailSubscriber(host, port string, logger *logrus.Entry, options ...gnat
 }
 
 // Start starts the subscription server and handles the incoming stock order data.
-func (n *NatsEmailSubscriber) Start(sub string, client email.EmailHandler) error {
+func (n *NatsEmailSubscriber) Start(
+	sub string,
+	client email.EmailHandler,
+) error {
 	_, err := n.econn.Subscribe(sub, func(ord *order.Order) {
 		if err := client.SendEmail(ord); err != nil {
 			n.logger.Error(err)
