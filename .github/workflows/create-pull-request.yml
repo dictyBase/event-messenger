@@ -1,17 +1,9 @@
 name: Create Pull Request
 on: create
 jobs:
-  create-pull-request:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Create Pull Request
-        env: 
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Get current branch name
-          branch_name=$(git symbolic-ref --short HEAD)
-          # Create pull request using GitHub CLI
-          gh pr create --base develop --title "Auto-generated Pull Request for $branch_name" --body "Pulling '$branch_name into develop. Please review and merge."
-  
+  call-pull-request:
+    uses: dictyBase/workflows/.github/workflows/create-pull-request.yaml@develop
+    secrets: inherit
+    with:
+      repository: ${{ github.repository }}
+      ref: ${{ github.ref_name }}
