@@ -5,7 +5,7 @@ on:
       - master
 jobs:
   call-lint:
-    uses: dictyBase/workflows/.github/workflows/golang-lint.yaml@develop
+    uses: dictyBase/workflows/.github/workflows/golang-lint.yml@develop
     secrets: inherit
     with:
       repository: ${{ github.repository }}

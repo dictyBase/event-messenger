@@ -2,7 +2,7 @@ name: Test coverage
 on: pull_request
 jobs:
   call-testcov:
-    uses: dictyBase/workflows/.github/workflows/golang-testcov.yaml@develop
+    uses: dictyBase/workflows/.github/workflows/golang-testcov.yml@develop
     secrets: inherit
     with:
       repository: ${{ github.repository }}

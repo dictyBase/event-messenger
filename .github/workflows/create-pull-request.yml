@@ -2,7 +2,7 @@ name: Create Pull Request
 on: create
 jobs:
   call-pull-request:
-    uses: dictyBase/workflows/.github/workflows/create-pull-request.yaml@develop
+    uses: dictyBase/workflows/.github/workflows/create-pull-request.yml@develop
     secrets: inherit
     with:
       repository: ${{ github.repository }}
