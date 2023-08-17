@@ -5,7 +5,7 @@ require (
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.1
 	github.com/dictyBase/arangomanager v0.4.0
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
-	github.com/dictyBase/go-obograph v1.1.0
+	github.com/dictyBase/go-obograph v1.6.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3
@@ -17,7 +17,7 @@ require (
 	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/nats-io/nuid v1.0.0 // indirect
 	github.com/rakyll/statik v0.1.7
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli v1.22.14
 	github.com/yuin/goldmark v1.4.13
