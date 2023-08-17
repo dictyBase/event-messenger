@@ -4,21 +4,16 @@ on:
     branches:
       - develop
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: set up golang
-        uses: actions/setup-go@v2
-        with:
-            go-version: 1.16.5
-      - name: check out code
-        uses: actions/checkout@v2
-      - name: unit test
-        run: go test -parallel 2 -covermode=atomic -coverprofile=profile.cov -v ./...
-        env:
-          GOPROXY: https://proxy.golang.org
-      - name: upload coverage to codecov
-        uses: codecov/codecov-action@v2
-        with:
-            file: ./profile.cov
-            token: ${{ secrets.CODECOV_TOKEN }}
+  call-testcov:
+    uses: dictyBase/workflows/.github/workflows/golang-testcov.yaml@develop
+    secrets: inherit
+    with:
+      repository: ${{ github.repository }}
+      ref: ${{ github.ref_name }}
+  call-docker-build:
+    needs: call-testcov
+    uses: dictyBase/workflows/.github/workflows/docker-build-push.yaml@develop
+    secrets: inherit
+    with:
+      repository: ${{ github.repository }}
+      ref: ${{ github.ref_name }}
