@@ -96,7 +96,9 @@ func (email *mailgunEmailer) orderData(ord *order.Order) (*emailData, error) {
 	return all, nil
 }
 
-func (email *mailgunEmailer) emailBody(ord *order.Order) (*emailData, *bytes.Buffer, error) {
+func (email *mailgunEmailer) emailBody(
+	ord *order.Order,
+) (*emailData, *bytes.Buffer, error) {
 	var b *bytes.Buffer
 	all, err := email.orderData(ord)
 	if err != nil {
@@ -170,9 +172,13 @@ func (email *mailgunEmailer) postEmail(msg *mailgun.Message) (string, error) {
 	return id, nil
 }
 
-func (email *mailgunEmailer) plasmids(ord *order.Order) ([]*template.PlasmidRows, error) {
+func (email *mailgunEmailer) plasmids(
+	ord *order.Order,
+) ([]*template.PlasmidRows, error) {
 	var prows []*template.PlasmidRows
-	plasmids, err := email.stk.GetPlasmids(email.stk.StocksFromItems(ord, "DBP"))
+	plasmids, err := email.stk.GetPlasmids(
+		email.stk.StocksFromItems(ord, "DBP"),
+	)
 	if err != nil {
 		return prows, fmt.Errorf("error in getting plasmids %s", err)
 	}
@@ -182,12 +188,18 @@ func (email *mailgunEmailer) plasmids(ord *order.Order) ([]*template.PlasmidRows
 	}
 	prows, err = email.addPlasmidPub(plsinfo, plasmids)
 	if err != nil {
-		return prows, fmt.Errorf("error in adding publication to plasmids %s", err)
+		return prows, fmt.Errorf(
+			"error in adding publication to plasmids %s",
+			err,
+		)
 	}
 	return prows, nil
 }
 
-func (email *mailgunEmailer) addPlasmidPub(strInfo [][]string, plasmids []*stock.Plasmid) ([]*template.PlasmidRows, error) {
+func (email *mailgunEmailer) addPlasmidPub(
+	strInfo [][]string,
+	plasmids []*stock.Plasmid,
+) ([]*template.PlasmidRows, error) {
 	var prows []*template.PlasmidRows
 	for i, pls := range plasmids {
 		prows = append(prows, &template.PlasmidRows{
@@ -206,7 +218,9 @@ func (email *mailgunEmailer) addPlasmidPub(strInfo [][]string, plasmids []*stock
 	return prows, nil
 }
 
-func (email *mailgunEmailer) strains(ord *order.Order) ([]*template.StrainRows, error) {
+func (email *mailgunEmailer) strains(
+	ord *order.Order,
+) ([]*template.StrainRows, error) {
 	var srows []*template.StrainRows
 	strains, err := email.stk.GetStrains(email.stk.StocksFromItems(ord, "DBS"))
 	if err != nil {
@@ -223,7 +237,10 @@ func (email *mailgunEmailer) strains(ord *order.Order) ([]*template.StrainRows, 
 	return srows, nil
 }
 
-func (email *mailgunEmailer) addStrainPub(strInfo [][]string, strains []*stock.Strain) ([]*template.StrainRows, error) {
+func (email *mailgunEmailer) addStrainPub(
+	strInfo [][]string,
+	strains []*stock.Strain,
+) ([]*template.StrainRows, error) {
 	var srows []*template.StrainRows
 	for i, str := range strains {
 		srows = append(srows, &template.StrainRows{
@@ -244,7 +261,9 @@ func (email *mailgunEmailer) addStrainPub(strInfo [][]string, strains []*stock.S
 	return srows, nil
 }
 
-func (email *mailgunEmailer) pubInfo(ids []string) ([]*datasource.PubInfo, error) {
+func (email *mailgunEmailer) pubInfo(
+	ids []string,
+) ([]*datasource.PubInfo, error) {
 	var pinfo []*datasource.PubInfo
 	for _, pid := range ids {
 		if len(strings.TrimSpace(pid)) == 0 {
