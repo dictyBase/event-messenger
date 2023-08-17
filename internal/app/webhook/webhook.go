@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/dictyBase/event-messenger/internal/client"
 	"github.com/dictyBase/event-messenger/internal/http/server"
@@ -46,7 +47,11 @@ func RunOntoServer(c *cli.Context) error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Post("/ontologies", server.DeploymentWebhookHandler)
-	if err := http.ListenAndServe(fmt.Sprintf(":%s", c.String("port")), r); err != nil {
+	tsrv := &http.Server{
+		Addr:              fmt.Sprintf(":%s", c.String("port")),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	if err := tsrv.ListenAndServe(); err != nil {
 		return cli.NewExitError(
 			fmt.Sprintf("error in running webhook server %s", err),
 			2,
