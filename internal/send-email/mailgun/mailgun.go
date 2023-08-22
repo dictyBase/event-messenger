@@ -269,7 +269,7 @@ func (email *mailgunEmailer) pubInfo(
 		if len(strings.TrimSpace(pid)) == 0 {
 			continue
 		}
-		pub, err := email.pub.ParsedInfo(pid)
+		pub, err := email.pub.ParsedInfoFromGraphql(pid)
 		if err != nil {
 			return pinfo, err
 		}
