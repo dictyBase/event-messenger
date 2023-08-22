@@ -1,12 +1,16 @@
 package datasource
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/hasura/go-graphql-client"
 )
 
 type dictyPub struct {
@@ -69,12 +73,62 @@ type PubInfo struct {
 	DoiURL    string
 }
 
+type GraphqlAuthor struct {
+	FirstName string `graphql:"first_name"`
+	LastName  string `graphql:"last_name"`
+	Initials  string
+	Rank      string
+}
+
+func (agl *GraphqlAuthor) FullName() string {
+	if len(agl.Initials) > 0 {
+		return fmt.Sprintf("%s %s", agl.Initials, agl.LastName)
+	}
+	return fmt.Sprintf("%s %s", agl.FirstName, agl.LastName)
+}
+
+type PubQuery struct {
+	Publication struct {
+		Id      string
+		PubDate time.Time `graphql:"pub_date"`
+		Doi     string
+		Authors []*GraphqlAuthor
+	} `graphql:"publication(id: $id)"`
+}
+
 type Publication struct {
 	apiBase string
+	client  *graphql.Client
 }
 
 func NewPublication(base string) *Publication {
-	return &Publication{apiBase: base}
+	return &Publication{apiBase: base, client: graphql.NewClient(base, nil)}
+}
+
+func (p *Publication) ParsedInfoFromGraphql(id string) (*PubInfo, error) {
+	pinfo := new(PubInfo)
+	query := new(PubQuery)
+	err := p.client.Query(context.Background(), query, map[string]interface{}{
+		"id": graphql.ID(id),
+	})
+	if err != nil {
+		return pinfo, fmt.Errorf("error in running graphql query %s", err)
+	}
+	sort.Slice(query.Publication.Authors, func(i, j int) bool {
+		return len(
+			query.Publication.Authors[i].Rank,
+		) > len(
+			query.Publication.Authors[j].Rank,
+		)
+	})
+	pinfo.AuthorStr = fmt.Sprintf(
+		"%s (%d)",
+		authorStrFromGrqphql(query.Publication.Authors),
+		query.Publication.PubDate.Year(),
+	)
+	pinfo.PubmedURL = fmt.Sprintf("https://pubmed.gov/%s", query.Publication.Id)
+	pinfo.DoiURL = fmt.Sprintf("https://doi.org/%s", query.Publication.Doi)
+	return pinfo, nil
 }
 
 func (p *Publication) ParsedInfo(id string) (*PubInfo, error) {
@@ -116,6 +170,19 @@ func pubResp(pubURL string) (*http.Response, error) {
 			)
 	}
 	return res, nil
+}
+
+func authorStrFromGrqphql(author []*GraphqlAuthor) string {
+	var str string
+	switch len(author) {
+	case 1:
+		str = author[0].FullName()
+	case 2:
+		str = fmt.Sprintf("%s & %s", author[0].FullName(), author[1].FullName())
+	default:
+		str = fmt.Sprintf("%s et al.", author[0].FullName())
+	}
+	return str
 }
 
 func authorStr(a []*author) string {
