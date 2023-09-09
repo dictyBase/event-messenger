@@ -11,7 +11,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/uuid v1.3.1 // indirect
-	github.com/hasura/go-graphql-client v0.10.0 // indirect
+	github.com/hasura/go-graphql-client v0.10.0
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/mwitkow/go-proto-validators v0.3.0 // indirect
 	github.com/nats-io/gnatsd v1.4.1 // indirect
@@ -24,7 +24,7 @@ require (
 	github.com/urfave/cli v1.22.14
 	github.com/yuin/goldmark v1.5.6
 	golang.org/x/oauth2 v0.11.0
-	google.golang.org/grpc v1.57.0
+	google.golang.org/grpc v1.58.0
 	google.golang.org/protobuf v1.31.0
 )
 
