@@ -24,7 +24,7 @@ require (
 	github.com/yuin/goldmark v1.6.0
 	golang.org/x/oauth2 v0.15.0
 	google.golang.org/grpc v1.60.0
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.32.0
 )
 
 go 1.13
