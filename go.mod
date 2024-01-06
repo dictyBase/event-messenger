@@ -10,7 +10,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3
 	github.com/google/go-github/v32 v32.1.0
-	github.com/hasura/go-graphql-client v0.10.1
+	github.com/hasura/go-graphql-client v0.10.2
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/mwitkow/go-proto-validators v0.3.0 // indirect
 	github.com/nats-io/gnatsd v1.4.1 // indirect
