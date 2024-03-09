@@ -23,7 +23,7 @@ require (
 	github.com/urfave/cli v1.22.14
 	github.com/yuin/goldmark v1.7.0
 	golang.org/x/oauth2 v0.16.0
-	google.golang.org/grpc v1.61.0
+	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.32.0
 )
 
