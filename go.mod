@@ -8,7 +8,7 @@ require (
 	github.com/dictyBase/go-obograph v1.6.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/go-github/v32 v32.1.0
 	github.com/hasura/go-graphql-client v0.11.0
 	github.com/mailgun/mailgun-go/v3 v3.6.4
@@ -22,9 +22,9 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli v1.22.14
 	github.com/yuin/goldmark v1.7.0
-	golang.org/x/oauth2 v0.16.0
-	google.golang.org/grpc v1.61.0
-	google.golang.org/protobuf v1.32.0
+	golang.org/x/oauth2 v0.17.0
+	google.golang.org/grpc v1.63.0
+	google.golang.org/protobuf v1.33.0
 )
 
 go 1.13
