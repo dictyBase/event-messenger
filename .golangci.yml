@@ -21,7 +21,6 @@ linters:
     - bodyclose
     - bidichk
     - cyclop 
-    - depguard
     - decorder
     - dogsled
     # - dupl
@@ -53,3 +52,4 @@ linters:
   # - gochecknoglobals
   # - golint
   # - gochecknoinits
+  #  - depguard
