@@ -19,7 +19,7 @@ require (
 	github.com/nats-io/nuid v1.0.0 // indirect
 	github.com/rakyll/statik v0.1.7
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli v1.22.14
 	github.com/yuin/goldmark v1.7.1
 	golang.org/x/oauth2 v0.17.0
