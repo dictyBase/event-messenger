@@ -59,18 +59,6 @@ func serviceFlags() []cli.Flag {
 			Usage:    "annotation grpc port",
 			Required: true,
 		},
-		cli.StringFlag{
-			Name:     "user-grpc-host",
-			EnvVar:   "USER_API_SERVICE_HOST",
-			Usage:    "user grpc host",
-			Required: true,
-		},
-		cli.StringFlag{
-			Name:     "user-grpc-port",
-			EnvVar:   "USER_API_SERVICE_PORT",
-			Usage:    "user grpc port",
-			Required: true,
-		},
 	}
 }
 
