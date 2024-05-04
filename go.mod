@@ -1,7 +1,7 @@
 module github.com/dictyBase/event-messenger
 
 require (
-	github.com/PuerkitoBio/goquery v1.9.1
+	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.2
 	github.com/dictyBase/arangomanager v0.4.0
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
