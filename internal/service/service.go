@@ -19,7 +19,7 @@ func ClientConn(
 	for _, n := range names {
 		host := fmt.Sprintf("%s-grpc-host", n)
 		port := fmt.Sprintf("%s-grpc-port", n)
-		conn, err := grpc.Dial(
+		conn, err := grpc.NewClient(
 			fmt.Sprintf("%s:%s", c.String(host), c.String(port)),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		)
