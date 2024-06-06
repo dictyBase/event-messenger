@@ -12,8 +12,10 @@ jobs:
       ref: ${{ github.ref_name }}
   call-docker-build:
     needs: call-testcov
-    uses: dictyBase/workflows/.github/workflows/docker-build-push.yaml@develop
+    uses: dictyBase/workflows/.github/workflows/docker-publish.yaml@main
     secrets: inherit
     with:
       repository: ${{ github.repository }}
       ref: ${{ github.ref_name }}
+      image: event-messenger
+      dockerfile: build/package/Dockerfile 
