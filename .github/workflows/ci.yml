@@ -4,7 +4,7 @@ on:
     branches:
       - develop
 jobs:
-  testcov:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: set up golang
@@ -21,7 +21,7 @@ jobs:
           files: ./profile.cov
           token: ${{ secrets.CODECOV }}
   call-build-deploy:
-    needs: testcov
+    needs: test
     uses: dictyBase/workflows/.github/workflows/composite-deploy.yaml@develop
     secrets: inherit
     with:
