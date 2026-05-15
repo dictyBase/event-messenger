@@ -9,6 +9,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	mr "github.com/yuin/goldmark/renderer/html"
@@ -29,23 +30,25 @@ type testParams struct {
 
 func TestIssueStockMkdown(t *testing.T) {
 	t.Parallel()
-	assert := assert.New(t)
+
 	ic := fakeStockIssueContent()
 	b, err := OutputText(&OutputParams{
 		File:    "issue.tmpl",
 		Path:    "/",
 		Content: ic,
 	})
-	assert.NoError(err, "expect no error from rending issue content")
+	require.NoError(t, err, "expect no error from rending issue content")
+
 	var out bytes.Buffer
+
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithRendererOptions(mr.WithUnsafe()),
 	)
 	err = md.Convert(b.Bytes(), &out)
-	assert.NoError(err, "expect no error from markdown conversion")
+	require.NoError(t, err, "expect no error from markdown conversion")
 	doc, err := goquery.NewDocumentFromReader(&out)
-	assert.NoError(err, "expect no error from reading html output")
+	require.NoError(t, err, "expect no error from reading html output")
 	testMarkdownOrderHeader(t, doc, ic)
 	testMrkdwnOrdAddr(t, doc, ic)
 	testMarkdownOrderPayment(t, doc, ic)
@@ -58,23 +61,25 @@ func TestIssueStockMkdown(t *testing.T) {
 
 func TestIssueStrainMkdown(t *testing.T) {
 	t.Parallel()
-	assert := assert.New(t)
+
 	ic := fakeStrainOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
 		File:    "issue.tmpl",
 		Path:    "/",
 		Content: ic,
 	})
-	assert.NoError(err, "expect no error from rending issue content")
+	require.NoError(t, err, "expect no error from rending issue content")
+
 	var out bytes.Buffer
+
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithRendererOptions(mr.WithUnsafe()),
 	)
 	err = md.Convert(b.Bytes(), &out)
-	assert.NoError(err, "expect no error from markdown conversion")
+	require.NoError(t, err, "expect no error from markdown conversion")
 	doc, err := goquery.NewDocumentFromReader(&out)
-	assert.NoError(err, "expect no error from reading html output")
+	require.NoError(t, err, "expect no error from reading html output")
 	testMarkdownOrderHeader(t, doc, ic)
 	testMrkdwnOrdAddr(t, doc, ic)
 	testMarkdownOrderPayment(t, doc, ic)
@@ -85,23 +90,25 @@ func TestIssueStrainMkdown(t *testing.T) {
 
 func TestIssuePlasmidMkdown(t *testing.T) {
 	t.Parallel()
-	assert := assert.New(t)
+
 	ic := fakePlasmidOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
 		File:    "issue.tmpl",
 		Path:    "/",
 		Content: ic,
 	})
-	assert.NoError(err, "expect no error from rending issue content")
+	require.NoError(t, err, "expect no error from rending issue content")
+
 	var out bytes.Buffer
+
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithRendererOptions(mr.WithUnsafe()),
 	)
 	err = md.Convert(b.Bytes(), &out)
-	assert.NoError(err, "expect no error from markdown conversion")
+	require.NoError(t, err, "expect no error from markdown conversion")
 	doc, err := goquery.NewDocumentFromReader(&out)
-	assert.NoError(err, "expect no error from reading html output")
+	require.NoError(t, err, "expect no error from reading html output")
 	testMarkdownOrderHeader(t, doc, ic)
 	testMrkdwnOrdAddr(t, doc, ic)
 	testMarkdownOrderPayment(t, doc, ic)
@@ -112,8 +119,7 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 func testMarkdownStrainStorage(t *testing.T, doc *goquery.Document) {
 	assert := assert.New(t)
 	assert.Exactly(
-		doc.Find("h1").Eq(3).Text(),
-		"Strain storage",
+		"Strain storage", doc.Find("h1").Eq(3).Text(),
 		"should match the strain stoage header",
 	)
 	th := doc.Find("table>thead").Eq(3).Find("tr").
@@ -124,9 +130,11 @@ func testMarkdownStrainStorage(t *testing.T, doc *goquery.Document) {
 		[]string{"Name", "Stored as", "Location", "No. of vials", "Color"},
 		"should match all strain storage header elements",
 	)
+
 	rowLen := doc.Find("table>tbody").Eq(3).
 		Find("tr:nth-child(1)").Children().Length()
-	assert.Exactly(rowLen, 5, "should have 5 elements for every strain info row")
+	assert.Exactly(5, rowLen, "should have 5 elements for every strain info row")
+
 	allTr := doc.Find("table>tbody").Eq(3).
 		Find("tr")
 	stItems := fakeStrainItems()
@@ -153,8 +161,7 @@ func testMarkdownStrainStorage(t *testing.T, doc *goquery.Document) {
 func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
 	assert := assert.New(t)
 	assert.Exactly(
-		doc.Find("h1").Eq(2).Text(),
-		"Strain information",
+		"Strain information", doc.Find("h1").Eq(2).Text(),
 		"should match the strain information header",
 	)
 	th := doc.Find("table>thead").Eq(2).Find("tr").
@@ -165,9 +172,11 @@ func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
 		[]string{"ID", "Descriptor", "Name(s)", "Systematic Name", "Characteristics"},
 		"should match all strain information header elements",
 	)
+
 	rowLen := doc.Find("table>tbody").Eq(2).
 		Find("tr:nth-child(1)").Children().Length()
-	assert.Exactly(rowLen, 5, "should have 5 elements for every strain info row")
+	assert.Exactly(5, rowLen, "should have 5 elements for every strain info row")
+
 	allTr := doc.Find("table>tbody").Eq(2).
 		Find("tr")
 	stItems := fakeStrainItems()
@@ -177,7 +186,7 @@ func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
 		"should have %d table rows",
 		len(stItems)*rowLen,
 	)
-	testStockIds(&testParams{
+	testStockIDs(&testParams{
 		t:     t,
 		all:   allTr,
 		items: append(stItems, "should match the strain id"),
@@ -198,8 +207,7 @@ func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
 func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document, idx int) {
 	assert := assert.New(t)
 	assert.Exactly(
-		doc.Find("h1").Eq(idx).Text(),
-		"Plasmid information and storage",
+		"Plasmid information and storage", doc.Find("h1").Eq(idx).Text(),
 		"should match the plasmid information header",
 	)
 	th := doc.Find("table>thead").Eq(idx).Find("tr").
@@ -210,10 +218,12 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document, idx int) {
 		[]string{"ID", "Name", "Stored as", "Location", "Color"},
 		"should match all plasmid information header elements",
 	)
+
 	stItems := fakePlasmidItems()
 	rowLen := doc.Find("table>tbody").Eq(idx).
 		Find("tr:nth-child(1)").Children().Length()
-	assert.Exactly(rowLen, 5, "should have 5 elements for every plasmid info row")
+	assert.Exactly(5, rowLen, "should have 5 elements for every plasmid info row")
+
 	allTr := doc.Find("table>tbody").Eq(idx).
 		Find("tr")
 	assert.Exactlyf(
@@ -222,7 +232,7 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document, idx int) {
 		"should have %d table rows",
 		len(stItems)*rowLen,
 	)
-	testStockIds(&testParams{
+	testStockIDs(&testParams{
 		t:     t,
 		all:   allTr,
 		items: append(stItems, "should match the plasmid id"),
@@ -240,33 +250,29 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document, idx int) {
 	})
 }
 
-func testStockIds(args *testParams) {
+func testStockIDs(args *testParams) {
 	assert := assert.New(args.t)
 	args.all.Find("td:nth-child(1)").Each(func(idx int, sel *goquery.Selection) {
 		assert.Exactly(
 			sel.Text(),
 			args.items[idx],
-			fmt.Sprintf(
-				"%s %s",
-				args.items[len(args.items)-1],
-				args.items[idx],
-			),
+			"%s %s", args.items[len(args.items)-1], args.items[idx],
 		)
 	})
 }
 
 func testStockRows(args *testParams) {
 	assert := assert.New(args.t)
-	for i := 0; i < len(args.records); i++ {
+	for i := range len(args.records) {
 		q := fmt.Sprintf("td:nth-child(%d)", args.startIdx)
-		args.all.Find(q).Each(func(idx int, sel *goquery.Selection) {
+		args.all.Find(q).Each(func(_ int, sel *goquery.Selection) {
 			assert.Exactly(
 				sel.Text(),
 				args.records[i].content,
 				args.records[i].description,
 			)
 		})
-		args.startIdx += 1
+		args.startIdx++
 	}
 }
 
@@ -392,8 +398,8 @@ func testMrkdwnOrdAddr(t *testing.T, doc *goquery.Document, ic *IssueContent) {
 			" "),
 		fmt.Sprintf(
 			"%s %s",
-			ic.Order.Data.Attributes.Courier,
-			ic.Order.Data.Attributes.CourierAccount,
+			ic.Order.GetData().GetAttributes().GetCourier(),
+			ic.Order.GetData().GetAttributes().GetCourierAccount(),
 		),
 		"should match courier information",
 	)
@@ -403,7 +409,11 @@ func testMrkdwnOrdAddr(t *testing.T, doc *goquery.Document, ic *IssueContent) {
 				Find("tr>td:nth-child(3)").Contents().
 				Last().Text(),
 			" "),
-		fmt.Sprintf("%s %s", ic.Order.Data.Attributes.Payment, ic.Order.Data.Attributes.PurchaseOrderNum),
+		fmt.Sprintf(
+			"%s %s",
+			ic.Order.GetData().GetAttributes().GetPayment(),
+			ic.Order.GetData().GetAttributes().GetPurchaseOrderNum(),
+		),
 		"should match payment information",
 	)
 }

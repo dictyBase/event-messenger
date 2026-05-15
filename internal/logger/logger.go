@@ -13,19 +13,23 @@ func NewLogger(c *cli.Context) (*logrus.Entry, error) {
 	if err != nil {
 		return &logrus.Entry{}, err
 	}
+
 	level, err := getLogLevel(c)
 	if err != nil {
 		return &logrus.Entry{}, err
 	}
+
 	logger := logrus.New()
 	logger.SetOutput(os.Stderr)
 	logger.SetFormatter(lfmt)
 	logger.SetLevel(level)
+
 	return logrus.NewEntry(logger), nil
 }
 
 func getLogLevel(c *cli.Context) (logrus.Level, error) {
 	var level logrus.Level
+
 	switch c.GlobalString("log-level") {
 	case "debug":
 		level = logrus.DebugLevel
@@ -45,11 +49,13 @@ func getLogLevel(c *cli.Context) (logrus.Level, error) {
 			level,
 		)
 	}
+
 	return level, nil
 }
 
 func getLogFmt(c *cli.Context) (logrus.Formatter, error) {
 	var lfmt logrus.Formatter
+
 	switch c.GlobalString("log-format") {
 	case "text":
 		lfmt = &logrus.TextFormatter{
@@ -65,5 +71,6 @@ func getLogFmt(c *cli.Context) (logrus.Formatter, error) {
 			c.String("log-format"),
 		)
 	}
+
 	return lfmt, nil
 }

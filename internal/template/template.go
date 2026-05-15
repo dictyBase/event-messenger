@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	html "html/template"
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"strings"
 	txt "text/template"
 
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/dictyBase/event-messenger/internal/datasource"
-	_ "github.com/dictyBase/event-messenger/internal/statik"
+	_ "github.com/dictyBase/event-messenger/internal/statik" // register embedded filesystem
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/rakyll/statik/fs"
@@ -20,7 +20,7 @@ import (
 type OutputParams struct {
 	File    string
 	Path    string
-	Content interface{}
+	Content any
 }
 
 type StrainRows struct {
@@ -46,7 +46,7 @@ type Content struct {
 }
 
 func (c *Content) OrderTimestamp() string {
-	return c.Order.Data.Attributes.CreatedAt.AsTime().Format("Jan 02, 2006")
+	return c.Order.GetData().GetAttributes().GetCreatedAt().AsTime().Format("Jan 02, 2006")
 }
 
 func (c *Content) IsPlasmid(str string) bool {
@@ -59,21 +59,25 @@ func (c *Content) IsStrain(str string) bool {
 
 func (c *Content) PlasmidItems() int {
 	count := 0
-	for _, item := range c.Order.Data.Attributes.Items {
+
+	for _, item := range c.Order.GetData().GetAttributes().GetItems() {
 		if c.IsPlasmid(item) {
 			count++
 		}
 	}
+
 	return count
 }
 
 func (c *Content) StrainItems() int {
 	count := 0
-	for _, item := range c.Order.Data.Attributes.Items {
+
+	for _, item := range c.Order.GetData().GetAttributes().GetItems() {
 		if c.IsStrain(item) {
 			count++
 		}
 	}
+
 	return count
 }
 
@@ -91,17 +95,21 @@ func (c *Content) TotalCost() int {
 
 func OutputText(args *OutputParams) (*bytes.Buffer, error) {
 	out := bytes.NewBuffer([]byte(""))
+
 	ct, err := ReadFromBundle(args.Path, args.File)
 	if err != nil {
 		return out, err
 	}
+
 	t, err := txt.New("stock-invoice").Parse(ct)
 	if err != nil {
 		return out, fmt.Errorf("error in parsing template %s", err)
 	}
+
 	if err := t.Execute(out, args.Content); err != nil {
 		return out, fmt.Errorf("error in executing template %s", err)
 	}
+
 	return out, nil
 }
 
@@ -110,6 +118,7 @@ func OutputPDF(args *OutputParams) (*bytes.Buffer, error) {
 	if err != nil {
 		return new(bytes.Buffer), err
 	}
+
 	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
 		return new(
@@ -119,27 +128,34 @@ func OutputPDF(args *OutputParams) (*bytes.Buffer, error) {
 				err,
 			)
 	}
+
 	page := wkhtmltopdf.NewPageReader(input)
 	pdfg.AddPage(page)
+
 	if err := pdfg.Create(); err != nil {
 		return new(bytes.Buffer), fmt.Errorf("error in generating pdf %s", err)
 	}
+
 	return pdfg.Buffer(), nil
 }
 
 func OutputHTML(args *OutputParams) (*bytes.Buffer, error) {
 	out := bytes.NewBuffer([]byte(""))
+
 	ct, err := ReadFromBundle(args.Path, args.File)
 	if err != nil {
 		return out, err
 	}
+
 	t, err := html.New("stock-invoice").Parse(ct)
 	if err != nil {
 		return out, fmt.Errorf("error in parsing template %s", err)
 	}
+
 	if err := t.Execute(out, args.Content); err != nil {
 		return out, fmt.Errorf("error in executing template %s", err)
 	}
+
 	return out, nil
 }
 
@@ -148,7 +164,9 @@ func ReadFromBundle(path, file string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error in getting embedded filesystem %s", err)
 	}
+
 	input := filepath.Join(path, file)
+
 	r, err := statikFs.Open(input)
 	if err != nil {
 		return "", fmt.Errorf(
@@ -157,9 +175,11 @@ func ReadFromBundle(path, file string) (string, error) {
 			err,
 		)
 	}
-	b, err := ioutil.ReadAll(r)
+
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return "", fmt.Errorf("error in reading content of file %s", err)
 	}
+
 	return string(b), nil
 }

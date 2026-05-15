@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type NatsGithubSubscriber struct {
+type GithubSubscriber struct {
 	econn  *gnats.EncodedConn
 	logger *logrus.Entry
 }
@@ -21,35 +21,38 @@ func NewGithubSubscriber(
 	host, port string,
 	logger *logrus.Entry,
 	options ...gnats.Option,
-) (*NatsGithubSubscriber, error) {
+) (*GithubSubscriber, error) {
 	nc, err := gnats.Connect(
 		fmt.Sprintf("nats://%s:%s", host, port),
 		options...)
 	if err != nil {
-		return &NatsGithubSubscriber{}, err
+		return &GithubSubscriber{}, err
 	}
+
 	ec, err := gnats.NewEncodedConn(nc, protobuf.PROTOBUF_ENCODER)
 	if err != nil {
-		return &NatsGithubSubscriber{}, err
+		return &GithubSubscriber{}, err
 	}
-	return &NatsGithubSubscriber{econn: ec, logger: logger}, nil
+
+	return &GithubSubscriber{econn: ec, logger: logger}, nil
 }
 
 // Start starts the subscription server and handles the incoming stock order data.
-func (n *NatsGithubSubscriber) Start(
+func (n *GithubSubscriber) Start(
 	sub string,
-	client issue.IssueTracker,
+	client issue.Tracker,
 ) error {
 	_, err := n.econn.Subscribe(sub, func(ord *order.Order) {
 		if err := client.CreateIssue(ord); err != nil {
 			n.logger.Error(err)
 		}
 	})
+
 	return message.HandleConnection(n.econn, err)
 }
 
 // Stop stops the server
-func (n *NatsGithubSubscriber) Stop() error {
+func (n *GithubSubscriber) Stop() error {
 	n.econn.Close()
 	return nil
 }

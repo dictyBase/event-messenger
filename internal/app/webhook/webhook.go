@@ -15,6 +15,11 @@ import (
 	"github.com/urfave/cli"
 )
 
+const (
+	exitCode          = 2
+	readHeaderTimeout = 5 * time.Second
+)
+
 func RunOntoServer(c *cli.Context) error {
 	arPort, _ := strconv.Atoi(c.String("arangodb-port"))
 	cp := &araobo.ConnectParams{
@@ -31,14 +36,17 @@ func RunOntoServer(c *cli.Context) error {
 		GraphInfo:    c.String("cv-collection"),
 		OboGraph:     c.String("obograph"),
 	}
+
 	ds, err := araobo.NewDataSource(cp, clp)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(err.Error(), exitCode)
 	}
+
 	l, err := logger.NewLogger(c)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(err.Error(), exitCode)
 	}
+
 	server := &server.OntoServer{
 		DataSource: ds,
 		Logger:     l,
@@ -47,15 +55,17 @@ func RunOntoServer(c *cli.Context) error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Post("/ontologies", server.DeploymentWebhookHandler)
+
 	tsrv := &http.Server{
 		Addr:              fmt.Sprintf(":%s", c.String("port")),
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 	if err := tsrv.ListenAndServe(); err != nil {
 		return cli.NewExitError(
 			fmt.Sprintf("error in running webhook server %s", err),
-			2,
+			exitCode,
 		)
 	}
+
 	return nil
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type NatsEmailSubscriber struct {
+type EmailSubscriber struct {
 	econn  *gnats.EncodedConn
 	logger *logrus.Entry
 }
@@ -21,35 +21,38 @@ func NewEmailSubscriber(
 	host, port string,
 	logger *logrus.Entry,
 	options ...gnats.Option,
-) (*NatsEmailSubscriber, error) {
+) (*EmailSubscriber, error) {
 	nc, err := gnats.Connect(
 		fmt.Sprintf("nats://%s:%s", host, port),
 		options...)
 	if err != nil {
-		return &NatsEmailSubscriber{}, err
+		return &EmailSubscriber{}, err
 	}
+
 	ec, err := gnats.NewEncodedConn(nc, protobuf.PROTOBUF_ENCODER)
 	if err != nil {
-		return &NatsEmailSubscriber{}, err
+		return &EmailSubscriber{}, err
 	}
-	return &NatsEmailSubscriber{econn: ec, logger: logger}, nil
+
+	return &EmailSubscriber{econn: ec, logger: logger}, nil
 }
 
 // Start starts the subscription server and handles the incoming stock order data.
-func (n *NatsEmailSubscriber) Start(
+func (n *EmailSubscriber) Start(
 	sub string,
-	client email.EmailHandler,
+	client email.Handler,
 ) error {
 	_, err := n.econn.Subscribe(sub, func(ord *order.Order) {
 		if err := client.SendEmail(ord); err != nil {
 			n.logger.Error(err)
 		}
 	})
+
 	return message.HandleConnection(n.econn, err)
 }
 
 // Stop stops the server
-func (n *NatsEmailSubscriber) Stop() error {
+func (n *EmailSubscriber) Stop() error {
 	n.econn.Close()
 	return nil
 }

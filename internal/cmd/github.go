@@ -84,12 +84,12 @@ func priceFlags() []cli.Flag {
 		cli.IntFlag{
 			Name:  "strain-price",
 			Usage: "price of individual strain",
-			Value: 30,
+			Value: defaultStrainPrice,
 		},
 		cli.IntFlag{
 			Name:  "plasmid-price",
 			Usage: "price of individual plasmid",
-			Value: 15,
+			Value: defaultPlasmidPrice,
 		},
 	}
 }
@@ -99,6 +99,7 @@ func GhIssueCmd() cli.Command {
 	flags = append(flags, ghNatsFlags()...)
 	flags = append(flags, serviceFlags()...)
 	flags = append(flags, priceFlags()...)
+
 	return cli.Command{
 		Name:   "gh-issue",
 		Usage:  "creates a github issue when a new stock order comes through",

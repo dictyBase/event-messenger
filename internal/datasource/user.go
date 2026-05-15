@@ -15,21 +15,25 @@ type User struct {
 
 func (u *User) UsersInOrder(ord *order.Order) (map[string]*user.User, error) {
 	m := make(map[string]*user.User)
+
 	pu, err := u.Client.GetUserByEmail(
 		context.Background(),
-		&jsonapi.GetEmailRequest{Email: ord.Data.Attributes.Payer},
+		&jsonapi.GetEmailRequest{Email: ord.GetData().GetAttributes().GetPayer()},
 	)
 	if err != nil {
 		return m, fmt.Errorf("error in retrieving payer %s", err)
 	}
+
 	su, err := u.Client.GetUserByEmail(
 		context.Background(),
-		&jsonapi.GetEmailRequest{Email: ord.Data.Attributes.Consumer},
+		&jsonapi.GetEmailRequest{Email: ord.GetData().GetAttributes().GetConsumer()},
 	)
 	if err != nil {
 		return m, fmt.Errorf("error in retrieving shipper %s", err)
 	}
+
 	m["payer"] = pu
 	m["shipper"] = su
+
 	return m, nil
 }

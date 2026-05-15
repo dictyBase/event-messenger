@@ -20,9 +20,11 @@ func Shutdown(r Subscriber, logger *logrus.Entry) {
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
 	<-ch
 	logger.Info("received kill signal")
+
 	if err := r.Stop(); err != nil {
 		logger.Fatalf("unable to close the subscription %s\n", err)
 	}
+
 	logger.Info("closed the connections gracefully")
 }
 
@@ -30,8 +32,10 @@ func HandleConnection(econn *gnats.EncodedConn, err error) error {
 	if err != nil {
 		return err
 	}
+
 	if err := econn.Flush(); err != nil {
 		return err
 	}
+
 	return econn.LastError()
 }
