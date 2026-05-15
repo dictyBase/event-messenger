@@ -59,7 +59,7 @@ type EmailerParams struct {
 	*datasource.Sources
 }
 
-func NewMailgunEmailer(args *EmailerParams) emailer.EmailHandler {
+func NewMailgunEmailer(args *EmailerParams) emailer.Handler {
 	return &mailgunEmailer{
 		name:      args.SenderName,
 		from:      args.Sender,
@@ -75,24 +75,84 @@ func NewMailgunEmailer(args *EmailerParams) emailer.EmailHandler {
 	}
 }
 
+func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
+	all, body, err := email.emailBody(ord)
+	if err != nil {
+		email.logger.Error(err)
+		return err
+	}
+
+	msg := email.client.NewMessage(
+		fmt.Sprintf("%s <%s>", email.name, email.from),
+		fmt.Sprintf(
+			"Order ID:%s %s %s",
+			ord.GetData().GetId(),
+			all.user["shipper"].GetData().GetAttributes().GetFirstName(),
+			all.user["shipper"].GetData().GetAttributes().GetLastName(),
+		),
+		fmt.Sprintf(
+			etext,
+			all.user["shipper"].GetData().GetAttributes().GetFirstName(),
+			all.user["shipper"].GetData().GetAttributes().GetLastName(),
+			ord.GetData().GetId(),
+		),
+	)
+
+	err = msg.AddRecipient(all.user["shipper"].GetData().GetAttributes().GetEmail())
+	if err != nil {
+		email.logger.Error(err)
+		return err
+	}
+
+	msg.AddCC(email.cc)
+
+	if all.user["shipper"].GetData().
+		GetAttributes().
+		GetEmail() !=
+		all.user["payer"].GetData().
+			GetAttributes().
+			GetEmail() {
+		msg.AddCC(all.user["payer"].GetData().GetAttributes().GetEmail())
+	}
+
+	msg.AddBufferAttachment(
+		fmt.Sprintf("invoice-%s.pdf", ord.GetData().GetId()),
+		body.Bytes(),
+	)
+
+	id, err := email.postEmail(msg)
+	if err != nil {
+		return err
+	}
+
+	email.logger.Infof("message sent with id %s", id)
+
+	return nil
+}
+
 func (email *mailgunEmailer) orderData(ord *order.Order) (*emailData, error) {
 	all := &emailData{}
+
 	strData, err := email.strains(ord)
 	if err != nil {
 		email.logger.Error(err)
 		return all, err
 	}
+
 	plasData, err := email.plasmids(ord)
 	if err != nil {
 		return all, err
 	}
+
 	um, err := email.usr.UsersInOrder(ord)
 	if err != nil {
 		return all, err
 	}
+
 	all.strains = strData
 	all.plasmids = plasData
 	all.user = um
+
 	return all, nil
 }
 
@@ -100,10 +160,12 @@ func (email *mailgunEmailer) emailBody(
 	ord *order.Order,
 ) (*emailData, *bytes.Buffer, error) {
 	var b *bytes.Buffer
+
 	all, err := email.orderData(ord)
 	if err != nil {
 		return all, b, err
 	}
+
 	body, err := template.OutputPDF(&template.OutputParams{
 		Path: "/",
 		File: "email.tmpl",
@@ -117,50 +179,10 @@ func (email *mailgunEmailer) emailBody(
 				StrainPrice:  email.strprice,
 				PlasmidPrice: email.plasprice,
 			},
-		}})
-	return all, body, err
-}
+		},
+	})
 
-func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
-	all, body, err := email.emailBody(ord)
-	if err != nil {
-		email.logger.Error(err)
-		return err
-	}
-	msg := email.client.NewMessage(
-		fmt.Sprintf("%s <%s>", email.name, email.from),
-		fmt.Sprintf(
-			"Order ID:%s %s %s",
-			ord.Data.Id,
-			all.user["shipper"].Data.Attributes.FirstName,
-			all.user["shipper"].Data.Attributes.LastName,
-		),
-		fmt.Sprintf(
-			etext,
-			all.user["shipper"].Data.Attributes.FirstName,
-			all.user["shipper"].Data.Attributes.LastName,
-			ord.Data.Id,
-		),
-	)
-	err = msg.AddRecipient(all.user["shipper"].Data.Attributes.Email)
-	if err != nil {
-		email.logger.Error(err)
-		return err
-	}
-	msg.AddCC(email.cc)
-	if all.user["shipper"].Data.Attributes.Email != all.user["payer"].Data.Attributes.Email {
-		msg.AddCC(all.user["payer"].Data.Attributes.Email)
-	}
-	msg.AddBufferAttachment(
-		fmt.Sprintf("invoice-%s.pdf", ord.Data.Id),
-		body.Bytes(),
-	)
-	id, err := email.postEmail(msg)
-	if err != nil {
-		return err
-	}
-	email.logger.Infof("message sent with id %s", id)
-	return nil
+	return all, body, err
 }
 
 func (email *mailgunEmailer) postEmail(msg *mailgun.Message) (string, error) {
@@ -169,6 +191,7 @@ func (email *mailgunEmailer) postEmail(msg *mailgun.Message) (string, error) {
 		email.logger.Errorf("error in sending email %s", err)
 		return id, fmt.Errorf("error in sending email %s", err)
 	}
+
 	return id, nil
 }
 
@@ -176,16 +199,19 @@ func (email *mailgunEmailer) plasmids(
 	ord *order.Order,
 ) ([]*template.PlasmidRows, error) {
 	var prows []*template.PlasmidRows
+
 	plasmids, err := email.stk.GetPlasmids(
 		email.stk.StocksFromItems(ord, "DBP"),
 	)
 	if err != nil {
 		return prows, fmt.Errorf("error in getting plasmids %s", err)
 	}
+
 	plsinfo, err := email.stk.GetBasicPlasmidInfo(plasmids)
 	if err != nil {
 		return prows, fmt.Errorf("error in getting plasmid information %s", err)
 	}
+
 	prows, err = email.addPlasmidPub(plsinfo, plasmids)
 	if err != nil {
 		return prows, fmt.Errorf(
@@ -193,6 +219,7 @@ func (email *mailgunEmailer) plasmids(
 			err,
 		)
 	}
+
 	return prows, nil
 }
 
@@ -206,15 +233,19 @@ func (email *mailgunEmailer) addPlasmidPub(
 			ID:   strInfo[i][0],
 			Name: strInfo[i][1],
 		})
-		if len(pls.Data.Attributes.Publications) == 0 {
+
+		if len(pls.GetData().GetAttributes().GetPublications()) == 0 {
 			continue
 		}
-		pinfo, err := email.pubInfo(pls.Data.Attributes.Publications)
+
+		pinfo, err := email.pubInfo(pls.GetData().GetAttributes().GetPublications())
 		if err != nil {
 			return prows, err
 		}
+
 		prows[i].PubInfo = pinfo
 	}
+
 	return prows, nil
 }
 
@@ -222,18 +253,22 @@ func (email *mailgunEmailer) strains(
 	ord *order.Order,
 ) ([]*template.StrainRows, error) {
 	var srows []*template.StrainRows
+
 	strains, err := email.stk.GetStrains(email.stk.StocksFromItems(ord, "DBS"))
 	if err != nil {
 		return srows, fmt.Errorf("error in getting strains %s", err)
 	}
+
 	strInfo, err := email.anno.GetBasicStrainInfo(strains)
 	if err != nil {
 		return srows, fmt.Errorf("error in getting strain information %s", err)
 	}
+
 	srows, err = email.addStrainPub(strInfo, strains)
 	if err != nil {
 		return srows, fmt.Errorf("error in adding pub to strain %s", err)
 	}
+
 	return srows, nil
 }
 
@@ -249,15 +284,19 @@ func (email *mailgunEmailer) addStrainPub(
 			Names:      strInfo[i][2],
 			SysName:    strInfo[i][3],
 		})
-		if len(str.Data.Attributes.Publications) == 0 {
+
+		if len(str.GetData().GetAttributes().GetPublications()) == 0 {
 			continue
 		}
-		pinfo, err := email.pubInfo(str.Data.Attributes.Publications)
+
+		pinfo, err := email.pubInfo(str.GetData().GetAttributes().GetPublications())
 		if err != nil {
 			return srows, err
 		}
+
 		srows[i].PubInfo = pinfo
 	}
+
 	return srows, nil
 }
 
@@ -265,16 +304,20 @@ func (email *mailgunEmailer) pubInfo(
 	ids []string,
 ) ([]*datasource.PubInfo, error) {
 	var pinfo []*datasource.PubInfo
+
 	for _, pid := range ids {
 		if len(strings.TrimSpace(pid)) == 0 {
 			continue
 		}
+
 		pub, err := email.pub.ParsedInfoFromGraphql(pid)
 		if err != nil {
 			return pinfo, err
 		}
+
 		pinfo = append(pinfo, pub)
 	}
+
 	return pinfo, nil
 }
 

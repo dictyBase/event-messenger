@@ -45,6 +45,11 @@ func emailParamFlags() []cli.Flag {
 	}
 }
 
+const (
+	defaultStrainPrice  = 30
+	defaultPlasmidPrice = 15
+)
+
 func datasourceFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
@@ -56,12 +61,12 @@ func datasourceFlags() []cli.Flag {
 		cli.IntFlag{
 			Name:  "strain-price",
 			Usage: "price of individual strain",
-			Value: 30,
+			Value: defaultStrainPrice,
 		},
 		cli.IntFlag{
 			Name:  "plasmid-price",
 			Usage: "price of individual plasmid",
-			Value: 15,
+			Value: defaultPlasmidPrice,
 		},
 	}
 }
@@ -71,6 +76,7 @@ func SendEmailFlags() cli.Command {
 	flags = append(flags, datasourceFlags()...)
 	flags = append(flags, ghNatsFlags()...)
 	flags = append(flags, serviceFlags()...)
+
 	return cli.Command{
 		Name:   "send-email",
 		Usage:  "sends an email when a new stock order comes through",

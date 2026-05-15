@@ -6,6 +6,7 @@ import (
 	"github.com/dictyBase/event-messenger/internal/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func mockedStockClient() *StockServiceClient {
@@ -20,32 +21,41 @@ func mockedStockClient() *StockServiceClient {
 			mock.Anything,
 			mock.AnythingOfType("*stock.StockId"),
 		).Return(fake.Plasmid(), nil)
+
 	return client
 }
 
 func TestGetStrains(t *testing.T) {
 	t.Parallel()
 	assert := assert.New(t)
-	ids := fake.StrainIds()
+	ids := fake.StrainIDs()
 	stock := &Stock{Client: mockedStockClient()}
 	strains, err := stock.GetStrains(ids)
-	assert.NoError(err, "expect no error from getting strains")
+	require.NoError(t, err, "expect no error from getting strains")
 	assert.Lenf(
 		strains, len(ids),
 		"expect %d received %d strains",
 		len(ids), len(strains),
 	)
+
 	for _, st := range strains {
-		assert.Exactly(st.Data.Id, fake.StrainID, "should match the strain id")
-		assert.Exactly(st.Data.Attributes.CreatedBy, fake.Consumer, "should match creator of the record")
-		assert.Exactly(st.Data.Attributes.Depositor, fake.Depositor, "should match depositor of the record")
+		assert.Exactly(fake.StrainID, st.GetData().GetId(), "should match the strain id")
 		assert.Exactly(
-			st.Data.Attributes.Summary,
-			"Radiation-sensitive mutant.",
+			fake.Consumer,
+			st.GetData().GetAttributes().GetCreatedBy(),
+			"should match creator of the record",
+		)
+		assert.Exactly(
+			fake.Depositor,
+			st.GetData().GetAttributes().GetDepositor(),
+			"should match depositor of the record",
+		)
+		assert.Exactly(
+			"Radiation-sensitive mutant.", st.GetData().GetAttributes().GetSummary(),
 			"should match creator of the record",
 		)
 		assert.ElementsMatch(
-			st.Data.Attributes.Genes,
+			st.GetData().GetAttributes().GetGenes(),
 			[]string{"DDB_G0348394", "DDB_G098058933"},
 			"should match list of genes",
 		)
@@ -55,39 +65,41 @@ func TestGetStrains(t *testing.T) {
 func TestPlasmids(t *testing.T) {
 	t.Parallel()
 	assert := assert.New(t)
-	ids := fake.PlasmidIds()
+	ids := fake.PlasmidIDs()
 	stock := &Stock{Client: mockedStockClient()}
 	plasmids, err := stock.GetPlasmids(ids)
-	assert.NoError(err, "expect no error from getting plasmids")
+	require.NoError(t, err, "expect no error from getting plasmids")
 	assert.Lenf(
 		plasmids, len(ids),
 		"expect %d received %d plasmids",
 		len(ids), len(plasmids),
 	)
+
 	for _, pl := range plasmids {
 		assert.Exactly(
-			pl.Data.Id,
-			fake.PlasmidID,
+			fake.PlasmidID, pl.GetData().GetId(),
 			"should match the plasmid id",
 		)
 		assert.Exactly(
-			pl.Data.Attributes.CreatedBy,
-			fake.Consumer,
+			fake.Consumer, pl.GetData().GetAttributes().GetCreatedBy(),
 			"should match creator of the record",
 		)
 		assert.Exactly(
-			pl.Data.Attributes.Depositor,
-			fake.Depositor,
+			fake.Depositor, pl.GetData().GetAttributes().GetDepositor(),
 			"should match depositor of the record",
 		)
 		assert.Exactly(
-			pl.Data.Attributes.ImageMap,
 			"http://dictybase.org/data/plasmid/images/87.jpg",
+			pl.GetData().GetAttributes().GetImageMap(),
 			"should map the image map",
 		)
-		assert.Exactly(pl.Data.Attributes.Name, "p123456", "should match the plasmid name")
+		assert.Exactly(
+			"p123456",
+			pl.GetData().GetAttributes().GetName(),
+			"should match the plasmid name",
+		)
 		assert.ElementsMatch(
-			pl.Data.Attributes.Publications,
+			pl.GetData().GetAttributes().GetPublications(),
 			[]string{"1348970", "48493483"},
 			"should match the list of publications",
 		)

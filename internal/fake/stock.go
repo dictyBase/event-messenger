@@ -10,7 +10,7 @@ const (
 	PlasmidID = "DBP0000120"
 )
 
-func StrainIds() []string {
+func StrainIDs() []string {
 	return []string{
 		"DBS0236414",
 		"DBS0236440",
@@ -19,7 +19,7 @@ func StrainIds() []string {
 	}
 }
 
-func PlasmidIds() []string {
+func PlasmidIDs() []string {
 	return []string{
 		"DBP0000105",
 		"DBP0000034",

@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	consumer = "pennpacker@dictycr.org"
-	payer    = "varnsen@dictycr.org"
-	orderID  = "3894333"
+	consumer       = "pennpacker@dictycr.org"
+	payer          = "varnsen@dictycr.org"
+	orderID        = "3894333"
+	payerUserID    = 8448393
+	consumerUserID = 8493438
 )
 
 type templateData struct {
@@ -66,7 +68,7 @@ func fakePayer() *user.User {
 	return &user.User{
 		Data: &user.UserData{
 			Type: "users",
-			Id:   8448393,
+			Id:   payerUserID,
 			Attributes: &user.UserAttributes{
 				FirstName:    "Kel",
 				LastName:     "Varnsen",
@@ -88,7 +90,7 @@ func fakeConsumer() *user.User {
 	return &user.User{
 		Data: &user.UserData{
 			Type: "users",
-			Id:   8493438,
+			Id:   consumerUserID,
 			Attributes: &user.UserAttributes{
 				FirstName:    "Harrold",
 				LastName:     "Pennypacker",
@@ -134,6 +136,7 @@ func fakeStrain() []*StrainRows {
 			},
 		)
 	}
+
 	return rows
 }
 
@@ -148,6 +151,7 @@ func fakePlasmid() []*PlasmidRows {
 			},
 		)
 	}
+
 	return rows
 }
 
@@ -162,12 +166,13 @@ func fakePlasmidInv() [][]string {
 			"blue",
 		})
 	}
+
 	return rows
 }
 
 func fakeStrainInv() [][]string {
 	var rows [][]string
-	for i := 0; i < len(fakeStrainItems()); i++ {
+	for range len(fakeStrainItems()) {
 		rows = append(rows, []string{
 			"talA-",
 			"axenic cells",
@@ -176,6 +181,7 @@ func fakeStrainInv() [][]string {
 			"pink",
 		})
 	}
+
 	return rows
 }
 
@@ -190,6 +196,7 @@ func fakeStrainInfo() [][]string {
 			"blasticidin resistant<br/>neomycin resistant",
 		})
 	}
+
 	return rows
 }
 
@@ -204,6 +211,7 @@ func fakeContent() *Content {
 func fakePlasmidOnlyEmailContent() *EmailContent {
 	c := fakeContent()
 	c.PlasmidPrice = 10
+
 	return &EmailContent{
 		PlasmidData: fakePlasmid(),
 		Content:     c,
@@ -213,6 +221,7 @@ func fakePlasmidOnlyEmailContent() *EmailContent {
 func fakePlasmidOnlyIssueContent() *IssueContent {
 	c := fakeContent()
 	c.PlasmidPrice = 10
+
 	return &IssueContent{
 		Content:    c,
 		PlasmidInv: fakePlasmidInv(),
@@ -222,6 +231,7 @@ func fakePlasmidOnlyIssueContent() *IssueContent {
 func fakeStrainOnlyIssueContent() *IssueContent {
 	c := fakeContent()
 	c.StrainPrice = 10
+
 	return &IssueContent{
 		Content:    c,
 		StrainInfo: fakeStrainInfo(),
@@ -233,6 +243,7 @@ func fakeStockIssueContent() *IssueContent {
 	c := fakeContent()
 	c.StrainPrice = 10
 	c.PlasmidPrice = 10
+
 	return &IssueContent{
 		Content:    c,
 		StrainInfo: fakeStrainInfo(),
@@ -244,6 +255,7 @@ func fakeStockIssueContent() *IssueContent {
 func fakeStrainOnlyEmailContent() *EmailContent {
 	c := fakeContent()
 	c.StrainPrice = 10
+
 	return &EmailContent{
 		StrainData: fakeStrain(),
 		Content:    c,
@@ -258,6 +270,7 @@ func fakeTemplateData() templateData {
 		{"DBS0236831", "tori"},
 		{"DBS0236415", "lori"},
 	}
+
 	return templateData{
 		Header:  "Stock information",
 		Strains: st,

@@ -10,24 +10,29 @@ import (
 	"github.com/urfave/cli"
 )
 
+const exitCode = 2
+
 // RunCreateIssue connects to nats and creates a GitHub issue based on received order data.
 func RunCreateIssue(c *cli.Context) error {
 	l, err := logger.NewLogger(c)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(err.Error(), exitCode)
 	}
+
 	s, err := nats.NewGithubSubscriber(
 		c.String("nats-host"),
 		c.String("nats-port"),
 		l,
 	)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(err.Error(), exitCode)
 	}
+
 	mc, err := service.ClientConn(c, []string{"stock", "user", "annotation"})
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(err.Error(), exitCode)
 	}
+
 	g := gh.NewIssueCreator(&gh.IssueParams{
 		Logger:       l,
 		Token:        c.String("token"),
@@ -37,11 +42,14 @@ func RunCreateIssue(c *cli.Context) error {
 		StrainPrice:  c.Int("strain-price"),
 		PlasmidPrice: c.Int("plasmid-price"),
 	})
+
 	err = s.Start(c.String("subject"), g)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(err.Error(), exitCode)
 	}
+
 	l.Info("starting the Github issue creation subscriber messaging backend")
 	message.Shutdown(s, l)
+
 	return nil
 }

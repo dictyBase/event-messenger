@@ -43,6 +43,7 @@ func WebhookOntoLoadCmd() cli.Command {
 		},
 		arangoflag.ArangodbFlags()...,
 	)
+
 	return cli.Command{
 		Name:   "start-onto-server",
 		Usage:  "starts the webhook server for loading ontologies",

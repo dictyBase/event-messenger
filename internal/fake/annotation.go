@@ -47,7 +47,7 @@ func stockGroupCollData(
 	gfn groupDataFn,
 ) []*annotation.TaggedAnnotationGroupCollection_Data {
 	var gcd []*annotation.TaggedAnnotationGroupCollection_Data
-	for i := 0; i <= 3; i++ {
+	for range 4 {
 		gcd = append(gcd, &annotation.TaggedAnnotationGroupCollection_Data{
 			Type: "annotation_group",
 			Group: &annotation.TaggedAnnotationGroup{
@@ -58,6 +58,7 @@ func stockGroupCollData(
 			},
 		})
 	}
+
 	return gcd
 }
 
@@ -81,6 +82,7 @@ func groupData(
 			},
 		})
 	}
+
 	return gd
 }
 
@@ -91,6 +93,7 @@ func strainGroupData() []*annotation.TaggedAnnotationGroup_Data {
 		{registry.InvVialCountTag, "9"},
 		{registry.InvVialColorTag, "blue"},
 	}
+
 	return groupData(allData, StrainID)
 }
 
@@ -100,5 +103,6 @@ func plasmidGroupData() []*annotation.TaggedAnnotationGroup_Data {
 		{registry.InvLocationTag, "17(21-22)"},
 		{registry.InvVialColorTag, "red"},
 	}
+
 	return groupData(allData, PlasmidID)
 }

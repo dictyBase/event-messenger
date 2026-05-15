@@ -25,6 +25,7 @@ func main() {
 			Value: "error",
 		},
 	}
+
 	app.Commands = []cli.Command{
 		cmd.GhIssueCmd(),
 		cmd.SendEmailFlags(),

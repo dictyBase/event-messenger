@@ -11,30 +11,37 @@ import (
 	"github.com/urfave/cli"
 )
 
+const exitCode = 2
+
 // RunSendEmail connects to nats and sends an email based on received stock order data.
 func RunSendEmail(c *cli.Context) error {
 	l, err := logger.NewLogger(c)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(err.Error(), exitCode)
 	}
+
 	s, err := setupEmail(c, l)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(err.Error(), exitCode)
 	}
+
 	l.Info("starting the email sending subscriber backend")
 	message.Shutdown(s, l)
+
 	return nil
 }
 
-func setupEmail(c *cli.Context, logger *logrus.Entry) (*nats.NatsEmailSubscriber, error) {
+func setupEmail(c *cli.Context, logger *logrus.Entry) (*nats.EmailSubscriber, error) {
 	s, err := nats.NewEmailSubscriber(c.String("nats-host"), c.String("nats-port"), logger)
 	if err != nil {
 		return s, err
 	}
+
 	mc, err := service.ClientConn(c, []string{"stock", "annotation", "user"})
 	if err != nil {
 		return s, err
 	}
+
 	mailer := mg.NewMailgunEmailer(&mg.EmailerParams{
 		Sender:       c.String("sender"),
 		SenderName:   c.String("name"),
@@ -47,5 +54,6 @@ func setupEmail(c *cli.Context, logger *logrus.Entry) (*nats.NatsEmailSubscriber
 		Sources:      datasource.GrpcSources(mc),
 		PubSource:    datasource.NewPublication(c.String("publication-api")),
 	})
+
 	return s, s.Start(c.String("subject"), mailer)
 }
