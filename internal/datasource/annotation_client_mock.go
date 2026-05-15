@@ -19,6 +19,29 @@ type TaggedAnnotationServiceClient struct {
 	mock.Mock
 }
 
+// OboJSONFileUpload provides a mock function with given fields: ctx, opts
+func (_m *TaggedAnnotationServiceClient) OboJSONFileUpload(ctx context.Context, opts ...grpc.CallOption) (annotation.TaggedAnnotationService_OboJSONFileUploadClient, error) {
+	ret := _m.Called(ctx)
+
+	var r0 annotation.TaggedAnnotationService_OboJSONFileUploadClient
+	if rf, ok := ret.Get(0).(func(context.Context, ...grpc.CallOption) annotation.TaggedAnnotationService_OboJSONFileUploadClient); ok {
+		r0 = rf(ctx, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(annotation.TaggedAnnotationService_OboJSONFileUploadClient)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AddToAnnotationGroup provides a mock function with given fields: ctx, in, opts
 func (_m *TaggedAnnotationServiceClient) AddToAnnotationGroup(ctx context.Context, in *annotation.AnnotationGroupId, opts ...grpc.CallOption) (*annotation.TaggedAnnotationGroup, error) {
 	_va := ifaceToOpts(opts...)
