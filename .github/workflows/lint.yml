@@ -5,8 +5,8 @@ on:
       - master
 jobs:
   call-lint:
-    uses: dictyBase/workflows/.github/workflows/golang-lint.yml@develop
-    secrets: inherit
+    uses: dictyBase/workflows/.github/workflows/golang-lint.yaml@develop
     with:
       repository: ${{ github.repository }}
-      ref: ${{ github.ref }}
+      ref: ${{ github.event.pull_request.head.sha }}
+      version: v2.8.0-alpine
