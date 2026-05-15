@@ -20,13 +20,17 @@ jobs:
         with:
           files: ./profile.cov
           token: ${{ secrets.CODECOV }}
-  call-publication-docker-build:
+  call-build-deploy:
     needs: testcov
-    uses: dictyBase/workflows/.github/workflows/build-publish-image.yaml@develop
+    uses: dictyBase/workflows/.github/workflows/composite-deploy.yaml@develop
     secrets: inherit
     with:
+      app: event-messenger
+      project: event-messenger
+      stack: experiments
       repository: ${{ github.repository }}
       ref: ${{ github.ref_name }}
-      image: event-messenger
       dockerfile: build/package/Dockerfile
-      namespace: dictybase
+      docker_image: event-messenger
+      cluster: ${{ vars.DEV_STAGING_CLUSTER }}
+      cluster_state_storage: ${{ vars.DEV_STAGING_KOPS_STATE_STORAGE }}
