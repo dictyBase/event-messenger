@@ -4,19 +4,29 @@ on:
     branches:
       - develop
 jobs:
-  call-testcov:
-    uses: dictyBase/workflows/.github/workflows/golang-testcov.yml@develop
-    secrets: inherit
-    with:
-      repository: ${{ github.repository }}
-      ref: ${{ github.ref_name }}
+  testcov:
+    runs-on: ubuntu-latest
+    steps:
+      - name: set up golang
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.25
+      - name: check out code
+        uses: actions/checkout@v6
+      - name: unit test
+        run: go test -covermode=atomic -coverprofile=profile.cov -v ./...
+      - name: upload coverage to codecov
+        uses: codecov/codecov-action@v6
+        with:
+          files: ./profile.cov
+          token: ${{ secrets.CODECOV }}
   call-publication-docker-build:
-    needs: call-testcov
+    needs: testcov
     uses: dictyBase/workflows/.github/workflows/build-publish-image.yaml@develop
     secrets: inherit
     with:
       repository: ${{ github.repository }}
       ref: ${{ github.ref_name }}
       image: event-messenger
-      dockerfile: build/package/Dockerfile 
+      dockerfile: build/package/Dockerfile
       namespace: dictybase

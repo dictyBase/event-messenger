@@ -1,4 +1,4 @@
-FROM golang:1.22-bullseye
+FROM golang:1.25-trixie
 ENV CGO_ENABLED=0 \
 	GOOS=linux \
 	GOARCH=amd64
