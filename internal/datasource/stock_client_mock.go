@@ -318,6 +318,59 @@ func (_m *StockServiceClient) UpdatePlasmid(ctx context.Context, in *stock.Plasm
 	return r0, r1
 }
 
+// ListStrainsByIds provides a mock function with given fields: ctx, in, opts
+func (_m *StockServiceClient) ListStrainsByIds(ctx context.Context, in *stock.StockIdList, opts ...grpc.CallOption) (*stock.StrainList, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *stock.StrainList
+	if rf, ok := ret.Get(0).(func(context.Context, *stock.StockIdList, ...grpc.CallOption) *stock.StrainList); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*stock.StrainList)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *stock.StockIdList, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// OboJSONFileUpload provides a mock function with given fields: ctx, opts
+func (_m *StockServiceClient) OboJSONFileUpload(ctx context.Context, opts ...grpc.CallOption) (stock.StockService_OboJSONFileUploadClient, error) {
+	ret := _m.Called(ctx)
+
+	var r0 stock.StockService_OboJSONFileUploadClient
+	if rf, ok := ret.Get(0).(func(context.Context, ...grpc.CallOption) stock.StockService_OboJSONFileUploadClient); ok {
+		r0 = rf(ctx, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(stock.StockService_OboJSONFileUploadClient)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UpdateStrain provides a mock function with given fields: ctx, in, opts
 func (_m *StockServiceClient) UpdateStrain(ctx context.Context, in *stock.StrainUpdate, opts ...grpc.CallOption) (*stock.Strain, error) {
 	_va := make([]interface{}, len(opts))
