@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,7 +13,7 @@ import (
 	araobo "github.com/dictyBase/go-obograph/storage/arangodb"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 	readHeaderTimeout = 5 * time.Second
 )
 
-func RunOntoServer(c *cli.Context) error {
+func RunOntoServer(_ context.Context, c *cli.Command) error {
 	arPort, _ := strconv.Atoi(c.String("arangodb-port"))
 	cp := &araobo.ConnectParams{
 		User:     c.String("arangodb-user"),
@@ -39,12 +40,12 @@ func RunOntoServer(c *cli.Context) error {
 
 	ds, err := araobo.NewDataSource(cp, clp)
 	if err != nil {
-		return cli.NewExitError(err.Error(), exitCode)
+		return cli.Exit(err.Error(), exitCode)
 	}
 
 	l, err := logger.NewLogger(c)
 	if err != nil {
-		return cli.NewExitError(err.Error(), exitCode)
+		return cli.Exit(err.Error(), exitCode)
 	}
 
 	server := &server.OntoServer{
@@ -61,7 +62,7 @@ func RunOntoServer(c *cli.Context) error {
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 	if err := tsrv.ListenAndServe(); err != nil {
-		return cli.NewExitError(
+		return cli.Exit(
 			fmt.Sprintf("error in running webhook server %s", err),
 			exitCode,
 		)

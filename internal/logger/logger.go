@@ -5,10 +5,10 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-func NewLogger(c *cli.Context) (*logrus.Entry, error) {
+func NewLogger(c *cli.Command) (*logrus.Entry, error) {
 	lfmt, err := getLogFmt(c)
 	if err != nil {
 		return &logrus.Entry{}, err
@@ -27,10 +27,10 @@ func NewLogger(c *cli.Context) (*logrus.Entry, error) {
 	return logrus.NewEntry(logger), nil
 }
 
-func getLogLevel(c *cli.Context) (logrus.Level, error) {
+func getLogLevel(c *cli.Command) (logrus.Level, error) {
 	var level logrus.Level
 
-	switch c.GlobalString("log-level") {
+	switch c.String("log-level") {
 	case "debug":
 		level = logrus.DebugLevel
 	case "info":
@@ -53,10 +53,10 @@ func getLogLevel(c *cli.Context) (logrus.Level, error) {
 	return level, nil
 }
 
-func getLogFmt(c *cli.Context) (logrus.Formatter, error) {
+func getLogFmt(c *cli.Command) (logrus.Formatter, error) {
 	var lfmt logrus.Formatter
 
-	switch c.GlobalString("log-format") {
+	switch c.String("log-format") {
 	case "text":
 		lfmt = &logrus.TextFormatter{
 			TimestampFormat: "02/Jan/2006:15:04:05",
