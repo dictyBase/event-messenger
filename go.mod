@@ -18,8 +18,8 @@ require (
 	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/nats-io/nuid v1.0.0 // indirect
 	github.com/rakyll/statik v0.1.7
-	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.9.0
+	github.com/sirupsen/logrus v1.9.4
+	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli v1.22.16
 	github.com/yuin/goldmark v1.7.8
 	golang.org/x/oauth2 v0.24.0
