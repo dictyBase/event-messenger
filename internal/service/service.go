@@ -6,13 +6,13 @@ import (
 	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 func ClientConn(
-	c *cli.Context,
+	c *cli.Command,
 	names []string,
 ) (map[string]*grpc.ClientConn, error) {
 	mc := make(map[string]*grpc.ClientConn)

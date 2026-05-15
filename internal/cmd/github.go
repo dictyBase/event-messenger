@@ -2,30 +2,32 @@ package cmd
 
 import (
 	"github.com/dictyBase/event-messenger/internal/app/github"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func ghRepoFlags() []cli.Flag {
 	return []cli.Flag{
-		cli.StringFlag{
-			Name:     "token, ght",
+		&cli.StringFlag{
+			Name:     "token",
+			Aliases:  []string{"ght"},
 			Usage:    "Github personal access token file",
-			EnvVar:   "GITHUB_TOKEN",
+			Sources:  cli.EnvVars("GITHUB_TOKEN"),
 			Required: true,
 		},
-		cli.StringFlag{
-			Name:     "repository, r",
+		&cli.StringFlag{
+			Name:     "repository",
+			Aliases:  []string{"r"},
 			Usage:    "Github repository",
-			EnvVar:   "GITHUB_REPOSITORY",
+			Sources:  cli.EnvVars("GITHUB_REPOSITORY"),
 			Required: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:     "owner",
 			Usage:    "Github repository owner",
-			EnvVar:   "GITHUB_OWNER",
+			Sources:  cli.EnvVars("GITHUB_OWNER"),
 			Required: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:     "subject",
 			Usage:    "Subject name for nats subscription",
 			Required: true,
@@ -35,27 +37,27 @@ func ghRepoFlags() []cli.Flag {
 
 func serviceFlags() []cli.Flag {
 	return []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:     "stock-grpc-host",
-			EnvVar:   "STOCK_API_SERVICE_HOST",
+			Sources:  cli.EnvVars("STOCK_API_SERVICE_HOST"),
 			Usage:    "stock grpc host",
 			Required: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:     "stock-grpc-port",
-			EnvVar:   "STOCK_API_SERVICE_PORT",
+			Sources:  cli.EnvVars("STOCK_API_SERVICE_PORT"),
 			Usage:    "stock grpc port",
 			Required: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:     "annotation-grpc-host",
-			EnvVar:   "ANNOTATION_API_SERVICE_HOST",
+			Sources:  cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
 			Usage:    "annotation grpc host",
 			Required: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:     "annotation-grpc-port",
-			EnvVar:   "ANNOTATION_API_SERVICE_PORT",
+			Sources:  cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
 			Usage:    "annotation grpc port",
 			Required: true,
 		},
@@ -64,15 +66,15 @@ func serviceFlags() []cli.Flag {
 
 func ghNatsFlags() []cli.Flag {
 	return []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:     "nats-host",
-			EnvVar:   "NATS_SERVICE_HOST",
+			Sources:  cli.EnvVars("NATS_SERVICE_HOST"),
 			Usage:    "nats messaging server host",
 			Required: true,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:     "nats-port",
-			EnvVar:   "NATS_SERVICE_PORT",
+			Sources:  cli.EnvVars("NATS_SERVICE_PORT"),
 			Usage:    "nats messaging server port",
 			Required: true,
 		},
@@ -81,12 +83,12 @@ func ghNatsFlags() []cli.Flag {
 
 func priceFlags() []cli.Flag {
 	return []cli.Flag{
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  "strain-price",
 			Usage: "price of individual strain",
 			Value: defaultStrainPrice,
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  "plasmid-price",
 			Usage: "price of individual plasmid",
 			Value: defaultPlasmidPrice,
@@ -94,13 +96,13 @@ func priceFlags() []cli.Flag {
 	}
 }
 
-func GhIssueCmd() cli.Command {
+func GhIssueCmd() *cli.Command {
 	flags := ghRepoFlags()
 	flags = append(flags, ghNatsFlags()...)
 	flags = append(flags, serviceFlags()...)
 	flags = append(flags, priceFlags()...)
 
-	return cli.Command{
+	return &cli.Command{
 		Name:   "gh-issue",
 		Usage:  "creates a github issue when a new stock order comes through",
 		Action: github.RunCreateIssue,

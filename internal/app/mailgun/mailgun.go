@@ -1,6 +1,8 @@
 package mailgun
 
 import (
+	"context"
+
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	"github.com/dictyBase/event-messenger/internal/logger"
 	"github.com/dictyBase/event-messenger/internal/message"
@@ -8,21 +10,21 @@ import (
 	mg "github.com/dictyBase/event-messenger/internal/send-email/mailgun"
 	"github.com/dictyBase/event-messenger/internal/service"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 const exitCode = 2
 
 // RunSendEmail connects to nats and sends an email based on received stock order data.
-func RunSendEmail(c *cli.Context) error {
+func RunSendEmail(_ context.Context, c *cli.Command) error {
 	l, err := logger.NewLogger(c)
 	if err != nil {
-		return cli.NewExitError(err.Error(), exitCode)
+		return cli.Exit(err.Error(), exitCode)
 	}
 
 	s, err := setupEmail(c, l)
 	if err != nil {
-		return cli.NewExitError(err.Error(), exitCode)
+		return cli.Exit(err.Error(), exitCode)
 	}
 
 	l.Info("starting the email sending subscriber backend")
@@ -31,7 +33,7 @@ func RunSendEmail(c *cli.Context) error {
 	return nil
 }
 
-func setupEmail(c *cli.Context, logger *logrus.Entry) (*nats.EmailSubscriber, error) {
+func setupEmail(c *cli.Command, logger *logrus.Entry) (*nats.EmailSubscriber, error) {
 	s, err := nats.NewEmailSubscriber(c.String("nats-host"), c.String("nats-port"), logger)
 	if err != nil {
 		return s, err

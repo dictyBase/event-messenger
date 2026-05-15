@@ -1,22 +1,24 @@
 package github
 
 import (
+	"context"
+
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	gh "github.com/dictyBase/event-messenger/internal/issue-tracker/github"
 	"github.com/dictyBase/event-messenger/internal/logger"
 	"github.com/dictyBase/event-messenger/internal/message"
 	"github.com/dictyBase/event-messenger/internal/message/nats"
 	"github.com/dictyBase/event-messenger/internal/service"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 const exitCode = 2
 
 // RunCreateIssue connects to nats and creates a GitHub issue based on received order data.
-func RunCreateIssue(c *cli.Context) error {
+func RunCreateIssue(_ context.Context, c *cli.Command) error {
 	l, err := logger.NewLogger(c)
 	if err != nil {
-		return cli.NewExitError(err.Error(), exitCode)
+		return cli.Exit(err.Error(), exitCode)
 	}
 
 	s, err := nats.NewGithubSubscriber(
@@ -25,12 +27,12 @@ func RunCreateIssue(c *cli.Context) error {
 		l,
 	)
 	if err != nil {
-		return cli.NewExitError(err.Error(), exitCode)
+		return cli.Exit(err.Error(), exitCode)
 	}
 
 	mc, err := service.ClientConn(c, []string{"stock", "user", "annotation"})
 	if err != nil {
-		return cli.NewExitError(err.Error(), exitCode)
+		return cli.Exit(err.Error(), exitCode)
 	}
 
 	g := gh.NewIssueCreator(&gh.IssueParams{
@@ -45,7 +47,7 @@ func RunCreateIssue(c *cli.Context) error {
 
 	err = s.Start(c.String("subject"), g)
 	if err != nil {
-		return cli.NewExitError(err.Error(), exitCode)
+		return cli.Exit(err.Error(), exitCode)
 	}
 
 	l.Info("starting the Github issue creation subscriber messaging backend")
