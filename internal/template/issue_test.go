@@ -33,7 +33,7 @@ func TestIssueStockMkdown(t *testing.T) {
 
 	ic := fakeStockIssueContent()
 	b, err := OutputText(&OutputParams{
-		File:    "issue.tmpl",
+		File:    issueTemplateFile,
 		Path:    "/",
 		Content: ic,
 	})
@@ -64,7 +64,7 @@ func TestIssueStrainMkdown(t *testing.T) {
 
 	ic := fakeStrainOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
-		File:    "issue.tmpl",
+		File:    issueTemplateFile,
 		Path:    "/",
 		Content: ic,
 	})
@@ -93,7 +93,7 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 
 	ic := fakePlasmidOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
-		File:    "issue.tmpl",
+		File:    issueTemplateFile,
 		Path:    "/",
 		Content: ic,
 	})
@@ -127,7 +127,7 @@ func testMarkdownStrainStorage(t *testing.T, doc *goquery.Document) {
 	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
 	assert.ElementsMatch(
 		th,
-		[]string{"Name", "Stored as", "Location", "No. of vials", "Color"},
+		[]string{"Name", "Stored as", locationColumn, "No. of vials", colorColumn},
 		"should match all strain storage header elements",
 	)
 
@@ -149,7 +149,7 @@ func testMarkdownStrainStorage(t *testing.T, doc *goquery.Document) {
 		all:      allTr,
 		startIdx: 1,
 		records: []*assertData{
-			{"talA-", "should match the strain name"},
+			{strainPrefix, "should match the strain name"},
 			{"axenic cells", "should match how the strain is stored"},
 			{"1-34(76-78)", "should match strain location"},
 			{"9", "should match no of vials"},
@@ -169,7 +169,7 @@ func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
 	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
 	assert.ElementsMatch(
 		th,
-		[]string{"ID", "Descriptor", "Name(s)", "Systematic Name", "Characteristics"},
+		[]string{"ID", descriptorColumn, "Name(s)", systematicNameCol, "Characteristics"},
 		"should match all strain information header elements",
 	)
 
@@ -196,7 +196,7 @@ func testMarkdownStrainInfo(t *testing.T, doc *goquery.Document) {
 		all:      allTr,
 		startIdx: 2,
 		records: []*assertData{
-			{"talA-", "should match the strain descriptor"},
+			{strainPrefix, "should match the strain descriptor"},
 			{"talin-null talA-null", "should match strain name(s)"},
 			{"HG1666", "should match strain systematic name"},
 			{"blasticidin resistantneomycin resistant", "should match strain characteristics"},
@@ -215,7 +215,7 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document, idx int) {
 	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
 	assert.ElementsMatch(
 		th,
-		[]string{"ID", "Name", "Stored as", "Location", "Color"},
+		[]string{"ID", "Name", "Stored as", locationColumn, colorColumn},
 		"should match all plasmid information header elements",
 	)
 
@@ -242,7 +242,7 @@ func testMarkdownPlasmidInfo(t *testing.T, doc *goquery.Document, idx int) {
 		all:      allTr,
 		startIdx: 2,
 		records: []*assertData{
-			{"pDV-fAR1-CYFP", "should match the plasmid name"},
+			{plasmidName, "should match the plasmid name"},
 			{"DH5α", "should match how plasmid is stored"},
 			{"12(45,54)", "should match plasmid location in storage system"},
 			{"blue", "should match color of plasmid storage container"},
@@ -283,7 +283,7 @@ func testMarkdownOrderPayment(t *testing.T, doc *goquery.Document, ic *IssueCont
 	assert.Lenf(th, 4, "expect %d got %d elements", 4, len(th))
 	assert.ElementsMatch(
 		th,
-		[]string{"Item", "Quantity", "Unit price($)", "Total($)"},
+		[]string{itemColumn, quantityColumn, "Unit price($)", "Total($)"},
 		"should match all header elements",
 	)
 	assert.Exactly(

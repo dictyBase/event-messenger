@@ -12,6 +12,17 @@ import (
 	"github.com/yuin/goldmark/extension"
 )
 
+const (
+	itemColumn        = "Item"
+	quantityColumn    = "Quantity"
+	totalColumn       = "Total"
+	systematicNameCol = "Systematic Name"
+	descriptorColumn  = "Descriptor"
+	colorColumn       = "Color"
+	issueTemplateFile = "issue.tmpl"
+	locationColumn    = "Location"
+)
+
 func checkSubstr(str string, slice []string, t *testing.T) {
 	assert := assert.New(t)
 	for _, s := range slice {
@@ -31,11 +42,11 @@ func emailSubstr() []string {
 		"Order #",
 		"Shipping Address",
 		"Billing Address",
-		"Item",
-		"Quantity",
-		"Total",
-		"Systematic Name",
-		"Descriptor",
+		itemColumn,
+		quantityColumn,
+		totalColumn,
+		systematicNameCol,
+		descriptorColumn,
 		"Plasmid Name",
 		"Comment",
 		"Payment information",
@@ -46,15 +57,15 @@ func issueSubstr() []string {
 	return []string{
 		"Shipping address",
 		"Billing address",
-		"Item",
-		"Quantity",
-		"Total",
-		"Systematic Name",
-		"Descriptor",
+		itemColumn,
+		quantityColumn,
+		totalColumn,
+		systematicNameCol,
+		descriptorColumn,
 		"Characteristics",
 		"Strain storage",
-		"Location",
-		"Color",
+		locationColumn,
+		colorColumn,
 		"Plasmid information and storage",
 	}
 }
@@ -66,7 +77,7 @@ func TestReadFromBundle(t *testing.T) {
 	require.NoError(t, err, "expect no error from reading email.tmpl template file")
 	checkSubstr(str, emailSubstr(), t)
 
-	str2, err := ReadFromBundle("/", "issue.tmpl")
+	str2, err := ReadFromBundle("/", issueTemplateFile)
 	require.NoError(t, err, "expect no error from reading issue.tmpl template file")
 	checkSubstr(str2, issueSubstr(), t)
 }
