@@ -109,7 +109,7 @@ func testHTMLStrainInfo(t *testing.T, doc *goquery.Document) {
 	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
 	assert.ElementsMatch(
 		th,
-		[]string{"ID", "Descriptor", "Name(s)", "Systematic Name", "Citation"},
+		[]string{"ID", descriptorColumn, "Name(s)", systematicNameCol, "Citation"},
 		"should match all header elements",
 	)
 
@@ -228,7 +228,7 @@ func testHTMLOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent)
 	assert.Lenf(th, 4, "expect %d got %d elements", 4, len(th))
 	assert.ElementsMatch(
 		th,
-		[]string{"Item", "Quantity", "Unit Price ($)", "Total ($)"},
+		[]string{itemColumn, quantityColumn, "Unit Price ($)", "Total ($)"},
 		"should match all header elements",
 	)
 
@@ -236,7 +236,7 @@ func testHTMLOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent)
 		"div#cost.card-panel>div.section>table.striped>tbody>tr:last-child",
 	).Children().Map(childrenContent)
 	assert.Lenf(tdt, 4, "expect %d got %d elements", 4, len(tdt))
-	assert.Exactly("Total", tdt[0], "should have total header")
+	assert.Exactly(totalColumn, tdt[0], "should have total header")
 	assert.Exactly(
 		tdt[len(tdt)-1],
 		strconv.Itoa(ec.TotalCost()),

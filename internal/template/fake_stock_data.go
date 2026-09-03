@@ -13,6 +13,8 @@ const (
 	orderID        = "3894333"
 	payerUserID    = 8448393
 	consumerUserID = 8493438
+	plasmidName    = "pDV-fAR1-CYFP"
+	strainPrefix   = "talA-"
 )
 
 type templateData struct {
@@ -147,7 +149,7 @@ func fakePlasmid() []*PlasmidRows {
 			&PlasmidRows{
 				ID:      p,
 				PubInfo: fakePub(),
-				Name:    "pDV-fAR1-CYFP",
+				Name:    plasmidName,
 			},
 		)
 	}
@@ -160,7 +162,7 @@ func fakePlasmidInv() [][]string {
 	for _, p := range fakePlasmidItems() {
 		rows = append(rows, []string{
 			p,
-			"pDV-fAR1-CYFP",
+			plasmidName,
 			"DH5α",
 			"12(45,54)",
 			"blue",
@@ -174,7 +176,7 @@ func fakeStrainInv() [][]string {
 	var rows [][]string
 	for range len(fakeStrainItems()) {
 		rows = append(rows, []string{
-			"talA-",
+			strainPrefix,
 			"axenic cells",
 			"1-34(76-78)",
 			"9",
@@ -190,7 +192,7 @@ func fakeStrainInfo() [][]string {
 	for _, s := range fakeStrainItems() {
 		rows = append(rows, []string{
 			s,
-			"talA-",
+			strainPrefix,
 			"talin-null talA-null",
 			"HG1666",
 			"blasticidin resistant<br/>neomycin resistant",

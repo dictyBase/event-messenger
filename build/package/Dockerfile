@@ -1,4 +1,4 @@
-FROM golang:1.25-trixie
+FROM golang:1.26-trixie
 ENV CGO_ENABLED=0 \
 	GOOS=linux \
 	GOARCH=amd64

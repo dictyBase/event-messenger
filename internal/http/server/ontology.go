@@ -76,8 +76,8 @@ func (s *OntoServer) setDeploymentStatus(d *github.DeploymentEvent, err error) (
 			d.GetRepo().GetName(),
 			d.GetDeployment().GetID(),
 			&github.DeploymentStatusRequest{
-				State:       github.String("error"),
-				Description: github.String(err.Error()),
+				State:       new("error"),
+				Description: new(err.Error()),
 			})
 		if err != nil {
 			err = errors.New(err.Error())
@@ -92,8 +92,8 @@ func (s *OntoServer) setDeploymentStatus(d *github.DeploymentEvent, err error) (
 		d.GetRepo().GetName(),
 		d.GetDeployment().GetID(),
 		&github.DeploymentStatusRequest{
-			State:       github.String("success"),
-			Description: github.String("success in loading files"),
+			State:       new("success"),
+			Description: new("success in loading files"),
 		})
 	if err != nil {
 		return fmt.Sprintf(
