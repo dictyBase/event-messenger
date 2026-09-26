@@ -6,9 +6,15 @@ import (
 	"fmt"
 	"strings"
 
+	A "github.com/IBM/fp-go/v2/array"
+	E "github.com/IBM/fp-go/v2/either"
+	F "github.com/IBM/fp-go/v2/function"
+	IOE "github.com/IBM/fp-go/v2/ioeither"
+	S "github.com/IBM/fp-go/v2/string"
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	emailer "github.com/dictyBase/event-messenger/internal/send-email"
 	"github.com/dictyBase/event-messenger/internal/template"
+	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
@@ -26,6 +32,11 @@ Please check the attached PDF for your invoice.
 `
 )
 
+// publicationSource resolves PubMed ids into citation snippets.
+type publicationSource interface {
+	ParsedInfo(pmid string) IOE.IOEither[error, *datasource.PubInfo]
+}
+
 type emailData struct {
 	user     map[string]*user.User
 	strains  []*template.StrainRows
@@ -38,7 +49,7 @@ type mailgunEmailer struct {
 	anno      *datasource.Annotation
 	stk       *datasource.Stock
 	usr       *datasource.User
-	pub       *datasource.Publication
+	pub       publicationSource
 	strprice  int
 	plasprice int
 	from      string
@@ -238,7 +249,9 @@ func (email *mailgunEmailer) addPlasmidPub(
 			continue
 		}
 
-		pinfo, err := email.pubInfo(pls.GetData().GetAttributes().GetPublications())
+		pinfo, err := E.UnwrapError(ioeutils.ToEither(email.pubInfo(
+			pls.GetData().GetAttributes().GetPublications(),
+		)))
 		if err != nil {
 			return prows, err
 		}
@@ -289,7 +302,9 @@ func (email *mailgunEmailer) addStrainPub(
 			continue
 		}
 
-		pinfo, err := email.pubInfo(str.GetData().GetAttributes().GetPublications())
+		pinfo, err := E.UnwrapError(ioeutils.ToEither(email.pubInfo(
+			str.GetData().GetAttributes().GetPublications(),
+		)))
 		if err != nil {
 			return srows, err
 		}
@@ -302,23 +317,21 @@ func (email *mailgunEmailer) addStrainPub(
 
 func (email *mailgunEmailer) pubInfo(
 	ids []string,
-) ([]*datasource.PubInfo, error) {
-	var pinfo []*datasource.PubInfo
+) IOE.IOEither[error, []*datasource.PubInfo] {
+	return F.Pipe2(
+		ids,
+		normalizePublicationIDs,
+		IOE.TraverseArraySeq(email.pub.ParsedInfo),
+	)
+}
 
-	for _, pid := range ids {
-		if len(strings.TrimSpace(pid)) == 0 {
-			continue
-		}
-
-		pub, err := email.pub.ParsedInfoFromGraphql(pid)
-		if err != nil {
-			return pinfo, err
-		}
-
-		pinfo = append(pinfo, pub)
-	}
-
-	return pinfo, nil
+// normalizePublicationIDs trims each id and drops the blank ones.
+func normalizePublicationIDs(ids []string) []string {
+	return F.Pipe2(
+		ids,
+		A.Map(strings.TrimSpace),
+		A.Filter(S.IsNonEmpty),
+	)
 }
 
 func getMailgunClient(domain, apiKey string) *mailgun.MailgunImpl {
