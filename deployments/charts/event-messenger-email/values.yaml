@@ -23,7 +23,6 @@ dictybaseConfiguration:
     sender: eventMessenger.email.sender
     senderName: eventMessenger.email.senderName
     cc: eventMessenger.email.cc
-    publication: endpoints.publication
   secrets:
     name: dictybase-configuration
     apiKey: eventMessenger.email.apiKey

@@ -37,8 +37,6 @@ spec:
             $(EMAIL_SENDER),
             "--cc",
             $(EMAIL_CC),
-            "--pub",
-            $(PUBLICATION_API_ENDPOINT),
           ]
           env:
           - name: MAILGUN_API_KEY
@@ -66,11 +64,6 @@ spec:
               configMapKeyRef:
                 name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
                 key: "{{ .Values.dictybaseConfiguration.configMap.cc }}"
-          - name: PUBLICATION_API_ENDPOINT
-            valueFrom:
-              configMapKeyRef:
-                name: "{{ .Values.dictybaseConfiguration.configMap.name }}"
-                key: "{{ .Values.dictybaseConfiguration.configMap.publication }}"
           # livenessProbe:
           #   httpGet:
           #     path: /
