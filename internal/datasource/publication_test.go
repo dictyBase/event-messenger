@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -16,13 +17,17 @@ const (
 	huberName = "Huber RJ"
 )
 
-// fakePubMed is an in-memory pubMedClient stub.
+// fakePubMed is an in-memory pubMedClient stub that records every id it
+// is asked for.
 type fakePubMed struct {
 	articles map[string]*literature.Article
 	errs     map[string]error
+	calls    []string
 }
 
 func (f *fakePubMed) GetArticle(pmid string) (*literature.Article, error) {
+	f.calls = append(f.calls, pmid)
+
 	if err := f.errs[pmid]; err != nil {
 		return nil, err
 	}
@@ -168,6 +173,46 @@ func TestParsedInfoTypedError(t *testing.T) {
 	var litErr *literature.Error
 	require.ErrorAs(t, err, &litErr)
 	require.Equal(t, literature.ErrorTypeInvalidInput, litErr.Type)
+}
+
+func TestParsedInfoInvalidPMID(t *testing.T) {
+	t.Parallel()
+
+	for _, pmid := range []string{"", "   ", "abc", "123x", "0"} {
+		t.Run(fmt.Sprintf("pmid %q", pmid), func(t *testing.T) {
+			t.Parallel()
+
+			// The stub answers every id, so a rejection here can only
+			// come from validation in front of the client call.
+			fake := newFakePubMed(testArticle(
+				[]literature.Author{{FullName: huberName}},
+			))
+			fake.articles[pmid] = fake.articles[testPMID]
+
+			_, err := E.UnwrapError(ioeutils.ToEither(
+				newPublication(fake).ParsedInfo(pmid),
+			))
+			require.Error(t, err)
+			require.ErrorContains(
+				t,
+				err,
+				"pmid must contain decimal digits",
+			)
+
+			var litErr *literature.Error
+			require.ErrorAs(t, err, &litErr)
+			require.Equal(
+				t,
+				literature.ErrorTypeInvalidInput,
+				litErr.Type,
+			)
+			require.Empty(
+				t,
+				fake.calls,
+				"an invalid pmid must be rejected before the client call",
+			)
+		})
+	}
 }
 
 func TestAuthorStr(t *testing.T) {

@@ -626,7 +626,7 @@ func TestPubInfoPreservesOrder(t *testing.T) {
 	require.Equal(t, []string{"first", "second", "third"}, authors)
 }
 
-func TestPubInfoPropagatesFailure(t *testing.T) {
+func TestPubInfoShortCircuitsOnFailure(t *testing.T) {
 	t.Parallel()
 
 	fake := &fakePublicationSource{
@@ -642,7 +642,12 @@ func TestPubInfoPropagatesFailure(t *testing.T) {
 	))
 	require.Error(t, err)
 	require.ErrorContains(t, err, "boom")
-	require.Equal(t, []string{"p1", "p2", "p3"}, fake.recordedCalls())
+	require.Equal(
+		t,
+		[]string{"p1", "p2"},
+		fake.recordedCalls(),
+		"a failure must stop the traversal before p3",
+	)
 }
 
 func TestNormalizePublicationIDs(t *testing.T) {
