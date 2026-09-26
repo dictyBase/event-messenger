@@ -2,6 +2,7 @@ package mailgun
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
+	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,9 +55,57 @@ func pubInfoFor(author string) *datasource.PubInfo {
 }
 
 // emailerWithPublications builds an emailer with only the publication
-// source wired, enough for the pubInfo traversal tests.
+// source wired, enough for the publication traversal and row tests.
 func emailerWithPublications(fake *fakePublicationSource) *mailgunEmailer {
 	return &mailgunEmailer{pub: fake}
+}
+
+// fakeStrain builds a strain carrying the given publication ids.
+func fakeStrain(pubs ...string) *stock.Strain {
+	return &stock.Strain{
+		Data: &stock.Strain_Data{
+			Attributes: &stock.StrainAttributes{Publications: pubs},
+		},
+	}
+}
+
+// fakePlasmid builds a plasmid carrying the given publication ids.
+func fakePlasmid(pubs ...string) *stock.Plasmid {
+	return &stock.Plasmid{
+		Data: &stock.Plasmid_Data{
+			Attributes: &stock.PlasmidAttributes{Publications: pubs},
+		},
+	}
+}
+
+// strainInfoRows builds the four-column strain info returned by the
+// annotation source, one row per index.
+func strainInfoRows(n int) [][]string {
+	rows := make([][]string, 0, n)
+	for i := range n {
+		rows = append(rows, []string{
+			fmt.Sprintf("DBS%05d", i),
+			"descriptor",
+			"name",
+			"sys-name",
+		})
+	}
+
+	return rows
+}
+
+// plasmidInfoRows builds the two-column plasmid info returned by the
+// stock source, one row per index.
+func plasmidInfoRows(n int) [][]string {
+	rows := make([][]string, 0, n)
+	for i := range n {
+		rows = append(rows, []string{
+			fmt.Sprintf("DBP%05d", i),
+			"plasmid-name",
+		})
+	}
+
+	return rows
 }
 
 func TestPubInfoFiltersAndTrimsIDs(t *testing.T) {
@@ -135,4 +185,140 @@ func TestNormalizePublicationIDs(t *testing.T) {
 		normalizePublicationIDs([]string{" 123 ", "", "456", " \t "}),
 	)
 	require.Empty(t, normalizePublicationIDs(nil))
+}
+
+func TestAddStrainPubEmptyPublications(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakePublicationSource{
+		infos: map[string]*datasource.PubInfo{},
+		errs:  map[string]error{},
+	}
+
+	res, err := E.UnwrapError(ioeutils.ToEither(
+		emailerWithPublications(fake).addStrainPub(
+			strainInfoRows(1),
+			[]*stock.Strain{fakeStrain()},
+		),
+	))
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.Equal(t, "DBS00000", res[0].ID)
+	require.Empty(t, res[0].PubInfo)
+	require.Empty(
+		t,
+		fake.recordedCalls(),
+		"a row without publication ids must not query the source",
+	)
+}
+
+func TestAddStrainPubEnrichesPublications(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakePublicationSource{
+		infos: map[string]*datasource.PubInfo{
+			"p1": pubInfoFor("first"),
+			"p2": pubInfoFor("second"),
+		},
+		errs: map[string]error{},
+	}
+
+	res, err := E.UnwrapError(ioeutils.ToEither(
+		emailerWithPublications(fake).addStrainPub(
+			strainInfoRows(1),
+			[]*stock.Strain{fakeStrain("p1", "p2")},
+		),
+	))
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.Equal(t, "descriptor", res[0].Descriptor)
+	require.Equal(t, "name", res[0].Names)
+	require.Equal(t, "sys-name", res[0].SysName)
+
+	authors := make([]string, 0, len(res[0].PubInfo))
+	for _, info := range res[0].PubInfo {
+		authors = append(authors, info.AuthorStr)
+	}
+
+	require.Equal(t, []string{"first", "second"}, authors)
+}
+
+func TestAddStrainPubPreservesOrder(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakePublicationSource{
+		infos: map[string]*datasource.PubInfo{
+			"p1": pubInfoFor("first"),
+			"p2": pubInfoFor("second"),
+			"p3": pubInfoFor("third"),
+		},
+		errs: map[string]error{},
+	}
+
+	res, err := E.UnwrapError(ioeutils.ToEither(
+		emailerWithPublications(fake).addStrainPub(
+			strainInfoRows(3),
+			[]*stock.Strain{
+				fakeStrain("p1"),
+				fakeStrain("p2"),
+				fakeStrain("p3"),
+			},
+		),
+	))
+	require.NoError(t, err)
+	require.Len(t, res, 3)
+	require.Equal(t, "DBS00000", res[0].ID)
+	require.Equal(t, "DBS00001", res[1].ID)
+	require.Equal(t, "DBS00002", res[2].ID)
+	require.Equal(t, "first", res[0].PubInfo[0].AuthorStr)
+	require.Equal(t, "second", res[1].PubInfo[0].AuthorStr)
+	require.Equal(t, "third", res[2].PubInfo[0].AuthorStr)
+}
+
+func TestAddPlasmidPubEmptyPublications(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakePublicationSource{
+		infos: map[string]*datasource.PubInfo{},
+		errs:  map[string]error{},
+	}
+
+	res, err := E.UnwrapError(ioeutils.ToEither(
+		emailerWithPublications(fake).addPlasmidPub(
+			plasmidInfoRows(1),
+			[]*stock.Plasmid{fakePlasmid()},
+		),
+	))
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.Equal(t, "DBP00000", res[0].ID)
+	require.Empty(t, res[0].PubInfo)
+	require.Empty(
+		t,
+		fake.recordedCalls(),
+		"a row without publication ids must not query the source",
+	)
+}
+
+func TestAddPlasmidPubEnrichesPublications(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakePublicationSource{
+		infos: map[string]*datasource.PubInfo{
+			"p1": pubInfoFor("first"),
+		},
+		errs: map[string]error{},
+	}
+
+	res, err := E.UnwrapError(ioeutils.ToEither(
+		emailerWithPublications(fake).addPlasmidPub(
+			plasmidInfoRows(1),
+			[]*stock.Plasmid{fakePlasmid("p1")},
+		),
+	))
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.Equal(t, "plasmid-name", res[0].Name)
+	require.Len(t, res[0].PubInfo, 1)
+	require.Equal(t, "first", res[0].PubInfo[0].AuthorStr)
 }

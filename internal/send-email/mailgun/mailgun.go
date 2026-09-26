@@ -10,11 +10,14 @@ import (
 	E "github.com/IBM/fp-go/v2/either"
 	F "github.com/IBM/fp-go/v2/function"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
+	L "github.com/IBM/fp-go/v2/optics/lens"
+	P "github.com/IBM/fp-go/v2/predicate"
 	S "github.com/IBM/fp-go/v2/string"
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	emailer "github.com/dictyBase/event-messenger/internal/send-email"
 	"github.com/dictyBase/event-messenger/internal/template"
 	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
+	predarrays "github.com/dictyBase/fp-go-loom/predicate/array"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
@@ -55,6 +58,15 @@ type mailgunEmailer struct {
 	from      string
 	name      string
 	cc        string
+}
+
+// publicationRowState carries one strain or plasmid row while its
+// publication info loads.
+type publicationRowState struct {
+	Emailer *mailgunEmailer
+	Info    []string
+	PubIDs  []string
+	Pubs    []*datasource.PubInfo
 }
 
 type EmailerParams struct {
@@ -223,7 +235,9 @@ func (email *mailgunEmailer) plasmids(
 		return prows, fmt.Errorf("error in getting plasmid information %s", err)
 	}
 
-	prows, err = email.addPlasmidPub(plsinfo, plasmids)
+	prows, err = E.UnwrapError(ioeutils.ToEither(
+		email.addPlasmidPub(plsinfo, plasmids),
+	))
 	if err != nil {
 		return prows, fmt.Errorf(
 			"error in adding publication to plasmids %s",
@@ -234,32 +248,142 @@ func (email *mailgunEmailer) plasmids(
 	return prows, nil
 }
 
+// publicationRowPubsLens focuses the loaded publication info of a row.
+var publicationRowPubsLens = L.MakeLens(
+	func(s publicationRowState) []*datasource.PubInfo { return s.Pubs },
+	func(s publicationRowState, v []*datasource.PubInfo) publicationRowState {
+		s.Pubs = v
+		return s
+	},
+)
+
+// publicationRowPubIDs extracts the row's normalized publication ids.
+func publicationRowPubIDs(s publicationRowState) []string {
+	return s.PubIDs
+}
+
+// rowHasPubs reports whether the row carries any publication ids.
+var rowHasPubs = F.Pipe1(
+	predarrays.IsNonEmpty[string](),
+	P.ContraMap(publicationRowPubIDs),
+)
+
+// fetchPubs loads publication info for the row's ids.
+func (s publicationRowState) fetchPubs() IOE.IOEither[error, []*datasource.PubInfo] {
+	return s.Emailer.pubInfo(s.PubIDs)
+}
+
+// keepRow leaves a row without publications unchanged.
+func keepRow(s publicationRowState) IOE.IOEither[error, publicationRowState] {
+	return IOE.Of[error](s)
+}
+
+// loadRowPubs enriches a row with the publication info for its ids.
+func loadRowPubs(s publicationRowState) IOE.IOEither[error, publicationRowState] {
+	return F.Pipe1(
+		IOE.Of[error](s),
+		IOE.Bind(publicationRowPubsLens.Set, publicationRowState.fetchPubs),
+	)
+}
+
+// resolveRowPubs is the pre-bound branch: enrich only when ids exist.
+var resolveRowPubs = P.Fold(keepRow, loadRowPubs)
+
+// enrichRow applies the pre-bound branch to the row.
+func enrichRow(s publicationRowState) IOE.IOEither[error, publicationRowState] {
+	resolve := resolveRowPubs(rowHasPubs)
+
+	return F.Pipe1(s, resolve)
+}
+
+// toStrainRow projects a row state onto a strain row.
+func toStrainRow(s publicationRowState) *template.StrainRows {
+	return &template.StrainRows{
+		ID:         s.Info[0],
+		Descriptor: s.Info[1],
+		Names:      s.Info[2],
+		SysName:    s.Info[3],
+		PubInfo:    s.Pubs,
+	}
+}
+
+// toPlasmidRow projects a row state onto a plasmid row.
+func toPlasmidRow(s publicationRowState) *template.PlasmidRows {
+	return &template.PlasmidRows{
+		ID:      s.Info[0],
+		Name:    s.Info[1],
+		PubInfo: s.Pubs,
+	}
+}
+
+// toStrainRowIO enriches one row and projects it onto a strain row.
+func toStrainRowIO(
+	s publicationRowState,
+) IOE.IOEither[error, *template.StrainRows] {
+	return F.Pipe2(
+		s,
+		enrichRow,
+		IOE.Map[error](toStrainRow),
+	)
+}
+
+// toPlasmidRowIO enriches one row and projects it onto a plasmid row.
+func toPlasmidRowIO(
+	s publicationRowState,
+) IOE.IOEither[error, *template.PlasmidRows] {
+	return F.Pipe2(
+		s,
+		enrichRow,
+		IOE.Map[error](toPlasmidRow),
+	)
+}
+
+// rowBuilder pairs basic row info with the protobuf stock entities.
+type rowBuilder struct {
+	Emailer *mailgunEmailer
+	Info    [][]string
+}
+
+// seedState builds the enrichment state for one row, storing the ids
+// already normalized so the branch predicate is exact.
+func (b rowBuilder) seedState(i int, pubs []string) publicationRowState {
+	return publicationRowState{
+		Emailer: b.Emailer,
+		Info:    b.Info[i],
+		PubIDs:  normalizePublicationIDs(pubs),
+	}
+}
+
+// resolveStrain enriches and projects one strain row.
+func (b rowBuilder) resolveStrain(
+	i int,
+	str *stock.Strain,
+) IOE.IOEither[error, *template.StrainRows] {
+	pubs := str.GetData().GetAttributes().GetPublications()
+	seed := b.seedState(i, pubs)
+
+	return toStrainRowIO(seed)
+}
+
+// resolvePlasmid enriches and projects one plasmid row.
+func (b rowBuilder) resolvePlasmid(
+	i int,
+	pls *stock.Plasmid,
+) IOE.IOEither[error, *template.PlasmidRows] {
+	pubs := pls.GetData().GetAttributes().GetPublications()
+	seed := b.seedState(i, pubs)
+
+	return toPlasmidRowIO(seed)
+}
+
 func (email *mailgunEmailer) addPlasmidPub(
 	strInfo [][]string,
 	plasmids []*stock.Plasmid,
-) ([]*template.PlasmidRows, error) {
-	var prows []*template.PlasmidRows
-	for i, pls := range plasmids {
-		prows = append(prows, &template.PlasmidRows{
-			ID:   strInfo[i][0],
-			Name: strInfo[i][1],
-		})
+) IOE.IOEither[error, []*template.PlasmidRows] {
+	builder := rowBuilder{Emailer: email, Info: strInfo}
+	traverse := IOE.TraverseArrayWithIndexSeq(builder.resolvePlasmid)
 
-		if len(pls.GetData().GetAttributes().GetPublications()) == 0 {
-			continue
-		}
-
-		pinfo, err := E.UnwrapError(ioeutils.ToEither(email.pubInfo(
-			pls.GetData().GetAttributes().GetPublications(),
-		)))
-		if err != nil {
-			return prows, err
-		}
-
-		prows[i].PubInfo = pinfo
-	}
-
-	return prows, nil
+	return F.Pipe1(plasmids, traverse)
 }
 
 func (email *mailgunEmailer) strains(
@@ -277,7 +401,9 @@ func (email *mailgunEmailer) strains(
 		return srows, fmt.Errorf("error in getting strain information %s", err)
 	}
 
-	srows, err = email.addStrainPub(strInfo, strains)
+	srows, err = E.UnwrapError(ioeutils.ToEither(
+		email.addStrainPub(strInfo, strains),
+	))
 	if err != nil {
 		return srows, fmt.Errorf("error in adding pub to strain %s", err)
 	}
@@ -288,31 +414,11 @@ func (email *mailgunEmailer) strains(
 func (email *mailgunEmailer) addStrainPub(
 	strInfo [][]string,
 	strains []*stock.Strain,
-) ([]*template.StrainRows, error) {
-	var srows []*template.StrainRows
-	for i, str := range strains {
-		srows = append(srows, &template.StrainRows{
-			ID:         strInfo[i][0],
-			Descriptor: strInfo[i][1],
-			Names:      strInfo[i][2],
-			SysName:    strInfo[i][3],
-		})
+) IOE.IOEither[error, []*template.StrainRows] {
+	builder := rowBuilder{Emailer: email, Info: strInfo}
+	traverse := IOE.TraverseArrayWithIndexSeq(builder.resolveStrain)
 
-		if len(str.GetData().GetAttributes().GetPublications()) == 0 {
-			continue
-		}
-
-		pinfo, err := E.UnwrapError(ioeutils.ToEither(email.pubInfo(
-			str.GetData().GetAttributes().GetPublications(),
-		)))
-		if err != nil {
-			return srows, err
-		}
-
-		srows[i].PubInfo = pinfo
-	}
-
-	return srows, nil
+	return F.Pipe1(strains, traverse)
 }
 
 func (email *mailgunEmailer) pubInfo(
