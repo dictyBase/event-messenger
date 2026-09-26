@@ -2,8 +2,10 @@ package mailgun
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"testing"
 
@@ -16,6 +18,8 @@ import (
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/mailgun/mailgun-go/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -116,6 +120,16 @@ func plasmidInfoRows(n int) [][]string {
 const (
 	shipperEmail = "shipper@example.com"
 	payerEmail   = "payer@example.com"
+
+	// Message envelope used by the send tests.
+	senderAddress     = "orders@example.org"
+	senderName        = "Dicty Stock Center"
+	ccAddress         = "cc@example.org"
+	providerMessageID = "provider-id"
+
+	// User map keys returned by the user source.
+	shipperKey = "shipper"
+	payerKey   = "payer"
 
 	// Row labels shared by the strain and plasmid invoice fixtures.
 	descriptorLabel  = "descriptor"
@@ -253,6 +267,14 @@ func testOrder() *order.Order {
 	}
 }
 
+// discardLogger returns a logrus entry that writes nowhere.
+func discardLogger() *logrus.Entry {
+	lg := logrus.New()
+	lg.SetOutput(io.Discard)
+
+	return logrus.NewEntry(lg)
+}
+
 // testEmailer wires every seam of the mailer to a stub.
 func testEmailer(
 	stk stockSource,
@@ -263,7 +285,14 @@ func testEmailer(
 	client mailgunClient,
 ) *mailgunEmailer {
 	return newMailgunEmailerWithDependencies(
-		&EmailerParams{StrainPrice: 30, PlasmidPrice: 15},
+		&EmailerParams{
+			Sender:       senderAddress,
+			SenderName:   senderName,
+			EmailCC:      ccAddress,
+			StrainPrice:  30,
+			PlasmidPrice: 15,
+			Logger:       discardLogger(),
+		},
 		stk,
 		anno,
 		usr,
@@ -293,8 +322,8 @@ func TestOrderData(t *testing.T) {
 		}},
 	}
 	usrFake := &fakeUserSource{users: map[string]*user.User{
-		"shipper": shipperUser,
-		"payer":   payerUser,
+		shipperKey: shipperUser,
+		payerKey:   payerUser,
 	}}
 
 	res, err := E.UnwrapError(ioeutils.ToEither(
@@ -321,8 +350,8 @@ func TestOrderData(t *testing.T) {
 	require.Equal(t, []string{fake.StrainID}, stkFake.requestedDBS)
 	require.Equal(t, []string{fake.PlasmidID}, stkFake.requestedDBP)
 	require.Same(t, ord, res.Order)
-	require.Same(t, shipperUser, res.User["shipper"])
-	require.Same(t, payerUser, res.User["payer"])
+	require.Same(t, shipperUser, res.User[shipperKey])
+	require.Same(t, payerUser, res.User[payerKey])
 	require.Len(t, res.Strains, 1)
 	require.Equal(t, fake.StrainID, res.Strains[0].ID)
 	require.Equal(t, descriptorLabel, res.Strains[0].Descriptor)
@@ -352,8 +381,8 @@ func TestEmailBodyHermetic(t *testing.T) {
 			}},
 		},
 		&fakeUserSource{users: map[string]*user.User{
-			"shipper": testUser("Shipper", shipperEmail),
-			"payer":   testUser("Payer", payerEmail),
+			shipperKey: testUser("Shipper", shipperEmail),
+			payerKey:   testUser("Payer", payerEmail),
 		}},
 		&fakePDFRenderer{buf: bytes.NewBufferString("dummy-pdf")},
 		&fakePublicationSource{
@@ -367,6 +396,185 @@ func TestEmailBodyHermetic(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "dummy-pdf", pkg.Body.String())
 	require.Same(t, ord, pkg.Data.Order)
+}
+
+// fakeMailgunClient is a mailgunClient stub that counts sends and can
+// pre-fill a message up to the recipient limit.
+type fakeMailgunClient struct {
+	underlying   *mailgun.MailgunImpl
+	sendCalls    int
+	sendID       string
+	sendErr      error
+	preloadLimit bool
+}
+
+func newFakeMailgunClient(
+	sendErr error,
+	preloadLimit bool,
+) *fakeMailgunClient {
+	return &fakeMailgunClient{
+		underlying:   mailgun.NewMailgun("example.org", "test-key"),
+		sendID:       providerMessageID,
+		sendErr:      sendErr,
+		preloadLimit: preloadLimit,
+	}
+}
+
+func (f *fakeMailgunClient) NewMessage(
+	from, subject, text string,
+	to ...string,
+) *mailgun.Message {
+	m := f.underlying.NewMessage(from, subject, text, to...)
+
+	if f.preloadLimit {
+		for i := range mailgun.MaxNumberOfRecipients {
+			_ = m.AddRecipient(fmt.Sprintf("user%d@example.org", i))
+		}
+	}
+
+	return m
+}
+
+func (f *fakeMailgunClient) Send(
+	_ context.Context,
+	_ *mailgun.Message,
+) (string, string, error) {
+	f.sendCalls++
+
+	return "ok", f.sendID, f.sendErr
+}
+
+// sendingEmailer builds a fully stubbed emailer ready to send a message.
+func sendingEmailer(client mailgunClient) *mailgunEmailer {
+	return testEmailer(
+		&fakeStockSource{
+			strains:     []*stock.Strain{fakeStrain()},
+			plasmids:    []*stock.Plasmid{fakePlasmid()},
+			plasmidInfo: [][]string{{fake.PlasmidID, plasmidNameLabel}},
+		},
+		&fakeAnnotationSource{
+			strainInfo: [][]string{{
+				fake.StrainID,
+				descriptorLabel,
+				namesLabel,
+				sysNameLabel,
+			}},
+		},
+		&fakeUserSource{users: map[string]*user.User{
+			shipperKey: testUser("Shipper", shipperEmail),
+			payerKey:   testUser("Payer", payerEmail),
+		}},
+		&fakePDFRenderer{buf: bytes.NewBufferString("dummy-pdf")},
+		&fakePublicationSource{
+			infos: map[string]*datasource.PubInfo{},
+			errs:  map[string]error{},
+		},
+		client,
+	)
+}
+
+// preparedPackage builds the invoice package the preparation tests send.
+func preparedPackage(t *testing.T, email *mailgunEmailer) emailPackage {
+	t.Helper()
+
+	pkg, err := E.UnwrapError(ioeutils.ToEither(email.emailBody(testOrder())))
+	require.NoError(t, err)
+
+	return pkg
+}
+
+func TestPrepareSendDescription(t *testing.T) {
+	t.Parallel()
+
+	clientFake := newFakeMailgunClient(nil, false)
+	email := sendingEmailer(clientFake)
+
+	desc, err := E.UnwrapError(ioeutils.ToEither(
+		email.prepareSendDescription(preparedPackage(t, email)),
+	))
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		0,
+		clientFake.sendCalls,
+		"preparing a description must not reach the terminal send",
+	)
+	require.NotNil(t, desc.message)
+	require.Equal(
+		t,
+		3,
+		desc.message.RecipientCount(),
+		"audience is the shipper plus the configured cc and the distinct payer",
+	)
+}
+
+func TestCCAddresses(t *testing.T) {
+	t.Parallel()
+
+	samePayer := ccDecision{
+		Shipper:    shipperEmail,
+		Payer:      shipperEmail,
+		Configured: ccAddress,
+	}
+	distinctPayer := ccDecision{
+		Shipper:    shipperEmail,
+		Payer:      payerEmail,
+		Configured: ccAddress,
+	}
+
+	require.Equal(t, []string{ccAddress}, ccAddresses(samePayer))
+	require.Equal(
+		t,
+		[]string{ccAddress, payerEmail},
+		ccAddresses(distinctPayer),
+	)
+}
+
+func TestPrepareSendDescriptionZeroSendOnRecipientLimit(t *testing.T) {
+	t.Parallel()
+
+	clientFake := newFakeMailgunClient(nil, true)
+	email := sendingEmailer(clientFake)
+
+	_, err := E.UnwrapError(ioeutils.ToEither(
+		email.prepareSendDescription(preparedPackage(t, email)),
+	))
+	require.Error(t, err)
+	require.Equal(
+		t,
+		0,
+		clientFake.sendCalls,
+		"a recipient failure must never reach the terminal send",
+	)
+}
+
+func TestSendEmailSendFailure(t *testing.T) {
+	t.Parallel()
+
+	clientFake := newFakeMailgunClient(errors.New("smtp down"), false)
+
+	err := sendingEmailer(clientFake).SendEmail(testOrder())
+	require.ErrorContains(t, err, "smtp down")
+	require.ErrorContains(t, err, "error in sending email")
+	require.Equal(t, 1, clientFake.sendCalls)
+}
+
+func TestSendEmailSuccess(t *testing.T) {
+	t.Parallel()
+
+	clientFake := newFakeMailgunClient(nil, false)
+
+	require.NoError(t, sendingEmailer(clientFake).SendEmail(testOrder()))
+	require.Equal(t, 1, clientFake.sendCalls)
+}
+
+func TestSendEmailZeroSendOnRecipientLimit(t *testing.T) {
+	t.Parallel()
+
+	clientFake := newFakeMailgunClient(nil, true)
+
+	require.Error(t, sendingEmailer(clientFake).SendEmail(testOrder()))
+	require.Equal(t, 0, clientFake.sendCalls)
 }
 
 func TestPubInfoFiltersAndTrimsIDs(t *testing.T) {
