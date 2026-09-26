@@ -9,6 +9,7 @@ import (
 	A "github.com/IBM/fp-go/v2/array"
 	E "github.com/IBM/fp-go/v2/either"
 	F "github.com/IBM/fp-go/v2/function"
+	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	L "github.com/IBM/fp-go/v2/optics/lens"
 	P "github.com/IBM/fp-go/v2/predicate"
@@ -18,6 +19,7 @@ import (
 	"github.com/dictyBase/event-messenger/internal/template"
 	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
 	predarrays "github.com/dictyBase/fp-go-loom/predicate/array"
+	predord "github.com/dictyBase/fp-go-loom/predicate/ord"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
@@ -107,6 +109,24 @@ type emailPackage struct {
 	Body *bytes.Buffer
 }
 
+// messageState carries a half-built message through preparation.
+type messageState struct {
+	Client       mailgunClient
+	Message      *mailgun.Message
+	ShipperEmail string
+	PayerEmail   string
+	CCs          []string
+	Filename     string
+	Attachment   []byte
+}
+
+// sendDescription is the prepared terminal effect: one client and one
+// message, with no sequencing left to decide.
+type sendDescription struct {
+	client  mailgunClient
+	message *mailgun.Message
+}
+
 type mailgunEmailer struct {
 	client    mailgunClient
 	logger    *logrus.Entry
@@ -184,75 +204,178 @@ func newMailgunEmailerWithDependencies(
 	}
 }
 
+// SendEmail builds and sends the invoice email for an order.
 func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
-	pkg, err := E.UnwrapError(ioeutils.ToEither(email.emailBody(ord)))
-	if err != nil {
-		email.logger.Error(err)
-		return err
-	}
-
-	all := pkg.Data
-	body := pkg.Body
-
-	msg := email.client.NewMessage(
-		fmt.Sprintf("%s <%s>", email.name, email.from),
-		fmt.Sprintf(
-			"Order ID:%s %s %s",
-			ord.GetData().GetId(),
-			all.User["shipper"].GetData().GetAttributes().GetFirstName(),
-			all.User["shipper"].GetData().GetAttributes().GetLastName(),
-		),
-		fmt.Sprintf(
-			etext,
-			all.User["shipper"].GetData().GetAttributes().GetFirstName(),
-			all.User["shipper"].GetData().GetAttributes().GetLastName(),
-			ord.GetData().GetId(),
-		),
+	return F.Pipe6(
+		IOE.Of[error](ord),
+		IOE.Chain(email.emailBody),
+		IOE.Chain(email.prepareSendDescription),
+		IOE.Chain(executeMailgunSend),
+		IOE.ChainFirstIOK[error](email.logMessageSent),
+		ioeutils.ToEither[error, string],
+		E.ToError[string],
 	)
-
-	err = msg.AddRecipient(
-		all.User["shipper"].GetData().GetAttributes().GetEmail(),
-	)
-	if err != nil {
-		email.logger.Error(err)
-		return err
-	}
-
-	msg.AddCC(email.cc)
-
-	if all.User["shipper"].GetData().
-		GetAttributes().
-		GetEmail() !=
-		all.User["payer"].GetData().
-			GetAttributes().
-			GetEmail() {
-		msg.AddCC(all.User["payer"].GetData().GetAttributes().GetEmail())
-	}
-
-	msg.AddBufferAttachment(
-		fmt.Sprintf("invoice-%s.pdf", ord.GetData().GetId()),
-		body.Bytes(),
-	)
-
-	id, err := email.postEmail(msg)
-	if err != nil {
-		return err
-	}
-
-	email.logger.Infof("message sent with id %s", id)
-
-	return nil
 }
 
-// postEmail sends a prepared message through the mailgun client.
-func (email *mailgunEmailer) postEmail(msg *mailgun.Message) (string, error) {
-	_, id, err := email.client.Send(context.Background(), msg)
-	if err != nil {
-		email.logger.Errorf("error in sending email %s", err)
-		return id, fmt.Errorf("error in sending email %s", err)
-	}
+// ccDecision carries the addresses that decide the CC list.
+type ccDecision struct {
+	Shipper    string
+	Payer      string
+	Configured string
+}
 
-	return id, nil
+// payerDiffers reports whether the payer address differs from the
+// shipper address.
+func payerDiffers(d ccDecision) bool {
+	differsFromShipper := predord.NotEqualStr(d.Shipper)
+
+	return differsFromShipper(d.Payer)
+}
+
+// ccWithoutPayer returns only the configured CC address.
+func ccWithoutPayer(d ccDecision) []string {
+	return []string{d.Configured}
+}
+
+// ccWithPayer returns the configured CC address followed by the payer.
+func ccWithPayer(d ccDecision) []string {
+	return []string{d.Configured, d.Payer}
+}
+
+// resolveCCs is the pre-bound branch over the payer-distinct decision.
+var resolveCCs = P.Fold(ccWithoutPayer, ccWithPayer)
+
+// ccAddresses lists every CC address for the message.
+func ccAddresses(d ccDecision) []string {
+	resolve := resolveCCs(payerDiffers)
+
+	return resolve(d)
+}
+
+// initMessageState precomputes the message envelope and its addresses.
+func (email *mailgunEmailer) initMessageState(pkg emailPackage) messageState {
+	ord := pkg.Data.Order
+	ordID := ord.GetData().GetId()
+	shipper := pkg.Data.User["shipper"].GetData().GetAttributes()
+	payer := pkg.Data.User["payer"].GetData().GetAttributes()
+	sFirst := shipper.GetFirstName()
+	sLast := shipper.GetLastName()
+	sEmail := shipper.GetEmail()
+	pEmail := payer.GetEmail()
+	fromHeader := fmt.Sprintf("%s <%s>", email.name, email.from)
+	subject := fmt.Sprintf("Order ID:%s %s %s", ordID, sFirst, sLast)
+	text := fmt.Sprintf(etext, sFirst, sLast, ordID)
+	msg := email.client.NewMessage(fromHeader, subject, text)
+
+	return messageState{
+		Client:       email.client,
+		Message:      msg,
+		ShipperEmail: sEmail,
+		PayerEmail:   pEmail,
+		CCs: ccAddresses(ccDecision{
+			Shipper:    sEmail,
+			Payer:      pEmail,
+			Configured: email.cc,
+		}),
+		Filename:   fmt.Sprintf("invoice-%s.pdf", ordID),
+		Attachment: pkg.Body.Bytes(),
+	}
+}
+
+// rawAddRecipient adds the shipper as a recipient.
+func rawAddRecipient(s messageState) (messageState, error) {
+	err := s.Message.AddRecipient(s.ShipperEmail)
+
+	return s, err
+}
+
+// addRecipient adds the shipper as a recipient, contextually wrapped.
+func addRecipient(s messageState) IOE.IOEither[error, messageState] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (messageState, error) {
+			return rawAddRecipient(s)
+		}),
+		IOE.MapLeft[messageState](func(err error) error {
+			return fmt.Errorf("error adding recipient %s: %w", s.ShipperEmail, err)
+		}),
+	)
+}
+
+// addCC is a consumer sink: it takes one address and returns nothing.
+func (s messageState) addCC(cc string) {
+	s.Message.AddCC(cc)
+}
+
+// addCCs runs the sink over every prepared CC address. The sequential
+// traversal is required: the sink mutates one shared *mailgun.Message,
+// and IO.TraverseArray applies its elements in parallel.
+func addCCs(s messageState) IO.IO[[]IO.Void] {
+	addOne := IO.FromConsumer(s.addCC)
+	traverse := IO.TraverseArraySeq(addOne)
+
+	return traverse(s.CCs)
+}
+
+// attachInvoice attaches the rendered invoice PDF.
+func attachInvoice(s messageState) IO.IO[IO.Void] {
+	return IO.FromImpure(func() {
+		s.Message.AddBufferAttachment(s.Filename, s.Attachment)
+	})
+}
+
+// toSendDescription projects the prepared state onto the terminal
+// effect description.
+func toSendDescription(s messageState) sendDescription {
+	return sendDescription{client: s.Client, message: s.Message}
+}
+
+// prepareSendDescription builds the message without sending it.
+func (email *mailgunEmailer) prepareSendDescription(
+	pkg emailPackage,
+) IOE.IOEither[error, sendDescription] {
+	return F.Pipe6(
+		pkg,
+		email.initMessageState,
+		IOE.Of[error],
+		IOE.Chain(addRecipient),
+		IOE.ChainFirstIOK[error](addCCs),
+		IOE.ChainFirstIOK[error](attachInvoice),
+		IOE.Map[error](toSendDescription),
+	)
+}
+
+// rawMailgunSend is the single call site of the terminal mailgun send.
+func rawMailgunSend(
+	ctx context.Context,
+	client mailgunClient,
+	msg *mailgun.Message,
+) (string, error) {
+	_, id, err := client.Send(ctx, msg)
+
+	return id, err
+}
+
+// executeMailgunSend performs the terminal send exactly once.
+func executeMailgunSend(desc sendDescription) IOE.IOEither[error, string] {
+	ctx := context.Background()
+
+	return F.Pipe1(
+		IOE.TryCatchError(func() (string, error) {
+			return rawMailgunSend(ctx, desc.client, desc.message)
+		}),
+		IOE.MapLeft[string](func(err error) error {
+			return fmt.Errorf("error in sending email: %w", err)
+		}),
+	)
+}
+
+// logMessageSent records the provider message id through the mailer's
+// logger. Named IO tap: the logger is a *logrus.Entry on the component,
+// and IO.Logf would bypass the configured logrus output.
+func (email *mailgunEmailer) logMessageSent(id string) IO.IO[IO.Void] {
+	return IO.FromImpure(func() {
+		email.logger.Infof("message sent with id %s", id)
+	})
 }
 
 // fetchStrains loads the strains listed in the order.
