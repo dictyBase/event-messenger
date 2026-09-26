@@ -52,13 +52,6 @@ const (
 
 func datasourceFlags() []cli.Flag {
 	return []cli.Flag{
-		&cli.StringFlag{
-			Name:     "publication-api",
-			Aliases:  []string{"pub"},
-			Usage:    "publication api endpoint",
-			Sources:  cli.EnvVars("PUBLICATION_API_ENDPOINT"),
-			Required: true,
-		},
 		&cli.IntFlag{
 			Name:  "strain-price",
 			Usage: "price of individual strain",

@@ -11,7 +11,6 @@ require (
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/golang/protobuf v1.5.4
 	github.com/google/go-github/v32 v32.1.0
-	github.com/hasura/go-graphql-client v0.16.0
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/nats-io/go-nats v1.7.2
 	github.com/rakyll/statik v0.1.8
@@ -29,7 +28,6 @@ require (
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/arangodb/go-driver v1.6.9 // indirect
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
-	github.com/coder/websocket v1.8.14 // indirect
 	github.com/dictyBase/arangomanager v0.8.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
@@ -38,7 +36,6 @@ require (
 	github.com/go-playground/validator/v10 v10.30.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mailru/easyjson v0.9.2 // indirect
