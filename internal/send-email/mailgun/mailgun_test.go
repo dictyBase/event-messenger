@@ -1,6 +1,7 @@
 package mailgun
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sync"
@@ -9,8 +10,12 @@ import (
 	E "github.com/IBM/fp-go/v2/either"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	"github.com/dictyBase/event-messenger/internal/datasource"
+	"github.com/dictyBase/event-messenger/internal/fake"
+	"github.com/dictyBase/event-messenger/internal/template"
 	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
+	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
+	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/stretchr/testify/require"
 )
 
@@ -85,9 +90,9 @@ func strainInfoRows(n int) [][]string {
 	for i := range n {
 		rows = append(rows, []string{
 			fmt.Sprintf("DBS%05d", i),
-			"descriptor",
-			"name",
-			"sys-name",
+			descriptorLabel,
+			namesLabel,
+			sysNameLabel,
 		})
 	}
 
@@ -101,11 +106,267 @@ func plasmidInfoRows(n int) [][]string {
 	for i := range n {
 		rows = append(rows, []string{
 			fmt.Sprintf("DBP%05d", i),
-			"plasmid-name",
+			plasmidNameLabel,
 		})
 	}
 
 	return rows
+}
+
+const (
+	shipperEmail = "shipper@example.com"
+	payerEmail   = "payer@example.com"
+
+	// Row labels shared by the strain and plasmid invoice fixtures.
+	descriptorLabel  = "descriptor"
+	namesLabel       = "name"
+	sysNameLabel     = "sys-name"
+	plasmidNameLabel = "plasmid-name"
+
+	// personLastName is the family name of both test users.
+	personLastName = "Person"
+)
+
+// fakeStockSource is an in-memory stockSource stub that records what it
+// was asked for. Its recorded fields are guarded because orderData
+// queries the strains and plasmids concurrently.
+type fakeStockSource struct {
+	mu               sync.Mutex
+	recordedOrder    *order.Order
+	recordedPatterns []string
+	requestedDBS     []string
+	requestedDBP     []string
+	strains          []*stock.Strain
+	plasmids         []*stock.Plasmid
+	plasmidInfo      [][]string
+	err              error
+}
+
+func (f *fakeStockSource) StocksFromItems(
+	ord *order.Order,
+	pattern string,
+) []string {
+	f.mu.Lock()
+	f.recordedOrder = ord
+	f.recordedPatterns = append(f.recordedPatterns, pattern)
+	f.mu.Unlock()
+
+	if pattern == "DBS" {
+		return []string{fake.StrainID}
+	}
+
+	return []string{fake.PlasmidID}
+}
+
+func (f *fakeStockSource) GetStrains(ids []string) ([]*stock.Strain, error) {
+	f.mu.Lock()
+	f.requestedDBS = append(f.requestedDBS, ids...)
+	f.mu.Unlock()
+
+	return f.strains, f.err
+}
+
+func (f *fakeStockSource) GetPlasmids(
+	ids []string,
+) ([]*stock.Plasmid, error) {
+	f.mu.Lock()
+	f.requestedDBP = append(f.requestedDBP, ids...)
+	f.mu.Unlock()
+
+	return f.plasmids, f.err
+}
+
+func (f *fakeStockSource) GetBasicPlasmidInfo(
+	_ []*stock.Plasmid,
+) ([][]string, error) {
+	return f.plasmidInfo, f.err
+}
+
+// patterns returns a copy of the patterns asked for so far.
+func (f *fakeStockSource) patterns() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return append([]string(nil), f.recordedPatterns...)
+}
+
+// fakeAnnotationSource is an in-memory annotationSource stub.
+type fakeAnnotationSource struct {
+	strainInfo [][]string
+	err        error
+}
+
+func (f *fakeAnnotationSource) GetBasicStrainInfo(
+	_ []*stock.Strain,
+) ([][]string, error) {
+	return f.strainInfo, f.err
+}
+
+// fakeUserSource is an in-memory userSource stub.
+type fakeUserSource struct {
+	users map[string]*user.User
+	err   error
+}
+
+func (f *fakeUserSource) UsersInOrder(
+	_ *order.Order,
+) (map[string]*user.User, error) {
+	return f.users, f.err
+}
+
+// fakePDFRenderer is a pdfRenderer stub that never touches wkhtmltopdf.
+type fakePDFRenderer struct {
+	buf *bytes.Buffer
+	err error
+}
+
+func (f *fakePDFRenderer) OutputPDF(
+	_ *template.OutputParams,
+) (*bytes.Buffer, error) {
+	return f.buf, f.err
+}
+
+// testUser builds a user with the given name and address.
+func testUser(first, email string) *user.User {
+	return &user.User{
+		Data: &user.UserData{
+			Attributes: &user.UserAttributes{
+				FirstName: first,
+				LastName:  personLastName,
+				Email:     email,
+			},
+		},
+	}
+}
+
+// testOrder builds an order carrying one strain and one plasmid item.
+func testOrder() *order.Order {
+	return &order.Order{
+		Data: &order.Order_Data{
+			Id: "ORD123",
+			Attributes: &order.OrderAttributes{
+				Consumer: shipperEmail,
+				Payer:    payerEmail,
+				Items:    []string{fake.StrainID, fake.PlasmidID},
+			},
+		},
+	}
+}
+
+// testEmailer wires every seam of the mailer to a stub.
+func testEmailer(
+	stk stockSource,
+	anno annotationSource,
+	usr userSource,
+	pdf pdfRenderer,
+	pub publicationSource,
+	client mailgunClient,
+) *mailgunEmailer {
+	return newMailgunEmailerWithDependencies(
+		&EmailerParams{StrainPrice: 30, PlasmidPrice: 15},
+		stk,
+		anno,
+		usr,
+		pdf,
+		pub,
+		client,
+	)
+}
+
+func TestOrderData(t *testing.T) {
+	t.Parallel()
+
+	ord := testOrder()
+	shipperUser := testUser("Shipper", shipperEmail)
+	payerUser := testUser("Payer", payerEmail)
+	stkFake := &fakeStockSource{
+		strains:     []*stock.Strain{fakeStrain()},
+		plasmids:    []*stock.Plasmid{fakePlasmid()},
+		plasmidInfo: [][]string{{fake.PlasmidID, plasmidNameLabel}},
+	}
+	annoFake := &fakeAnnotationSource{
+		strainInfo: [][]string{{
+			fake.StrainID,
+			descriptorLabel,
+			namesLabel,
+			sysNameLabel,
+		}},
+	}
+	usrFake := &fakeUserSource{users: map[string]*user.User{
+		"shipper": shipperUser,
+		"payer":   payerUser,
+	}}
+
+	res, err := E.UnwrapError(ioeutils.ToEither(
+		testEmailer(
+			stkFake,
+			annoFake,
+			usrFake,
+			&fakePDFRenderer{buf: bytes.NewBufferString("dummy-pdf")},
+			&fakePublicationSource{
+				infos: map[string]*datasource.PubInfo{},
+				errs:  map[string]error{},
+			},
+			nil,
+		).orderData(ord),
+	))
+	require.NoError(t, err)
+	require.Same(t, ord, stkFake.recordedOrder)
+	require.ElementsMatch(
+		t,
+		[]string{"DBS", "DBP"},
+		stkFake.patterns(),
+		"orderData queries strains and plasmids independently and so may schedule them in either order",
+	)
+	require.Equal(t, []string{fake.StrainID}, stkFake.requestedDBS)
+	require.Equal(t, []string{fake.PlasmidID}, stkFake.requestedDBP)
+	require.Same(t, ord, res.Order)
+	require.Same(t, shipperUser, res.User["shipper"])
+	require.Same(t, payerUser, res.User["payer"])
+	require.Len(t, res.Strains, 1)
+	require.Equal(t, fake.StrainID, res.Strains[0].ID)
+	require.Equal(t, descriptorLabel, res.Strains[0].Descriptor)
+	require.Equal(t, namesLabel, res.Strains[0].Names)
+	require.Equal(t, sysNameLabel, res.Strains[0].SysName)
+	require.Len(t, res.Plasmids, 1)
+	require.Equal(t, fake.PlasmidID, res.Plasmids[0].ID)
+	require.Equal(t, plasmidNameLabel, res.Plasmids[0].Name)
+}
+
+func TestEmailBodyHermetic(t *testing.T) {
+	t.Parallel()
+
+	ord := testOrder()
+	email := testEmailer(
+		&fakeStockSource{
+			strains:     []*stock.Strain{fakeStrain()},
+			plasmids:    []*stock.Plasmid{fakePlasmid()},
+			plasmidInfo: [][]string{{fake.PlasmidID, plasmidNameLabel}},
+		},
+		&fakeAnnotationSource{
+			strainInfo: [][]string{{
+				fake.StrainID,
+				descriptorLabel,
+				namesLabel,
+				sysNameLabel,
+			}},
+		},
+		&fakeUserSource{users: map[string]*user.User{
+			"shipper": testUser("Shipper", shipperEmail),
+			"payer":   testUser("Payer", payerEmail),
+		}},
+		&fakePDFRenderer{buf: bytes.NewBufferString("dummy-pdf")},
+		&fakePublicationSource{
+			infos: map[string]*datasource.PubInfo{},
+			errs:  map[string]error{},
+		},
+		nil,
+	)
+
+	pkg, err := E.UnwrapError(ioeutils.ToEither(email.emailBody(ord)))
+	require.NoError(t, err)
+	require.Equal(t, "dummy-pdf", pkg.Body.String())
+	require.Same(t, ord, pkg.Data.Order)
 }
 
 func TestPubInfoFiltersAndTrimsIDs(t *testing.T) {
@@ -231,9 +492,9 @@ func TestAddStrainPubEnrichesPublications(t *testing.T) {
 	))
 	require.NoError(t, err)
 	require.Len(t, res, 1)
-	require.Equal(t, "descriptor", res[0].Descriptor)
-	require.Equal(t, "name", res[0].Names)
-	require.Equal(t, "sys-name", res[0].SysName)
+	require.Equal(t, descriptorLabel, res[0].Descriptor)
+	require.Equal(t, namesLabel, res[0].Names)
+	require.Equal(t, sysNameLabel, res[0].SysName)
 
 	authors := make([]string, 0, len(res[0].PubInfo))
 	for _, info := range res[0].PubInfo {
@@ -318,7 +579,7 @@ func TestAddPlasmidPubEnrichesPublications(t *testing.T) {
 	))
 	require.NoError(t, err)
 	require.Len(t, res, 1)
-	require.Equal(t, "plasmid-name", res[0].Name)
+	require.Equal(t, plasmidNameLabel, res[0].Name)
 	require.Len(t, res[0].PubInfo, 1)
 	require.Equal(t, "first", res[0].PubInfo[0].AuthorStr)
 }

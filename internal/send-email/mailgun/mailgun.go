@@ -40,19 +40,81 @@ type publicationSource interface {
 	ParsedInfo(pmid string) IOE.IOEither[error, *datasource.PubInfo]
 }
 
+// stockSource reads stock entities and their basic invoice row info.
+type stockSource interface {
+	StocksFromItems(ord *order.Order, pattern string) []string
+	GetStrains(ids []string) ([]*stock.Strain, error)
+	GetPlasmids(ids []string) ([]*stock.Plasmid, error)
+	GetBasicPlasmidInfo(plasmids []*stock.Plasmid) ([][]string, error)
+}
+
+// annotationSource reads the basic invoice row info for strains.
+type annotationSource interface {
+	GetBasicStrainInfo(strains []*stock.Strain) ([][]string, error)
+}
+
+// userSource resolves the shipper and payer of an order.
+type userSource interface {
+	UsersInOrder(ord *order.Order) (map[string]*user.User, error)
+}
+
+// pdfRenderer renders the invoice attachment.
+type pdfRenderer interface {
+	OutputPDF(args *template.OutputParams) (*bytes.Buffer, error)
+}
+
+// pdfRendererFunc adapts a plain render function into a pdfRenderer.
+type pdfRendererFunc func(args *template.OutputParams) (*bytes.Buffer, error)
+
+// OutputPDF renders the invoice attachment.
+func (f pdfRendererFunc) OutputPDF(
+	p *template.OutputParams,
+) (*bytes.Buffer, error) {
+	return f(p)
+}
+
+// mailgunClient prepares and sends messages.
+type mailgunClient interface {
+	NewMessage(from, subject, text string, to ...string) *mailgun.Message
+	Send(ctx context.Context, m *mailgun.Message) (string, string, error)
+}
+
+// emailData is the value the invoice template renders.
 type emailData struct {
-	user     map[string]*user.User
-	strains  []*template.StrainRows
-	plasmids []*template.PlasmidRows
+	Order    *order.Order
+	Strains  []*template.StrainRows
+	Plasmids []*template.PlasmidRows
+	User     map[string]*user.User
+}
+
+// strainState accumulates an order's strains and their basic row info.
+type strainState struct {
+	Order   *order.Order
+	Strains []*stock.Strain
+	Info    [][]string
+}
+
+// plasmidState accumulates an order's plasmids and their basic row info.
+type plasmidState struct {
+	Order    *order.Order
+	Plasmids []*stock.Plasmid
+	Info     [][]string
+}
+
+// emailPackage carries the invoice data and its rendered PDF.
+type emailPackage struct {
+	Data emailData
+	Body *bytes.Buffer
 }
 
 type mailgunEmailer struct {
-	client    *mailgun.MailgunImpl
+	client    mailgunClient
 	logger    *logrus.Entry
-	anno      *datasource.Annotation
-	stk       *datasource.Stock
-	usr       *datasource.User
+	anno      annotationSource
+	stk       stockSource
+	usr       userSource
 	pub       publicationSource
+	pdf       pdfRenderer
 	strprice  int
 	plasprice int
 	from      string
@@ -82,7 +144,30 @@ type EmailerParams struct {
 	*datasource.Sources
 }
 
+// NewMailgunEmailer wires the production dependencies onto the emailer.
 func NewMailgunEmailer(args *EmailerParams) emailer.Handler {
+	return newMailgunEmailerWithDependencies(
+		args,
+		args.StockSource,
+		args.AnnoSource,
+		args.UserSource,
+		pdfRendererFunc(template.OutputPDF),
+		args.PubSource,
+		getMailgunClient(args.Domain, args.APIKey),
+	)
+}
+
+// newMailgunEmailerWithDependencies wires every seam explicitly so tests
+// can inject stubs.
+func newMailgunEmailerWithDependencies(
+	args *EmailerParams,
+	stk stockSource,
+	anno annotationSource,
+	usr userSource,
+	pdf pdfRenderer,
+	pub publicationSource,
+	client mailgunClient,
+) *mailgunEmailer {
 	return &mailgunEmailer{
 		name:      args.SenderName,
 		from:      args.Sender,
@@ -90,38 +175,44 @@ func NewMailgunEmailer(args *EmailerParams) emailer.Handler {
 		strprice:  args.StrainPrice,
 		plasprice: args.PlasmidPrice,
 		logger:    args.Logger,
-		anno:      args.AnnoSource,
-		stk:       args.StockSource,
-		usr:       args.UserSource,
-		pub:       args.PubSource,
-		client:    getMailgunClient(args.Domain, args.APIKey),
+		anno:      anno,
+		stk:       stk,
+		usr:       usr,
+		pub:       pub,
+		pdf:       pdf,
+		client:    client,
 	}
 }
 
 func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
-	all, body, err := email.emailBody(ord)
+	pkg, err := E.UnwrapError(ioeutils.ToEither(email.emailBody(ord)))
 	if err != nil {
 		email.logger.Error(err)
 		return err
 	}
+
+	all := pkg.Data
+	body := pkg.Body
 
 	msg := email.client.NewMessage(
 		fmt.Sprintf("%s <%s>", email.name, email.from),
 		fmt.Sprintf(
 			"Order ID:%s %s %s",
 			ord.GetData().GetId(),
-			all.user["shipper"].GetData().GetAttributes().GetFirstName(),
-			all.user["shipper"].GetData().GetAttributes().GetLastName(),
+			all.User["shipper"].GetData().GetAttributes().GetFirstName(),
+			all.User["shipper"].GetData().GetAttributes().GetLastName(),
 		),
 		fmt.Sprintf(
 			etext,
-			all.user["shipper"].GetData().GetAttributes().GetFirstName(),
-			all.user["shipper"].GetData().GetAttributes().GetLastName(),
+			all.User["shipper"].GetData().GetAttributes().GetFirstName(),
+			all.User["shipper"].GetData().GetAttributes().GetLastName(),
 			ord.GetData().GetId(),
 		),
 	)
 
-	err = msg.AddRecipient(all.user["shipper"].GetData().GetAttributes().GetEmail())
+	err = msg.AddRecipient(
+		all.User["shipper"].GetData().GetAttributes().GetEmail(),
+	)
 	if err != nil {
 		email.logger.Error(err)
 		return err
@@ -129,13 +220,13 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 
 	msg.AddCC(email.cc)
 
-	if all.user["shipper"].GetData().
+	if all.User["shipper"].GetData().
 		GetAttributes().
 		GetEmail() !=
-		all.user["payer"].GetData().
+		all.User["payer"].GetData().
 			GetAttributes().
 			GetEmail() {
-		msg.AddCC(all.user["payer"].GetData().GetAttributes().GetEmail())
+		msg.AddCC(all.User["payer"].GetData().GetAttributes().GetEmail())
 	}
 
 	msg.AddBufferAttachment(
@@ -153,61 +244,7 @@ func (email *mailgunEmailer) SendEmail(ord *order.Order) error {
 	return nil
 }
 
-func (email *mailgunEmailer) orderData(ord *order.Order) (*emailData, error) {
-	all := &emailData{}
-
-	strData, err := email.strains(ord)
-	if err != nil {
-		email.logger.Error(err)
-		return all, err
-	}
-
-	plasData, err := email.plasmids(ord)
-	if err != nil {
-		return all, err
-	}
-
-	um, err := email.usr.UsersInOrder(ord)
-	if err != nil {
-		return all, err
-	}
-
-	all.strains = strData
-	all.plasmids = plasData
-	all.user = um
-
-	return all, nil
-}
-
-func (email *mailgunEmailer) emailBody(
-	ord *order.Order,
-) (*emailData, *bytes.Buffer, error) {
-	var b *bytes.Buffer
-
-	all, err := email.orderData(ord)
-	if err != nil {
-		return all, b, err
-	}
-
-	body, err := template.OutputPDF(&template.OutputParams{
-		Path: "/",
-		File: "email.tmpl",
-		Content: &template.EmailContent{
-			StrainData:  all.strains,
-			PlasmidData: all.plasmids,
-			Content: &template.Content{
-				Order:        ord,
-				Shipper:      all.user["shipper"],
-				Payer:        all.user["payer"],
-				StrainPrice:  email.strprice,
-				PlasmidPrice: email.plasprice,
-			},
-		},
-	})
-
-	return all, body, err
-}
-
+// postEmail sends a prepared message through the mailgun client.
 func (email *mailgunEmailer) postEmail(msg *mailgun.Message) (string, error) {
 	_, id, err := email.client.Send(context.Background(), msg)
 	if err != nil {
@@ -218,34 +255,252 @@ func (email *mailgunEmailer) postEmail(msg *mailgun.Message) (string, error) {
 	return id, nil
 }
 
+// fetchStrains loads the strains listed in the order.
+func (email *mailgunEmailer) fetchStrains(
+	s strainState,
+) IOE.IOEither[error, []*stock.Strain] {
+	ids := email.stk.StocksFromItems(s.Order, "DBS")
+
+	return F.Pipe1(
+		IOE.TryCatchError(func() ([]*stock.Strain, error) {
+			return email.stk.GetStrains(ids)
+		}),
+		IOE.MapLeft[[]*stock.Strain](func(err error) error {
+			return fmt.Errorf("error in getting strains: %w", err)
+		}),
+	)
+}
+
+// fetchStrainInfo loads the basic invoice row info of the state's strains.
+func (email *mailgunEmailer) fetchStrainInfo(
+	s strainState,
+) IOE.IOEither[error, [][]string] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() ([][]string, error) {
+			return email.anno.GetBasicStrainInfo(s.Strains)
+		}),
+		IOE.MapLeft[[][]string](func(err error) error {
+			return fmt.Errorf("error in getting strain information: %w", err)
+		}),
+	)
+}
+
+// enrichStrains enriches the state's strain rows with publication info.
+func (email *mailgunEmailer) enrichStrains(
+	s strainState,
+) IOE.IOEither[error, []*template.StrainRows] {
+	return email.addStrainPub(s.Info, s.Strains)
+}
+
+// strains builds the invoice strain rows for an order.
+func (email *mailgunEmailer) strains(
+	ord *order.Order,
+) IOE.IOEither[error, []*template.StrainRows] {
+	return F.Pipe3(
+		IOE.Of[error](strainState{Order: ord}),
+		IOE.Bind(strainItemsLens.Set, email.fetchStrains),
+		IOE.Bind(strainInfoLens.Set, email.fetchStrainInfo),
+		IOE.Chain(email.enrichStrains),
+	)
+}
+
+// fetchPlasmids loads the plasmids listed in the order.
+func (email *mailgunEmailer) fetchPlasmids(
+	s plasmidState,
+) IOE.IOEither[error, []*stock.Plasmid] {
+	ids := email.stk.StocksFromItems(s.Order, "DBP")
+
+	return F.Pipe1(
+		IOE.TryCatchError(func() ([]*stock.Plasmid, error) {
+			return email.stk.GetPlasmids(ids)
+		}),
+		IOE.MapLeft[[]*stock.Plasmid](func(err error) error {
+			return fmt.Errorf("error in getting plasmids: %w", err)
+		}),
+	)
+}
+
+// fetchPlasmidInfo loads the basic invoice row info of the state's
+// plasmids.
+func (email *mailgunEmailer) fetchPlasmidInfo(
+	s plasmidState,
+) IOE.IOEither[error, [][]string] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() ([][]string, error) {
+			return email.stk.GetBasicPlasmidInfo(s.Plasmids)
+		}),
+		IOE.MapLeft[[][]string](func(err error) error {
+			return fmt.Errorf("error in getting plasmid information: %w", err)
+		}),
+	)
+}
+
+// enrichPlasmids enriches the state's plasmid rows with publication info.
+func (email *mailgunEmailer) enrichPlasmids(
+	s plasmidState,
+) IOE.IOEither[error, []*template.PlasmidRows] {
+	return email.addPlasmidPub(s.Info, s.Plasmids)
+}
+
+// plasmids builds the invoice plasmid rows for an order.
 func (email *mailgunEmailer) plasmids(
 	ord *order.Order,
-) ([]*template.PlasmidRows, error) {
-	var prows []*template.PlasmidRows
-
-	plasmids, err := email.stk.GetPlasmids(
-		email.stk.StocksFromItems(ord, "DBP"),
+) IOE.IOEither[error, []*template.PlasmidRows] {
+	return F.Pipe3(
+		IOE.Of[error](plasmidState{Order: ord}),
+		IOE.Bind(plasmidItemsLens.Set, email.fetchPlasmids),
+		IOE.Bind(plasmidInfoLens.Set, email.fetchPlasmidInfo),
+		IOE.Chain(email.enrichPlasmids),
 	)
-	if err != nil {
-		return prows, fmt.Errorf("error in getting plasmids %s", err)
-	}
+}
 
-	plsinfo, err := email.stk.GetBasicPlasmidInfo(plasmids)
-	if err != nil {
-		return prows, fmt.Errorf("error in getting plasmid information %s", err)
-	}
+// fetchUsers resolves the shipper and payer of the order.
+func (email *mailgunEmailer) fetchUsers(
+	ord *order.Order,
+) IOE.IOEither[error, map[string]*user.User] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (map[string]*user.User, error) {
+			return email.usr.UsersInOrder(ord)
+		}),
+		IOE.MapLeft[map[string]*user.User](func(err error) error {
+			return fmt.Errorf("error in getting users for order: %w", err)
+		}),
+	)
+}
 
-	prows, err = E.UnwrapError(ioeutils.ToEither(
-		email.addPlasmidPub(plsinfo, plasmids),
-	))
-	if err != nil {
-		return prows, fmt.Errorf(
-			"error in adding publication to plasmids %s",
-			err,
-		)
-	}
+// orderData builds every value the invoice needs for an order.
+func (email *mailgunEmailer) orderData(
+	ord *order.Order,
+) IOE.IOEither[error, emailData] {
+	return F.Pipe3(
+		IOE.Of[error](emailData{Order: ord}),
+		IOE.ApS(emailStrainsLens.Set, email.strains(ord)),
+		IOE.ApS(emailPlasmidsLens.Set, email.plasmids(ord)),
+		IOE.ApS(emailUserLens.Set, email.fetchUsers(ord)),
+	)
+}
 
-	return prows, nil
+var (
+	// strainItemsLens focuses the strains loaded for an order.
+	strainItemsLens = L.MakeLens(
+		func(s strainState) []*stock.Strain { return s.Strains },
+		func(s strainState, v []*stock.Strain) strainState {
+			s.Strains = v
+			return s
+		},
+	)
+
+	// strainInfoLens focuses the basic row info of the loaded strains.
+	strainInfoLens = L.MakeLens(
+		func(s strainState) [][]string { return s.Info },
+		func(s strainState, v [][]string) strainState {
+			s.Info = v
+			return s
+		},
+	)
+
+	// plasmidItemsLens focuses the plasmids loaded for an order.
+	plasmidItemsLens = L.MakeLens(
+		func(s plasmidState) []*stock.Plasmid { return s.Plasmids },
+		func(s plasmidState, v []*stock.Plasmid) plasmidState {
+			s.Plasmids = v
+			return s
+		},
+	)
+
+	// plasmidInfoLens focuses the basic row info of the loaded plasmids.
+	plasmidInfoLens = L.MakeLens(
+		func(s plasmidState) [][]string { return s.Info },
+		func(s plasmidState, v [][]string) plasmidState {
+			s.Info = v
+			return s
+		},
+	)
+
+	// emailStrainsLens focuses the invoice's strain rows.
+	emailStrainsLens = L.MakeLens(
+		func(d emailData) []*template.StrainRows { return d.Strains },
+		func(d emailData, v []*template.StrainRows) emailData {
+			d.Strains = v
+			return d
+		},
+	)
+
+	// emailPlasmidsLens focuses the invoice's plasmid rows.
+	emailPlasmidsLens = L.MakeLens(
+		func(d emailData) []*template.PlasmidRows { return d.Plasmids },
+		func(d emailData, v []*template.PlasmidRows) emailData {
+			d.Plasmids = v
+			return d
+		},
+	)
+
+	// emailUserLens focuses the invoice's resolved users.
+	emailUserLens = L.MakeLens(
+		func(d emailData) map[string]*user.User { return d.User },
+		func(d emailData, v map[string]*user.User) emailData {
+			d.User = v
+			return d
+		},
+	)
+
+	// emailBodyLens focuses the rendered invoice PDF.
+	emailBodyLens = L.MakeLens(
+		func(pkg emailPackage) *bytes.Buffer { return pkg.Body },
+		func(pkg emailPackage, v *bytes.Buffer) emailPackage {
+			pkg.Body = v
+			return pkg
+		},
+	)
+)
+
+// renderPDF renders the invoice PDF for the package's order data.
+func (email *mailgunEmailer) renderPDF(
+	pkg emailPackage,
+) IOE.IOEither[error, *bytes.Buffer] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*bytes.Buffer, error) {
+			return email.pdf.OutputPDF(&template.OutputParams{
+				Path: "/",
+				File: "email.tmpl",
+				Content: &template.EmailContent{
+					StrainData:  pkg.Data.Strains,
+					PlasmidData: pkg.Data.Plasmids,
+					Content: &template.Content{
+						Order:        pkg.Data.Order,
+						Shipper:      pkg.Data.User["shipper"],
+						Payer:        pkg.Data.User["payer"],
+						StrainPrice:  email.strprice,
+						PlasmidPrice: email.plasprice,
+					},
+				},
+			})
+		}),
+		IOE.MapLeft[*bytes.Buffer](func(err error) error {
+			return fmt.Errorf("error in generating invoice pdf: %w", err)
+		}),
+	)
+}
+
+// renderPackage renders the invoice PDF into the package body.
+func (email *mailgunEmailer) renderPackage(
+	data emailData,
+) IOE.IOEither[error, emailPackage] {
+	return F.Pipe1(
+		IOE.Of[error](emailPackage{Data: data}),
+		IOE.Bind(emailBodyLens.Set, email.renderPDF),
+	)
+}
+
+// emailBody builds the invoice package for an order.
+func (email *mailgunEmailer) emailBody(
+	ord *order.Order,
+) IOE.IOEither[error, emailPackage] {
+	return F.Pipe2(
+		ord,
+		email.orderData,
+		IOE.Chain(email.renderPackage),
+	)
 }
 
 // publicationRowPubsLens focuses the loaded publication info of a row.
@@ -384,31 +639,6 @@ func (email *mailgunEmailer) addPlasmidPub(
 	traverse := IOE.TraverseArrayWithIndexSeq(builder.resolvePlasmid)
 
 	return F.Pipe1(plasmids, traverse)
-}
-
-func (email *mailgunEmailer) strains(
-	ord *order.Order,
-) ([]*template.StrainRows, error) {
-	var srows []*template.StrainRows
-
-	strains, err := email.stk.GetStrains(email.stk.StocksFromItems(ord, "DBS"))
-	if err != nil {
-		return srows, fmt.Errorf("error in getting strains %s", err)
-	}
-
-	strInfo, err := email.anno.GetBasicStrainInfo(strains)
-	if err != nil {
-		return srows, fmt.Errorf("error in getting strain information %s", err)
-	}
-
-	srows, err = E.UnwrapError(ioeutils.ToEither(
-		email.addStrainPub(strInfo, strains),
-	))
-	if err != nil {
-		return srows, fmt.Errorf("error in adding pub to strain %s", err)
-	}
-
-	return srows, nil
 }
 
 func (email *mailgunEmailer) addStrainPub(
