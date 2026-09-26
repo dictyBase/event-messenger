@@ -774,13 +774,47 @@ func (email *mailgunEmailer) addStrainPub(
 	return F.Pipe1(strains, traverse)
 }
 
+// loadPubInto loads one publication and appends it to the accumulated
+// slice.
+func (email *mailgunEmailer) loadPubInto(
+	id string,
+	pubs []*datasource.PubInfo,
+) IOE.IOEither[error, []*datasource.PubInfo] {
+	appendTo := F.Curry2(A.Append[*datasource.PubInfo])
+
+	return F.Pipe1(
+		email.pub.ParsedInfo(id),
+		IOE.Map[error](appendTo(pubs)),
+	)
+}
+
+// loadPubNext appends one publication to the monadic accumulator.
+// Chaining on the accumulator is what stops the fold at the first
+// failure, so no later id is requested.
+func (email *mailgunEmailer) loadPubNext(
+	acc IOE.IOEither[error, []*datasource.PubInfo],
+	id string,
+) IOE.IOEither[error, []*datasource.PubInfo] {
+	load := F.Curry2(email.loadPubInto)
+	loadID := load(id)
+
+	return F.Pipe1(acc, IOE.Chain(loadID))
+}
+
+// pubInfo loads publication info for every id in order, stopping at the
+// first failure.
 func (email *mailgunEmailer) pubInfo(
 	ids []string,
 ) IOE.IOEither[error, []*datasource.PubInfo] {
+	reduce := A.Reduce(
+		email.loadPubNext,
+		IOE.Of[error]([]*datasource.PubInfo{}),
+	)
+
 	return F.Pipe2(
 		ids,
 		normalizePublicationIDs,
-		IOE.TraverseArraySeq(email.pub.ParsedInfo),
+		reduce,
 	)
 }
 

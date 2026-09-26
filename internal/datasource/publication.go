@@ -2,8 +2,10 @@ package datasource
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
+	E "github.com/IBM/fp-go/v2/either"
 	F "github.com/IBM/fp-go/v2/function"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	O "github.com/IBM/fp-go/v2/option"
@@ -59,8 +61,45 @@ func newPublication(c pubMedClient) *Publication {
 	return &Publication{client: c}
 }
 
+// pmidPattern matches PubMed identifiers: decimal digits with no
+// leading zero.
+var pmidPattern = regexp.MustCompile(`^[1-9][0-9]*$`)
+
+// validPMID reports whether pmid is a PubMed identifier.
+func validPMID(pmid string) bool {
+	return pmidPattern.MatchString(pmid)
+}
+
+// invalidPMIDError presents a non-identifier pmid as a typed literature
+// error.
+func invalidPMIDError(pmid string) error {
+	return fmt.Errorf(
+		"error fetching publication %s: %w",
+		pmid,
+		literature.NewErrorWithPMID(
+			literature.ErrorTypeInvalidInput,
+			pmid,
+			"pmid must contain decimal digits",
+		),
+	)
+}
+
+// validatePMID rejects anything that is not a PubMed identifier before
+// the client is called.
+var validatePMID = E.FromPredicate(validPMID, invalidPMIDError)
+
 // ParsedInfo fetches one article and formats its citation snippet.
 func (p *Publication) ParsedInfo(pmid string) IOE.IOEither[error, *PubInfo] {
+	return F.Pipe3(
+		pmid,
+		validatePMID,
+		IOE.FromEither[error, string],
+		IOE.Chain(p.fetchInfo),
+	)
+}
+
+// fetchInfo fetches one article through the client and formats it.
+func (p *Publication) fetchInfo(pmid string) IOE.IOEither[error, *PubInfo] {
 	return F.Pipe2(
 		IOE.TryCatchError(func() (*literature.Article, error) {
 			return p.client.GetArticle(pmid)
@@ -72,7 +111,10 @@ func (p *Publication) ParsedInfo(pmid string) IOE.IOEither[error, *PubInfo] {
 	)
 }
 
-// toPubInfo formats one article into a citation snippet.
+// toPubInfo formats one article into a citation snippet. The publish
+// year comes from Article.PublishDate, which the pinned literature
+// adapter never fills in for the NCBI path, so production citations
+// currently render without a year.
 func toPubInfo(a *literature.Article) *PubInfo {
 	authors := authorStr(a.Authors)
 	year := pubYear(a.PublishDate)
