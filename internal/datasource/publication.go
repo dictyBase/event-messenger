@@ -1,219 +1,176 @@
 package datasource
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
-	"sort"
-	"strings"
 	"time"
 
-	"github.com/hasura/go-graphql-client"
+	F "github.com/IBM/fp-go/v2/function"
+	IOE "github.com/IBM/fp-go/v2/ioeither"
+	O "github.com/IBM/fp-go/v2/option"
+	P "github.com/IBM/fp-go/v2/predicate"
+	S "github.com/IBM/fp-go/v2/string"
+	MO "github.com/dictyBase/fp-go-loom/matchopt"
+	predarrays "github.com/dictyBase/fp-go-loom/predicate/array"
+	"github.com/dictybase/literature"
 )
 
-type dictyPub struct {
-	Data  *pubData `json:"data"`
-	Links *links   `json:"links"`
+// pubMedClient is the narrow seam over the NCBI eUtils client.
+type pubMedClient interface {
+	GetArticle(pmid string) (*literature.Article, error)
 }
 
-type links struct {
-	Self string `json:"self"`
-}
+const (
+	// twoAuthors is the citation arity that joins both names.
+	twoAuthors = 2
 
-type pubData struct {
-	Type       string `json:"type"`
-	ID         string `json:"id"`
-	Attributes *pub   `json:"attributes"`
-}
+	// threeAuthors is the citation arity that abbreviates to "et al.".
+	threeAuthors = 3
+)
 
-type author struct {
-	FirstName string `json:"first_name,omitempty"`
-	LastName  string `json:"last_name"`
-	FullName  string `json:"full_name"`
-	Initials  string `json:"initials"`
-}
-
-type pub struct {
-	Abstract      string    `json:"abstract"`
-	Doi           string    `json:"doi,omitempty"`
-	FullTextURL   string    `json:"full_text_url,omitempty"`
-	PubmedURL     string    `json:"pubmed_url,omitempty"`
-	Journal       string    `json:"journal,omitempty"`
-	Issn          string    `json:"issn,omitempty"`
-	Page          string    `json:"page,omitempty"`
-	Pubmed        string    `json:"pubmed,omitempty"`
-	Title         string    `json:"title,omitempty"`
-	Source        string    `json:"source,omitempty"`
-	Status        string    `json:"status,omitempty"`
-	PubType       string    `json:"pub_type,omitempty"`
-	Issue         string    `json:"issue,omitempty"`
-	Volume        string    `json:"volume,omitempty"`
-	PublishedDate *pubDate  `json:"publication_date,omitempty"`
-	Authors       []*author `json:"authors,omitempty"`
-}
-
-type pubDate struct {
-	time.Time
-}
-
-func (pd *pubDate) UnmarshalJSON(in []byte) error {
-	t, err := time.Parse("2006-01-02", strings.ReplaceAll(string(in), `"`, ""))
-	if err != nil {
-		return fmt.Errorf("error in parsing time %s", err)
-	}
-
-	pd.Time = t
-
-	return nil
-}
-
+// PubInfo is the citation snippet rendered into an invoice row.
 type PubInfo struct {
 	AuthorStr string
 	PubmedURL string
 	DoiURL    string
 }
 
-type GraphqlAuthor struct {
-	FirstName string `graphql:"first_name"`
-	LastName  string `graphql:"last_name"`
-	Initials  string
-	Rank      string
-}
-
-func (agl *GraphqlAuthor) FullName() string {
-	if len(agl.Initials) > 0 {
-		return fmt.Sprintf("%s %s", agl.Initials, agl.LastName)
-	}
-
-	return fmt.Sprintf("%s %s", agl.FirstName, agl.LastName)
-}
-
-const twoAuthors = 2
-
-type PubQuery struct {
-	Publication struct {
-		ID      string    `graphql:"id"`
-		PubDate time.Time `graphql:"pub_date"`
-		Doi     string
-		Authors []*GraphqlAuthor
-	} `graphql:"publication(id: $id)"`
-}
-
+// Publication resolves PubMed identifiers into citation snippets.
 type Publication struct {
-	apiBase string
-	client  *graphql.Client
+	client pubMedClient
 }
 
-func NewPublication(base string) *Publication {
-	return &Publication{apiBase: base, client: graphql.NewClient(base, nil)}
-}
-
-func (p *Publication) ParsedInfoFromGraphql(id string) (*PubInfo, error) {
-	pinfo := new(PubInfo)
-	query := new(PubQuery)
-
-	err := p.client.Query(context.Background(), query, map[string]any{
-		"id": graphql.ID(id),
-	})
-	if err != nil {
-		return pinfo, fmt.Errorf("error in running graphql query %s", err)
-	}
-
-	sort.Slice(query.Publication.Authors, func(i, j int) bool {
-		return len(
-			query.Publication.Authors[i].Rank,
-		) > len(
-			query.Publication.Authors[j].Rank,
-		)
-	})
-	pinfo.AuthorStr = fmt.Sprintf(
-		"%s (%d)",
-		authorStrFromGrqphql(query.Publication.Authors),
-		query.Publication.PubDate.Year(),
+// NewPublication builds the publication source over the NCBI eUtils client.
+func NewPublication() IOE.IOEither[error, *Publication] {
+	return F.Pipe2(
+		IOE.TryCatchError(func() (*literature.Client, error) {
+			return literature.New()
+		}),
+		IOE.MapLeft[*literature.Client](func(err error) error {
+			return fmt.Errorf("error creating literature pubmed client: %w", err)
+		}),
+		IOE.Map[error](func(c *literature.Client) *Publication {
+			return &Publication{client: c}
+		}),
 	)
-	pinfo.PubmedURL = fmt.Sprintf("https://pubmed.gov/%s", query.Publication.ID)
-	pinfo.DoiURL = fmt.Sprintf("https://doi.org/%s", query.Publication.Doi)
-
-	return pinfo, nil
 }
 
-func (p *Publication) ParsedInfo(id string) (*PubInfo, error) {
-	pinfo := new(PubInfo)
+// newPublication builds a publication source over an injected client.
+func newPublication(c pubMedClient) *Publication {
+	return &Publication{client: c}
+}
 
-	res, err := pubResp(fmt.Sprintf("%s/%s", p.apiBase, id))
-	if err != nil {
-		return pinfo, err
-	}
-	defer res.Body.Close()
-
-	pub := new(dictyPub)
-	if err := json.NewDecoder(res.Body).Decode(pub); err != nil {
-		return pinfo, fmt.Errorf("error in decoding json %s", err)
-	}
-
-	pinfo.AuthorStr = fmt.Sprintf(
-		"%s (%d)",
-		authorStr(pub.Data.Attributes.Authors),
-		pub.Data.Attributes.PublishedDate.Year(),
+// ParsedInfo fetches one article and formats its citation snippet.
+func (p *Publication) ParsedInfo(pmid string) IOE.IOEither[error, *PubInfo] {
+	return F.Pipe2(
+		IOE.TryCatchError(func() (*literature.Article, error) {
+			return p.client.GetArticle(pmid)
+		}),
+		IOE.MapLeft[*literature.Article](func(err error) error {
+			return fmt.Errorf("error fetching publication %s: %w", pmid, err)
+		}),
+		IOE.Map[error](toPubInfo),
 	)
-	pinfo.PubmedURL = pub.Data.Attributes.PubmedURL
-	pinfo.DoiURL = pub.Data.Attributes.FullTextURL
-
-	return pinfo, nil
 }
 
-func pubResp(pubURL string) (*http.Response, error) {
-	var r *http.Response
+// toPubInfo formats one article into a citation snippet.
+func toPubInfo(a *literature.Article) *PubInfo {
+	authors := authorStr(a.Authors)
+	year := pubYear(a.PublishDate)
 
-	parsedURL, err := url.Parse(pubURL)
-	if err != nil {
-		return r, fmt.Errorf("error in parsing url %s %s", pubURL, err)
+	return &PubInfo{
+		AuthorStr: S.Monoid.Concat(authors, year),
+		PubmedURL: fmt.Sprintf("https://pubmed.gov/%s", a.PMID),
+		DoiURL:    doiURL(a.DOI),
 	}
-
-	res, err := http.Get(parsedURL.String())
-	if err != nil {
-		return res, fmt.Errorf("error in http get request with %s", err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return res,
-			fmt.Errorf(
-				"error fetching publication %s status code %d",
-				parsedURL.String(), res.StatusCode,
-			)
-	}
-
-	return res, nil
 }
 
-func authorStrFromGrqphql(author []*GraphqlAuthor) string {
-	var str string
+// matchAuthors formats the author list by arity, with a total fallback.
+func matchAuthors(authors []literature.Author) string {
+	isSingle := predarrays.LenEq[literature.Author](1)
+	isPair := predarrays.LenEq[literature.Author](twoAuthors)
+	isEtAl := predarrays.MinLen[literature.Author](threeAuthors)
 
-	switch len(author) {
-	case 1:
-		str = author[0].FullName()
-	case twoAuthors:
-		str = fmt.Sprintf("%s & %s", author[0].FullName(), author[1].FullName())
-	default:
-		str = fmt.Sprintf("%s et al.", author[0].FullName())
+	cases := []O.Option[string]{
+		F.Pipe1(authors, MO.Case(isSingle, singleAuthor)),
+		F.Pipe1(authors, MO.Case(isPair, pairAuthors)),
+		F.Pipe1(authors, MO.Case(isEtAl, etAlAuthors)),
 	}
 
-	return str
+	return MO.First("unknown authors", cases)
 }
 
-func authorStr(a []*author) string {
-	var str string
+// authorStr formats the author list for the citation.
+func authorStr(authors []literature.Author) string {
+	matcher := matchAuthors
 
-	switch len(a) {
-	case 1:
-		str = a[0].FullName
-	case twoAuthors:
-		str = fmt.Sprintf("%s & %s", a[0].FullName, a[1].FullName)
-	default:
-		str = fmt.Sprintf("%s et al.", a[0].FullName)
-	}
+	return F.Pipe1(authors, matcher)
+}
 
-	return str
+// singleAuthor formats a one-author citation.
+func singleAuthor(a []literature.Author) string {
+	return displayName(a[0])
+}
+
+// pairAuthors formats a two-author citation.
+func pairAuthors(a []literature.Author) string {
+	first := displayName(a[0])
+	second := displayName(a[1])
+
+	return S.IntersperseMonoid(" & ").Concat(first, second)
+}
+
+// etAlAuthors formats a three-or-more-author citation.
+func etAlAuthors(a []literature.Author) string {
+	name := displayName(a[0])
+
+	return S.Monoid.Concat(name, " et al.")
+}
+
+// fullNameFallback joins the author's given and family names.
+func fullNameFallback(a literature.Author) string {
+	return S.IntersperseMonoid(" ").Concat(a.FirstName, a.LastName)
+}
+
+// displayName prefers the abbreviated full name over given and family names.
+func displayName(a literature.Author) string {
+	fallback := fullNameFallback(a)
+
+	return F.Pipe2(
+		a.FullName,
+		O.FromPredicate(S.IsNonEmpty),
+		O.GetOrElse(F.Constant(fallback)),
+	)
+}
+
+// isNonZeroTime reports whether the timestamp is set.
+var isNonZeroTime = P.Not(time.Time.IsZero)
+
+// formatYear renders a publish year as a citation suffix.
+func formatYear(t time.Time) string {
+	return fmt.Sprintf(" (%d)", t.Year())
+}
+
+// pubYear renders the publish year, or nothing when the date is unset.
+func pubYear(t time.Time) string {
+	return F.Pipe3(
+		t,
+		O.FromPredicate(isNonZeroTime),
+		O.Map(formatYear),
+		O.GetOrElse(F.Constant("")),
+	)
+}
+
+// formatDOI renders a DOI as a resolvable url.
+func formatDOI(doi string) string {
+	return fmt.Sprintf("https://doi.org/%s", doi)
+}
+
+// doiURL renders the DOI url, or nothing when the DOI is missing.
+func doiURL(doi string) string {
+	return F.Pipe3(
+		doi,
+		O.FromPredicate(S.IsNonEmpty),
+		O.Map(formatDOI),
+		O.GetOrElse(F.Constant("")),
+	)
 }
