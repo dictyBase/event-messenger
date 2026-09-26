@@ -25,8 +25,8 @@ github.com/dictyBase/go-genproto v0.0.0-20250812211349-c01bdbe25058 h1:+tJZbSiQi
 github.com/dictyBase/go-genproto v0.0.0-20250812211349-c01bdbe25058/go.mod h1:rlUPhBs4duDUE73MswuLGW9UzbkcTWqQsbpsp/pGqTg=
 github.com/dictyBase/go-obograph v1.6.0 h1:otuiEadRCJ25o6X/5tWhDjiiAbK0R8LBLQpBxVREotc=
 github.com/dictyBase/go-obograph v1.6.0/go.mod h1:osNZ7PRqai1OTnrLy8SoDavKIMaDp7Sw8CFh52ddBkY=
-github.com/dictybase/literature v0.1.2-0.20260926193825-6767616be889 h1:/ID+fN0go50XFY19/1L+4xSUIVvRa+lxNyo7G0hz/cg=
-github.com/dictybase/literature v0.1.2-0.20260926193825-6767616be889/go.mod h1:ZvRcDWeCrgzJWUX3osXIqPYJtx46tAuoCbtYhOTc0ls=
+github.com/dictybase/literature v0.1.2 h1:RCHk33Q2JVK8PaRbjB8LTxVLCm3hdDUOcvOeW3dIm7E=
+github.com/dictybase/literature v0.1.2/go.mod h1:ZvRcDWeCrgzJWUX3osXIqPYJtx46tAuoCbtYhOTc0ls=
 github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 h1:0JZ+dUmQeA8IIVUMzysrX4/AKuQwWhV2dYQuPZdvdSQ=
 github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51/go.mod h1:Yg+htXGokKKdzcwhuNDwVvN+uBxDGXJ7G/VN1d8fa64=
 github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 h1:JWuenKqqX8nojtoVVWjGfOF9635RETekkoH6Cc9SX0A=
