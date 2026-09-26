@@ -112,9 +112,8 @@ func (p *Publication) fetchInfo(pmid string) IOE.IOEither[error, *PubInfo] {
 }
 
 // toPubInfo formats one article into a citation snippet. The publish
-// year comes from Article.PublishDate, which the pinned literature
-// adapter never fills in for the NCBI path, so production citations
-// currently render without a year.
+// year comes from Article.PublishDate, which the literature client fills
+// from the PubMed journal issue; a zero date renders no year at all.
 func toPubInfo(a *literature.Article) *PubInfo {
 	authors := authorStr(a.Authors)
 	year := pubYear(a.PublishDate)
