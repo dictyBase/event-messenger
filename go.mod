@@ -2,11 +2,11 @@ module github.com/dictyBase/event-messenger
 
 require (
 	github.com/IBM/fp-go/v2 v2.3.126
-	github.com/PuerkitoBio/goquery v1.9.2
+	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/dictyBase/fp-go-loom v0.0.0-20260907153825-45f9f571545f
 	github.com/dictyBase/go-genproto v0.0.0-20250812211349-c01bdbe25058
-	github.com/dictyBase/go-obograph v1.6.0
+	github.com/dictyBase/go-obograph v1.6.1
 	github.com/dictybase/literature v0.1.2
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/golang/protobuf v1.5.4
@@ -17,15 +17,15 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli/v3 v3.11.0
-	github.com/yuin/goldmark v1.7.8
+	github.com/yuin/goldmark v1.8.5
 	golang.org/x/oauth2 v0.36.0
-	google.golang.org/grpc v1.81.1
+	google.golang.org/grpc v1.83.0
 	google.golang.org/protobuf v1.36.11
 )
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 // indirect
-	github.com/andybalholm/cascadia v1.3.2 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/arangodb/go-driver v1.6.9 // indirect
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
 	github.com/dictyBase/arangomanager v0.8.0 // indirect
@@ -50,7 +50,7 @@ require (
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 )
 
 go 1.26.0
