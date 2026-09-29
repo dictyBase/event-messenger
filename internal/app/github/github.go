@@ -30,7 +30,7 @@ func RunCreateIssue(_ context.Context, c *cli.Command) error {
 		return cli.Exit(err.Error(), exitCode)
 	}
 
-	mc, err := service.ClientConn(c, []string{"stock", "user", "annotation"})
+	mc, err := service.ClientConn(c, []string{"stock", "annotation"})
 	if err != nil {
 		return cli.Exit(err.Error(), exitCode)
 	}

@@ -71,8 +71,9 @@
                     <h6><strong>Billing Address</strong></h6>
                 </div>
             </div>
-            {{- $s := .Shipper.Data.Attributes -}}
-            {{- $p := .Payer.Data.Attributes -}}
+            {{- $o := .Order.Data.Attributes -}}
+            {{- $s := .Shipper -}}
+            {{- $p := .Payer -}}
             <div class="row">
                 <div class="col s6">
                     <div>{{$s.FirstName}} {{$s.LastName}}</div>
@@ -83,7 +84,7 @@
                     <div>{{$s.Country}}</div>
                     <div>{{$s.Phone}}</div>
                     <div><a class="blue-text text-darken-1"
-                            href="{{$s.Email}}">{{$s.Email}}</a>
+                            href="{{$o.Consumer}}">{{$o.Consumer}}</a>
                     </div>
                     <div>{{.Order.Data.Attributes.Courier}} {{.Order.Data.Attributes.CourierAccount}}</div>
                 </div>
@@ -96,7 +97,7 @@
                     <div>{{$p.Country}}</div>
                     <div>{{$p.Phone}}</div>
                     <div><a class="blue-text text-darken-1"
-                            href="{{$p.Email}}">{{$p.Email}}</a>
+                            href="{{$o.Payer}}">{{$o.Payer}}</a>
                     </div>
                     <div>{{.Order.Data.Attributes.Payment}} {{.Order.Data.Attributes.PurchaseOrderNum}}</div>
                 </div>

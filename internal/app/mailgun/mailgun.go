@@ -155,7 +155,7 @@ func createSubscriber(
 
 // createSources dials the grpc services and wraps them as data sources.
 func createSources(s EmailSetupState) IOE.IOEither[error, *datasource.Sources] {
-	services := []string{"stock", "annotation", "user"}
+	services := []string{"stock", "annotation"}
 
 	return F.Pipe2(
 		IOE.TryCatchError(func() (map[string]*grpc.ClientConn, error) {

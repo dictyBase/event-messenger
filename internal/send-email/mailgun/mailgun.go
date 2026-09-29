@@ -22,7 +22,6 @@ import (
 	predord "github.com/dictyBase/fp-go-loom/predicate/ord"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/mailgun/mailgun-go/v3"
 	"github.com/sirupsen/logrus"
 )
@@ -55,11 +54,6 @@ type annotationSource interface {
 	GetBasicStrainInfo(strains []*stock.Strain) ([][]string, error)
 }
 
-// userSource resolves the shipper and payer of an order.
-type userSource interface {
-	UsersInOrder(ord *order.Order) (map[string]*user.User, error)
-}
-
 // pdfRenderer renders the invoice attachment.
 type pdfRenderer interface {
 	OutputPDF(args *template.OutputParams) (*bytes.Buffer, error)
@@ -86,7 +80,6 @@ type emailData struct {
 	Order    *order.Order
 	Strains  []*template.StrainRows
 	Plasmids []*template.PlasmidRows
-	User     map[string]*user.User
 }
 
 // strainState accumulates an order's strains and their basic row info.
@@ -132,7 +125,6 @@ type mailgunEmailer struct {
 	logger    *logrus.Entry
 	anno      annotationSource
 	stk       stockSource
-	usr       userSource
 	pub       publicationSource
 	pdf       pdfRenderer
 	strprice  int
@@ -170,7 +162,6 @@ func NewMailgunEmailer(args *EmailerParams) emailer.Handler {
 		args,
 		args.StockSource,
 		args.AnnoSource,
-		args.UserSource,
 		pdfRendererFunc(template.OutputPDF),
 		args.PubSource,
 		getMailgunClient(args.Domain, args.APIKey),
@@ -183,7 +174,6 @@ func newMailgunEmailerWithDependencies(
 	args *EmailerParams,
 	stk stockSource,
 	anno annotationSource,
-	usr userSource,
 	pdf pdfRenderer,
 	pub publicationSource,
 	client mailgunClient,
@@ -197,7 +187,6 @@ func newMailgunEmailerWithDependencies(
 		logger:    args.Logger,
 		anno:      anno,
 		stk:       stk,
-		usr:       usr,
 		pub:       pub,
 		pdf:       pdf,
 		client:    client,
@@ -256,12 +245,11 @@ func ccAddresses(d ccDecision) []string {
 func (email *mailgunEmailer) initMessageState(pkg emailPackage) messageState {
 	ord := pkg.Data.Order
 	ordID := ord.GetData().GetId()
-	shipper := pkg.Data.User["shipper"].GetData().GetAttributes()
-	payer := pkg.Data.User["payer"].GetData().GetAttributes()
-	sFirst := shipper.GetFirstName()
-	sLast := shipper.GetLastName()
-	sEmail := shipper.GetEmail()
-	pEmail := payer.GetEmail()
+	attr := ord.GetData().GetAttributes()
+	sFirst := attr.GetConsumerInfo().GetFirstName()
+	sLast := attr.GetConsumerInfo().GetLastName()
+	sEmail := attr.GetConsumer()
+	pEmail := attr.GetPayer()
 	fromHeader := fmt.Sprintf("%s <%s>", email.name, email.from)
 	subject := fmt.Sprintf("Order ID:%s %s %s", ordID, sFirst, sLast)
 	text := fmt.Sprintf(etext, sFirst, sLast, ordID)
@@ -477,29 +465,14 @@ func (email *mailgunEmailer) plasmids(
 	)
 }
 
-// fetchUsers resolves the shipper and payer of the order.
-func (email *mailgunEmailer) fetchUsers(
-	ord *order.Order,
-) IOE.IOEither[error, map[string]*user.User] {
-	return F.Pipe1(
-		IOE.TryCatchError(func() (map[string]*user.User, error) {
-			return email.usr.UsersInOrder(ord)
-		}),
-		IOE.MapLeft[map[string]*user.User](func(err error) error {
-			return fmt.Errorf("error in getting users for order: %w", err)
-		}),
-	)
-}
-
 // orderData builds every value the invoice needs for an order.
 func (email *mailgunEmailer) orderData(
 	ord *order.Order,
 ) IOE.IOEither[error, emailData] {
-	return F.Pipe3(
+	return F.Pipe2(
 		IOE.Of[error](emailData{Order: ord}),
 		IOE.ApS(emailStrainsLens.Set, email.strains(ord)),
 		IOE.ApS(emailPlasmidsLens.Set, email.plasmids(ord)),
-		IOE.ApS(emailUserLens.Set, email.fetchUsers(ord)),
 	)
 }
 
@@ -558,15 +531,6 @@ var (
 		},
 	)
 
-	// emailUserLens focuses the invoice's resolved users.
-	emailUserLens = L.MakeLens(
-		func(d emailData) map[string]*user.User { return d.User },
-		func(d emailData, v map[string]*user.User) emailData {
-			d.User = v
-			return d
-		},
-	)
-
 	// emailBodyLens focuses the rendered invoice PDF.
 	emailBodyLens = L.MakeLens(
 		func(pkg emailPackage) *bytes.Buffer { return pkg.Body },
@@ -583,6 +547,8 @@ func (email *mailgunEmailer) renderPDF(
 ) IOE.IOEither[error, *bytes.Buffer] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*bytes.Buffer, error) {
+			attr := pkg.Data.Order.GetData().GetAttributes()
+
 			return email.pdf.OutputPDF(&template.OutputParams{
 				Path: "/",
 				File: "email.tmpl",
@@ -591,8 +557,8 @@ func (email *mailgunEmailer) renderPDF(
 					PlasmidData: pkg.Data.Plasmids,
 					Content: &template.Content{
 						Order:        pkg.Data.Order,
-						Shipper:      pkg.Data.User["shipper"],
-						Payer:        pkg.Data.User["payer"],
+						Shipper:      attr.GetConsumerInfo(),
+						Payer:        attr.GetPayerInfo(),
 						StrainPrice:  email.strprice,
 						PlasmidPrice: email.plasprice,
 					},
