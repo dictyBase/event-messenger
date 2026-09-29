@@ -13,7 +13,6 @@ import (
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	_ "github.com/dictyBase/event-messenger/internal/statik" // register embedded filesystem
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/rakyll/statik/fs"
 )
 
@@ -39,8 +38,8 @@ type PlasmidRows struct {
 
 type Content struct {
 	Order        *order.Order
-	Shipper      *user.User
-	Payer        *user.User
+	Shipper      *order.UserInfo
+	Payer        *order.UserInfo
 	StrainPrice  int
 	PlasmidPrice int
 }

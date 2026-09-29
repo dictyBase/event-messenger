@@ -10,7 +10,6 @@ import (
 	"github.com/dictyBase/event-messenger/internal/template"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/google/go-github/v32/github"
 	"golang.org/x/oauth2"
 
@@ -20,7 +19,6 @@ import (
 type allData struct {
 	*strainData
 	*plasmidData
-	user map[string]*user.User
 }
 
 type strainData struct {
@@ -43,7 +41,6 @@ type githubIssue struct {
 	logger     *logrus.Entry
 	anno       *datasource.Annotation
 	stk        *datasource.Stock
-	usr        *datasource.User
 	strprice   int
 	plasprice  int
 }
@@ -79,7 +76,6 @@ func NewIssueCreator(args *IssueParams) issue.Tracker {
 		logger:     args.Logger,
 		anno:       args.AnnoSource,
 		stk:        args.StockSource,
-		usr:        args.UserSource,
 		strprice:   args.StrainPrice,
 		plasprice:  args.PlasmidPrice,
 	}
@@ -148,12 +144,6 @@ func (gh *githubIssue) orderData(ord *order.Order) (*allData, error) {
 		return all, err
 	}
 
-	um, err := gh.usr.UsersInOrder(ord)
-	if err != nil {
-		return all, err
-	}
-
-	all.user = um
 	all.strainData = strData
 	all.plasmidData = plasData
 
@@ -234,13 +224,15 @@ func (gh *githubIssue) plasmids(ord *order.Order) (*plasmidData, error) {
 }
 
 func getContent(all *allData, ord *order.Order) *template.IssueContent {
+	attr := ord.GetData().GetAttributes()
+
 	return &template.IssueContent{
 		StrainInv:  all.strainData.invs,
 		PlasmidInv: all.plasmidData.invs,
 		StrainInfo: all.info,
 		Content: &template.Content{
-			Shipper: all.user["shipper"],
-			Payer:   all.user["payer"],
+			Shipper: attr.GetConsumerInfo(),
+			Payer:   attr.GetPayerInfo(),
 			Order:   ord,
 		},
 	}

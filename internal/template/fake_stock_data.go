@@ -3,18 +3,15 @@ package template
 import (
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
-	consumer       = "pennpacker@dictycr.org"
-	payer          = "varnsen@dictycr.org"
-	orderID        = "3894333"
-	payerUserID    = 8448393
-	consumerUserID = 8493438
-	plasmidName    = "pDV-fAR1-CYFP"
-	strainPrefix   = "talA-"
+	consumer     = "pennpacker@dictycr.org"
+	payer        = "varnsen@dictycr.org"
+	orderID      = "3894333"
+	plasmidName  = "pDV-fAR1-CYFP"
+	strainPrefix = "talA-"
 )
 
 type templateData struct {
@@ -61,52 +58,38 @@ func fakeOrder() *order.Order {
 				Courier:          "Fedex",
 				CreatedAt:        timestamppb.Now(),
 				Items:            fakeStockItems(),
+				ConsumerInfo:     fakeConsumerInfo(),
+				PayerInfo:        fakePayerInfo(),
 			},
 		},
 	}
 }
 
-func fakePayer() *user.User {
-	return &user.User{
-		Data: &user.UserData{
-			Type: "users",
-			Id:   payerUserID,
-			Attributes: &user.UserAttributes{
-				FirstName:    "Kel",
-				LastName:     "Varnsen",
-				Email:        payer,
-				Organization: "Cornell University",
-				FirstAddress: "5 West 63 street",
-				City:         "New York",
-				State:        "NY",
-				Zipcode:      "100009",
-				Country:      "US",
-				Phone:        "212-555-0109",
-				CreatedAt:    timestamppb.Now(),
-			},
-		},
+func fakePayerInfo() *order.UserInfo {
+	return &order.UserInfo{
+		FirstName:    "Kel",
+		LastName:     "Varnsen",
+		Organization: "Cornell University",
+		FirstAddress: "5 West 63 street",
+		City:         "New York",
+		State:        "NY",
+		Zipcode:      "100009",
+		Country:      "US",
+		Phone:        "212-555-0109",
 	}
 }
 
-func fakeConsumer() *user.User {
-	return &user.User{
-		Data: &user.UserData{
-			Type: "users",
-			Id:   consumerUserID,
-			Attributes: &user.UserAttributes{
-				FirstName:    "Harrold",
-				LastName:     "Pennypacker",
-				Email:        consumer,
-				Organization: "New York University",
-				FirstAddress: "129 West 81 street",
-				City:         "New York",
-				State:        "NY",
-				Zipcode:      "100001",
-				Country:      "US",
-				Phone:        "212-555-0171",
-				CreatedAt:    timestamppb.Now(),
-			},
-		},
+func fakeConsumerInfo() *order.UserInfo {
+	return &order.UserInfo{
+		FirstName:    "Harrold",
+		LastName:     "Pennypacker",
+		Organization: "New York University",
+		FirstAddress: "129 West 81 street",
+		City:         "New York",
+		State:        "NY",
+		Zipcode:      "100001",
+		Country:      "US",
+		Phone:        "212-555-0171",
 	}
 }
 
@@ -205,8 +188,8 @@ func fakeStrainInfo() [][]string {
 func fakeContent() *Content {
 	return &Content{
 		Order:   fakeOrder(),
-		Shipper: fakeConsumer(),
-		Payer:   fakePayer(),
+		Shipper: fakeConsumerInfo(),
+		Payer:   fakePayerInfo(),
 	}
 }
 

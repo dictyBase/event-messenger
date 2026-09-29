@@ -17,7 +17,6 @@ import (
 	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/mailgun/mailgun-go/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -127,18 +126,11 @@ const (
 	ccAddress         = "cc@example.org"
 	providerMessageID = "provider-id"
 
-	// User map keys returned by the user source.
-	shipperKey = "shipper"
-	payerKey   = "payer"
-
 	// Row labels shared by the strain and plasmid invoice fixtures.
 	descriptorLabel  = "descriptor"
 	namesLabel       = "name"
 	sysNameLabel     = "sys-name"
 	plasmidNameLabel = "plasmid-name"
-
-	// personLastName is the family name of both test users.
-	personLastName = "Person"
 )
 
 // fakeStockSource is an in-memory stockSource stub that records what it
@@ -216,18 +208,6 @@ func (f *fakeAnnotationSource) GetBasicStrainInfo(
 	return f.strainInfo, f.err
 }
 
-// fakeUserSource is an in-memory userSource stub.
-type fakeUserSource struct {
-	users map[string]*user.User
-	err   error
-}
-
-func (f *fakeUserSource) UsersInOrder(
-	_ *order.Order,
-) (map[string]*user.User, error) {
-	return f.users, f.err
-}
-
 // fakePDFRenderer is a pdfRenderer stub that never touches wkhtmltopdf.
 type fakePDFRenderer struct {
 	buf *bytes.Buffer
@@ -240,28 +220,17 @@ func (f *fakePDFRenderer) OutputPDF(
 	return f.buf, f.err
 }
 
-// testUser builds a user with the given name and address.
-func testUser(first, email string) *user.User {
-	return &user.User{
-		Data: &user.UserData{
-			Attributes: &user.UserAttributes{
-				FirstName: first,
-				LastName:  personLastName,
-				Email:     email,
-			},
-		},
-	}
-}
-
 // testOrder builds an order carrying one strain and one plasmid item.
 func testOrder() *order.Order {
 	return &order.Order{
 		Data: &order.Order_Data{
 			Id: "ORD123",
 			Attributes: &order.OrderAttributes{
-				Consumer: shipperEmail,
-				Payer:    payerEmail,
-				Items:    []string{fake.StrainID, fake.PlasmidID},
+				Consumer:     shipperEmail,
+				Payer:        payerEmail,
+				Items:        []string{fake.StrainID, fake.PlasmidID},
+				ConsumerInfo: &order.UserInfo{FirstName: "Shipper", LastName: "Person"},
+				PayerInfo:    &order.UserInfo{FirstName: "Payer", LastName: "Person"},
 			},
 		},
 	}
@@ -279,7 +248,6 @@ func discardLogger() *logrus.Entry {
 func testEmailer(
 	stk stockSource,
 	anno annotationSource,
-	usr userSource,
 	pdf pdfRenderer,
 	pub publicationSource,
 	client mailgunClient,
@@ -295,7 +263,6 @@ func testEmailer(
 		},
 		stk,
 		anno,
-		usr,
 		pdf,
 		pub,
 		client,
@@ -306,8 +273,6 @@ func TestOrderData(t *testing.T) {
 	t.Parallel()
 
 	ord := testOrder()
-	shipperUser := testUser("Shipper", shipperEmail)
-	payerUser := testUser("Payer", payerEmail)
 	stkFake := &fakeStockSource{
 		strains:     []*stock.Strain{fakeStrain()},
 		plasmids:    []*stock.Plasmid{fakePlasmid()},
@@ -321,16 +286,10 @@ func TestOrderData(t *testing.T) {
 			sysNameLabel,
 		}},
 	}
-	usrFake := &fakeUserSource{users: map[string]*user.User{
-		shipperKey: shipperUser,
-		payerKey:   payerUser,
-	}}
-
 	res, err := E.UnwrapError(ioeutils.ToEither(
 		testEmailer(
 			stkFake,
 			annoFake,
-			usrFake,
 			&fakePDFRenderer{buf: bytes.NewBufferString("dummy-pdf")},
 			&fakePublicationSource{
 				infos: map[string]*datasource.PubInfo{},
@@ -350,8 +309,6 @@ func TestOrderData(t *testing.T) {
 	require.Equal(t, []string{fake.StrainID}, stkFake.requestedDBS)
 	require.Equal(t, []string{fake.PlasmidID}, stkFake.requestedDBP)
 	require.Same(t, ord, res.Order)
-	require.Same(t, shipperUser, res.User[shipperKey])
-	require.Same(t, payerUser, res.User[payerKey])
 	require.Len(t, res.Strains, 1)
 	require.Equal(t, fake.StrainID, res.Strains[0].ID)
 	require.Equal(t, descriptorLabel, res.Strains[0].Descriptor)
@@ -380,10 +337,6 @@ func TestEmailBodyHermetic(t *testing.T) {
 				sysNameLabel,
 			}},
 		},
-		&fakeUserSource{users: map[string]*user.User{
-			shipperKey: testUser("Shipper", shipperEmail),
-			payerKey:   testUser("Payer", payerEmail),
-		}},
 		&fakePDFRenderer{buf: bytes.NewBufferString("dummy-pdf")},
 		&fakePublicationSource{
 			infos: map[string]*datasource.PubInfo{},
@@ -460,10 +413,6 @@ func sendingEmailer(client mailgunClient) *mailgunEmailer {
 				sysNameLabel,
 			}},
 		},
-		&fakeUserSource{users: map[string]*user.User{
-			shipperKey: testUser("Shipper", shipperEmail),
-			payerKey:   testUser("Payer", payerEmail),
-		}},
 		&fakePDFRenderer{buf: bytes.NewBufferString("dummy-pdf")},
 		&fakePublicationSource{
 			infos: map[string]*datasource.PubInfo{},

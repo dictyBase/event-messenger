@@ -5,7 +5,6 @@ import (
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -37,10 +36,6 @@ func ClientConn(
 	}
 
 	return mc, nil
-}
-
-func UserClient(mc map[string]*grpc.ClientConn) user.UserServiceClient {
-	return user.NewUserServiceClient(mc["user"])
 }
 
 func StockClient(mc map[string]*grpc.ClientConn) stock.StockServiceClient {
