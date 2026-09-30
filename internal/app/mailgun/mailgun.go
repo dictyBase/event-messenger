@@ -170,9 +170,13 @@ func createSources(s EmailSetupState) IOE.IOEither[error, *datasource.Sources] {
 
 // createPublicationSource builds the NCBI eUtils publication client.
 func createPublicationSource(
-	_ EmailSetupState,
+	s EmailSetupState,
 ) IOE.IOEither[error, *datasource.Publication] {
-	pub := datasource.NewPublication()
+	pub := datasource.NewPublication(&datasource.PublicationParams{
+		APIKey: s.Command.String("ncbi-api-key"),
+		Tool:   s.Command.String("ncbi-tool"),
+		Email:  s.Command.String("ncbi-email"),
+	})
 
 	return F.Pipe1(
 		pub,
