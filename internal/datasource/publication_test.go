@@ -244,3 +244,55 @@ func TestAuthorStr(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicationOptions(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name string
+		args *PublicationParams
+		want int
+	}{
+		{name: "empty params", args: &PublicationParams{}, want: 0},
+		{
+			name: "api key only",
+			args: &PublicationParams{APIKey: "key"},
+			want: 1,
+		},
+		{
+			name: "tool only",
+			args: &PublicationParams{Tool: "event-messenger"},
+			want: 1,
+		},
+		{
+			name: "email only",
+			args: &PublicationParams{Email: "dev@example.org"},
+			want: 1,
+		},
+		{
+			name: "full identity",
+			args: &PublicationParams{
+				APIKey: "key",
+				Tool:   "event-messenger",
+				Email:  "dev@example.org",
+			},
+			want: 3,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			require.Len(t, publicationOptions(tc.args), tc.want)
+		})
+	}
+}
+
+func TestNewPublicationEmptyParams(t *testing.T) {
+	t.Parallel()
+	require := require.New(t)
+
+	pub, err := E.UnwrapError(ioeutils.ToEither(
+		NewPublication(&PublicationParams{}),
+	))
+	require.NoError(err, "expect no error, received %s", err)
+	require.NotNil(pub, "expect a publication source")
+}

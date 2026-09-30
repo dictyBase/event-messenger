@@ -27,6 +27,8 @@ github.com/dictyBase/go-obograph v1.6.1 h1:2qWF1OPVUAV20OeCZxi6bEQyMFzKdV7DNzmG7
 github.com/dictyBase/go-obograph v1.6.1/go.mod h1:GJjVU6iquV7OUsMLAZFFqI64gN+GyXOfdnOWdR/Bj4A=
 github.com/dictybase/literature v0.1.2 h1:RCHk33Q2JVK8PaRbjB8LTxVLCm3hdDUOcvOeW3dIm7E=
 github.com/dictybase/literature v0.1.2/go.mod h1:ZvRcDWeCrgzJWUX3osXIqPYJtx46tAuoCbtYhOTc0ls=
+github.com/dictybase/literature v0.2.0 h1:n5yjX/Nx2fSqNpsU6lLezwG3YibU95Fjy236Gpm1FHY=
+github.com/dictybase/literature v0.2.0/go.mod h1:ZvRcDWeCrgzJWUX3osXIqPYJtx46tAuoCbtYhOTc0ls=
 github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 h1:0JZ+dUmQeA8IIVUMzysrX4/AKuQwWhV2dYQuPZdvdSQ=
 github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51/go.mod h1:Yg+htXGokKKdzcwhuNDwVvN+uBxDGXJ7G/VN1d8fa64=
 github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 h1:JWuenKqqX8nojtoVVWjGfOF9635RETekkoH6Cc9SX0A=

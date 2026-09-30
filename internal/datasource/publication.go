@@ -11,6 +11,7 @@ import (
 	O "github.com/IBM/fp-go/v2/option"
 	P "github.com/IBM/fp-go/v2/predicate"
 	S "github.com/IBM/fp-go/v2/string"
+	arrutils "github.com/dictyBase/fp-go-loom/array"
 	MO "github.com/dictyBase/fp-go-loom/matchopt"
 	predarrays "github.com/dictyBase/fp-go-loom/predicate/array"
 	"github.com/dictybase/literature"
@@ -41,11 +42,17 @@ type Publication struct {
 	client pubMedClient
 }
 
-// NewPublication builds the publication source over the NCBI eUtils client.
-func NewPublication() IOE.IOEither[error, *Publication] {
+// NewPublication builds the publication source over the NCBI eUtils
+// client. Configured identity values ride on every request per the NCBI
+// usage policy.
+func NewPublication(
+	p *PublicationParams,
+) IOE.IOEither[error, *Publication] {
+	opts := publicationOptions(p)
+
 	return F.Pipe2(
 		IOE.TryCatchError(func() (*literature.Client, error) {
-			return literature.New()
+			return literature.New(opts...)
 		}),
 		IOE.MapLeft[*literature.Client](func(err error) error {
 			return fmt.Errorf("error creating literature pubmed client: %w", err)
@@ -53,6 +60,43 @@ func NewPublication() IOE.IOEither[error, *Publication] {
 		IOE.Map[error](func(c *literature.Client) *Publication {
 			return &Publication{client: c}
 		}),
+	)
+}
+
+// PublicationParams carries the optional NCBI request identity. Blank
+// values leave the corresponding parameter out of every request, so an
+// all-empty struct preserves the unauthenticated behavior.
+type PublicationParams struct {
+	APIKey string
+	Tool   string
+	Email  string
+}
+
+// someOption lifts a configured identity value into its literature
+// option, or nothing when the value is blank.
+func someOption(
+	apply func(string) literature.Option,
+	value string,
+) O.Option[literature.Option] {
+	return F.Pipe2(
+		value,
+		O.FromPredicate(S.IsNonEmpty),
+		O.Map(apply),
+	)
+}
+
+// publicationOptions builds the client options for the configured
+// identity, dropping every blank value.
+func publicationOptions(
+	p *PublicationParams,
+) []literature.Option {
+	return F.Pipe1(
+		[]O.Option[literature.Option]{
+			someOption(literature.WithAPIKey, p.APIKey),
+			someOption(literature.WithTool, p.Tool),
+			someOption(literature.WithEmail, p.Email),
+		},
+		arrutils.Compact[literature.Option],
 	)
 }
 

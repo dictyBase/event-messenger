@@ -65,9 +65,30 @@ func datasourceFlags() []cli.Flag {
 	}
 }
 
+func ncbiFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:    "ncbi-api-key",
+			Usage:   "optional NCBI api key sent on every pubmed request",
+			Sources: cli.EnvVars("NCBI_API_KEY"),
+		},
+		&cli.StringFlag{
+			Name:    "ncbi-tool",
+			Usage:   "optional tool name identifying this software to NCBI",
+			Sources: cli.EnvVars("NCBI_TOOL"),
+		},
+		&cli.StringFlag{
+			Name:    "ncbi-email",
+			Usage:   "optional developer contact email sent to NCBI",
+			Sources: cli.EnvVars("NCBI_EMAIL"),
+		},
+	}
+}
+
 func SendEmailFlags() *cli.Command {
 	flags := emailParamFlags()
 	flags = append(flags, datasourceFlags()...)
+	flags = append(flags, ncbiFlags()...)
 	flags = append(flags, ghNatsFlags()...)
 	flags = append(flags, serviceFlags()...)
 
