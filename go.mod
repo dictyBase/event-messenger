@@ -2,7 +2,7 @@ module github.com/dictyBase/event-messenger
 
 require (
 	github.com/IBM/fp-go/v2 v2.3.126
-	github.com/PuerkitoBio/goquery v1.12.0
+	github.com/PuerkitoBio/goquery v1.13.0
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/dictyBase/fp-go-loom v0.0.0-20260907153825-45f9f571545f
 	github.com/dictyBase/go-genproto v0.0.0-20260928171459-163a42bcacab
@@ -25,7 +25,7 @@ require (
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 // indirect
-	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/andybalholm/cascadia v1.3.4 // indirect
 	github.com/arangodb/go-driver v1.6.9 // indirect
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
 	github.com/dictyBase/arangomanager v0.8.0 // indirect
