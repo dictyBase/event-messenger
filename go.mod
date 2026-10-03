@@ -14,7 +14,7 @@ require (
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/nats-io/go-nats v1.7.2
 	github.com/rakyll/statik v0.1.8
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli/v3 v3.11.0
 	github.com/yuin/goldmark v1.8.5
