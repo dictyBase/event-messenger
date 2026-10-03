@@ -1,7 +1,7 @@
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 h1:s6hzCXtND/ICdGPTMGk7C+/BFlr2Jg5GyH0NKf4XGXg=
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1/go.mod h1:tvtbpgaVXZX4g6Pn+AnzFycuRK3MOz5HJfEGeEllXYM=
-github.com/IBM/fp-go/v2 v2.3.126 h1:0YGOkgMpe+pUFA39E4uuxw2boskCtvceBFqtHl5Butk=
-github.com/IBM/fp-go/v2 v2.3.126/go.mod h1:0xBCDb5M2wf3Af0qwPUNi1waAlk6i0IfxgcApzVB6BE=
+github.com/IBM/fp-go/v2 v2.3.146 h1:Dh2FAW5JuTcqlHfgwzkV4V6o7mp3tXL4wk3kwBuUXow=
+github.com/IBM/fp-go/v2 v2.3.146/go.mod h1:9ozfAXTDdMHzGwK4/lcuHwVv61/6Dp0SBoF8i8u1xG0=
 github.com/PuerkitoBio/goquery v1.13.0 h1:mqHbjD7Jmnul4DTR24LKTjo1uUmHUh072kteGV+xpFM=
 github.com/PuerkitoBio/goquery v1.13.0/go.mod h1:Hip5mdBL8K2wEGKJdr27sRaNwIdDajmCwB/ExUPwW+g=
 github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3 h1:vrA6+R1BMLKMTbos8jAeuBrImHPGtY4gTlcue3OIej8=
