@@ -16,16 +16,18 @@ RUN go build \
 	-ldflags "-s -w -extldflags '-static'" \
 	-installsuffix cgo \
 	-tags netgo \
-	-o /bin/app \ 
+	-o /bin/app \
 	cmd/event-messenger/main.go
 RUN upx -q -9 /bin/app
 
-FROM debian:11.7-slim
+FROM debian:trixie-slim
 RUN apt-get update \
-	&& apt-get -y install curl \
+	&& apt-get -y install --no-install-recommends ca-certificates curl \
 	&& ln -sf /usr/share/zoneinfo/America/Chicago /etc/localtime \
 	&& curl -o /tmp/wkhtmltopdf.deb -L \
-	https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.bullseye_amd64.deb \
-	&& dpkg -i /tmp/wkhtmltopdf.deb || apt-get -y -f install
+	https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_amd64.deb \
+	&& dpkg -i /tmp/wkhtmltopdf.deb || apt-get -y -f install \
+	&& rm -f /tmp/wkhtmltopdf.deb \
+	&& rm -rf /var/lib/apt/lists/*
 COPY --from=0 /bin/app /usr/local/bin/
 ENTRYPOINT ["/usr/local/bin/app"]
