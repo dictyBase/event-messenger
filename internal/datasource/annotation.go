@@ -78,7 +78,7 @@ func (an *Annotation) GetStrainInv(strains []*stock.Strain) ([][]string, error) 
 		)
 		if err != nil {
 			if status.Code(err) == codes.NotFound {
-				return allInv, nil
+				continue
 			}
 
 			return allInv, err
@@ -122,7 +122,7 @@ func (an *Annotation) GetPlasmidInv(plasmids []*stock.Plasmid) ([][]string, erro
 		)
 		if err != nil {
 			if status.Code(err) == codes.NotFound {
-				return allInv, nil
+				continue
 			}
 
 			return allInv, err
@@ -162,6 +162,11 @@ func (an *Annotation) strainData(st *stock.Strain) ([]string, error) {
 				st.GetData().GetId(),
 				err,
 			)
+	}
+
+	// missing systematic name annotation falls back to the strain label
+	if sysName == "" {
+		sysName = st.GetData().GetAttributes().GetLabel()
 	}
 
 	stNames, err := an.getAnnotations(
@@ -233,6 +238,11 @@ func (an *Annotation) getSysName(id string) (string, error) {
 			EntryId:  id,
 		})
 	if err != nil {
+		// strains without a systematic name annotation are common
+		if status.Code(err) == codes.NotFound {
+			return "", nil
+		}
+
 		return "", err
 	}
 
