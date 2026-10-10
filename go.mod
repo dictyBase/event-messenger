@@ -1,7 +1,7 @@
 module github.com/dictyBase/event-messenger
 
 require (
-	github.com/IBM/fp-go/v2 v2.3.146
+	github.com/IBM/fp-go/v2 v2.5.0
 	github.com/PuerkitoBio/goquery v1.13.0
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/dictyBase/fp-go-loom v0.0.0-20260907153825-45f9f571545f
@@ -16,7 +16,7 @@ require (
 	github.com/rakyll/statik v0.1.8
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/urfave/cli/v3 v3.13.0
+	github.com/urfave/cli/v3 v3.14.0
 	github.com/yuin/goldmark v1.8.6
 	golang.org/x/oauth2 v0.37.0
 	google.golang.org/grpc v1.84.0
