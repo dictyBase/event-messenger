@@ -7,7 +7,7 @@ require (
 	github.com/dictyBase/fp-go-loom v0.0.0-20260907153825-45f9f571545f
 	github.com/dictyBase/go-genproto v0.0.0-20260928171459-163a42bcacab
 	github.com/dictyBase/go-obograph v1.6.1
-	github.com/dictybase/literature v0.2.0
+	github.com/dictybase/literature v0.3.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/golang/protobuf v1.5.4
 	github.com/google/go-github/v32 v32.1.0
