@@ -4,7 +4,7 @@ require (
 	github.com/IBM/fp-go/v2 v2.5.2
 	github.com/PuerkitoBio/goquery v1.13.0
 	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
-	github.com/dictyBase/fp-go-loom v0.0.0-20260907153825-45f9f571545f
+	github.com/dictyBase/fp-go-loom v0.0.0-20261017160436-45e4f096bd46
 	github.com/dictyBase/go-genproto v0.0.0-20260928171459-163a42bcacab
 	github.com/dictyBase/go-obograph v1.6.1
 	github.com/dictybase/literature v0.3.0

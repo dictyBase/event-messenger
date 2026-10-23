@@ -17,8 +17,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dictyBase/arangomanager v0.8.0 h1:wXWmq7QYBn37eGs0nELPxqccMbTvx9G99k/crHwfDAw=
 github.com/dictyBase/arangomanager v0.8.0/go.mod h1:Fm3AuYBeMccsYcu8M6iq2a96XlPIe4Y55x95TAWmGs4=
-github.com/dictyBase/fp-go-loom v0.0.0-20260907153825-45f9f571545f h1:ryPv8sSm5qg1G3y/YFaXha7OWLBj0JDofWN388156e0=
-github.com/dictyBase/fp-go-loom v0.0.0-20260907153825-45f9f571545f/go.mod h1:+hDtTKuob++bKvpaefO5llyn0F8fpjrPi3ns6iygAKM=
+github.com/dictyBase/fp-go-loom v0.0.0-20261017160436-45e4f096bd46 h1:hzXWz2xh+9Eup6nfuOHQOKb2EkO5aiGAt0hwiP/XNag=
+github.com/dictyBase/fp-go-loom v0.0.0-20261017160436-45e4f096bd46/go.mod h1:EVYNZiwKU9jZfNKK6ZwsD7LjlfdH7vHWQ+2DcW2Tbns=
 github.com/dictyBase/go-genproto v0.0.0-20260928171459-163a42bcacab h1:JyX/8SiQ1wZ5oCCjMvjS0QxgcuwYwJZwsuZm1Bw8684=
 github.com/dictyBase/go-genproto v0.0.0-20260928171459-163a42bcacab/go.mod h1:rlUPhBs4duDUE73MswuLGW9UzbkcTWqQsbpsp/pGqTg=
 github.com/dictyBase/go-obograph v1.6.1 h1:2qWF1OPVUAV20OeCZxi6bEQyMFzKdV7DNzmG7qT9otE=
