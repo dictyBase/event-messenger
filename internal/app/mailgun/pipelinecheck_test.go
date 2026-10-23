@@ -17,6 +17,7 @@ func TestPipelineContinuity(t *testing.T) {
 		},
 		RequirePointFreeSeed:      true,
 		RequirePointFreeBranching: true,
+		RequireTrivialDelegate:    true,
 	}
 	pipelinecheck.Require(t, cfg)
 
