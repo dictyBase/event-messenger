@@ -265,7 +265,7 @@ func (email *mailgunEmailer) initMessageState(pkg emailPackage) messageState {
 			Payer:      pEmail,
 			Configured: email.cc,
 		}),
-		Filename:   fmt.Sprintf("invoice-%s.pdf", ordID),
+		Filename:   fmt.Sprintf("order-information-%s.pdf", ordID),
 		Attachment: pkg.Body.Bytes(),
 	}
 }
