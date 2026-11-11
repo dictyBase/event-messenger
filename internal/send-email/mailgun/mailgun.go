@@ -550,8 +550,6 @@ func (email *mailgunEmailer) renderPDF(
 			attr := pkg.Data.Order.GetData().GetAttributes()
 
 			return email.pdf.OutputPDF(&template.OutputParams{
-				Path: "/",
-				File: "email.tmpl",
 				Content: &template.EmailContent{
 					StrainData:  pkg.Data.Strains,
 					PlasmidData: pkg.Data.Plasmids,

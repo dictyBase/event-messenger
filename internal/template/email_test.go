@@ -1,297 +1,364 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
+	"time"
 
-	"github.com/PuerkitoBio/goquery"
-	"github.com/stretchr/testify/assert"
+	"github.com/dictyBase/event-messenger/internal/datasource"
+	"github.com/dictyBase/go-genproto/dictybaseapis/order"
+	"github.com/johnfercher/go-tree/node"
+	"github.com/johnfercher/maroto/v2/pkg/core"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestEmailPlasmidHtml(t *testing.T) {
+type textEntry struct {
+	text string
+	href string
+}
+
+func collectTextEntries(n *node.Node[core.Structure]) []textEntry {
+	if n == nil {
+		return nil
+	}
+
+	var out []textEntry
+
+	data := n.GetData()
+	if data.Type == "text" {
+		val, _ := data.Value.(string)
+		href, _ := data.Details["prop_hyperlink"].(string)
+		out = append(out, textEntry{text: val, href: href})
+	}
+
+	for _, child := range n.GetNexts() {
+		out = append(out, collectTextEntries(child)...)
+	}
+
+	return out
+}
+
+func entryTexts(entries []textEntry) []string {
+	out := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		out = append(out, entry.text)
+	}
+
+	return out
+}
+
+func TestEmailPlasmidPDF(t *testing.T) {
+	t.Parallel()
+
 	ec := fakePlasmidOnlyEmailContent()
-	b, err := OutputHTML(&OutputParams{
-		File:    emailTemplateFile,
-		Path:    "/",
-		Content: ec,
-	})
-	require.NoError(t, err, "expect no error from rendering email template with plasmid data")
-	doc, err := goquery.NewDocumentFromReader(b)
-	require.NoError(t, err, "expect no error from reading html output")
-	testHTMLOrderHeader(t, doc, ec)
-	testHTMLOrderAddress(t, doc, ec)
-	testHTMLOrderPayment(t, doc, ec)
-	testHTMLOrderPayPlasmid(t, doc, ec)
-	testHTMLPlasmidInfo(t, doc)
+	m := BuildOrderMaroto(ec)
+	entries := collectTextEntries(m.GetStructure())
+	texts := entryTexts(entries)
+
+	assertPDFOrderHeader(t, texts, ec)
+	assertPDFOrderAddress(t, entries, texts, ec)
+	assertPDFOrderPayment(t, entries, texts, ec)
+	assertPDFOrderPayPlasmid(t, texts, ec)
+	assertPDFPlasmidInfo(t, entries, texts)
+
+	buf, err := OutputPDF(&OutputParams{Content: ec})
+	require.NoError(t, err)
+	require.True(t, bytes.HasPrefix(buf.Bytes(), []byte("%PDF-")))
 }
 
-func TestEmailStrainHtml(t *testing.T) {
+func TestEmailStrainPDF(t *testing.T) {
+	t.Parallel()
+
 	ec := fakeStrainOnlyEmailContent()
-	b, err := OutputHTML(&OutputParams{
-		File:    emailTemplateFile,
-		Path:    "/",
-		Content: ec,
-	})
-	require.NoError(t, err, "expect no error from rendering email template with strain data")
-	doc, err := goquery.NewDocumentFromReader(b)
-	require.NoError(t, err, "expect no error from reading html output")
-	testHTMLOrderHeader(t, doc, ec)
-	testHTMLOrderAddress(t, doc, ec)
-	testHTMLOrderPayment(t, doc, ec)
-	testHTMLOrderPayStrain(t, doc, ec)
-	testHTMLStrainInfo(t, doc)
+	m := BuildOrderMaroto(ec)
+	entries := collectTextEntries(m.GetStructure())
+	texts := entryTexts(entries)
+
+	assertPDFOrderHeader(t, texts, ec)
+	assertPDFOrderAddress(t, entries, texts, ec)
+	assertPDFOrderPayment(t, entries, texts, ec)
+	assertPDFOrderPayStrain(t, texts, ec)
+	assertPDFStrainInfo(t, entries, texts)
+
+	buf, err := OutputPDF(&OutputParams{Content: ec})
+	require.NoError(t, err)
+	require.True(t, bytes.HasPrefix(buf.Bytes(), []byte("%PDF-")))
 }
 
-func testHTMLPlasmidInfo(t *testing.T, doc *goquery.Document) {
-	assert := assert.New(t)
-	assert.Exactly(
-		"Plasmid Information", doc.Find("div#plasmid.card-panel>h5.blue-text").Text(),
-		"should match the plasmid information header",
-	)
-	th := doc.Find(
-		"div#plasmid.card-panel>div.section>table.striped>thead>tr",
-	).Children().Map(childrenContent)
-	assert.Lenf(th, 3, "expect %d got %d elements", 3, len(th))
-	assert.ElementsMatch(
-		th,
-		[]string{"ID", "Plasmid Name", "Citation"},
-		"should match all header elements",
-	)
+func TestOutputPDFInvalidContent(t *testing.T) {
+	t.Parallel()
 
-	tr := doc.Find(
-		"div#plasmid.card-panel>div.section>table.striped>tbody",
-	).Children()
-	assert.Exactly(3, tr.Length(), "should have 3 table rows")
-	assert.Exactly(9, tr.Children().Length(), "should have total of 9 columns")
-
-	stItems := fakePlasmidItems()
-
-	tr.Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Find("td:first-child").Text(),
-			stItems[idx],
-			"should match the plasmid Id",
-		)
-		assert.Exactly(
-			"pDV-fAR1-CYFP", sel.Find("td:nth-child(2)").Text(),
-			"should match the plasmid name",
-		)
-		testHTMLPubInfo(assert, sel)
-	})
+	_, err := OutputPDF(&OutputParams{Content: "invalid"})
+	require.Error(t, err)
 }
 
-func testHTMLPubInfo(assert *assert.Assertions, sel *goquery.Selection) {
-	assert.Exactly(
-		"Pubmed", sel.Find("td:last-child>a:first-child").Text(),
-		"should match text of first link",
-	)
-	pubHref, _ := sel.Find("td:last-child>a:first-child").Attr("href")
-	assert.Exactly("https://pubmed.gov/26088819", pubHref, "should match pubmed url")
-	assert.Exactly(
-		"Full text", sel.Find("td:last-child>a:nth-child(2)").Text(),
-		"should match text of last link",
-	)
-	doiHref, _ := sel.Find("td:last-child>a:nth-child(2)").Attr("href")
-	assert.Exactly("https://doi.org/10.1002/dvg.22867", doiHref, "should match doi url")
+func assertPDFOrderHeader(t *testing.T, texts []string, ec *EmailContent) {
+	t.Helper()
+
+	require.Contains(t, texts, "Dicty Stock Center")
+	require.Contains(t, texts, "Order")
+	require.Contains(t, texts, "Confirmation")
+	require.Contains(t, texts, fmt.Sprintf("Order #%s", orderID))
+	require.Contains(t, texts, ec.OrderTimestamp())
 }
 
-func testHTMLStrainInfo(t *testing.T, doc *goquery.Document) {
-	assert := assert.New(t)
-	assert.Exactly(
-		"Strain Information", doc.Find("div#strain.card-panel>h5.blue-text").Text(),
-		"should match the strain information header",
-	)
-	th := doc.Find(
-		"div#strain.card-panel>div.section>table.striped>thead>tr",
-	).Children().Map(childrenContent)
-	assert.Lenf(th, 5, "expect %d got %d elements", 5, len(th))
-	assert.ElementsMatch(
-		th,
-		[]string{"ID", descriptorColumn, "Name(s)", systematicNameCol, "Citation"},
-		"should match all header elements",
-	)
+func assertPDFOrderAddress(
+	t *testing.T,
+	entries []textEntry,
+	texts []string,
+	ec *EmailContent,
+) {
+	t.Helper()
 
-	tr := doc.Find(
-		"div#strain.card-panel>div.section>table.striped>tbody",
-	).Children()
-	assert.Exactly(4, tr.Length(), "should have 4 table rows")
-	assert.Exactly(20, tr.Children().Length(), "should have total of 20 columns")
-
-	stItems := fakeStrainItems()
-
-	tr.Each(func(idx int, sel *goquery.Selection) {
-		assert.Exactly(
-			sel.Find("td:first-child").Text(),
-			stItems[idx],
-			"should match the strain Id",
-		)
-		assert.Exactly(
-			"JB10", sel.Find("td:nth-child(2)").Text(),
-			"should match the strain systematic name",
-		)
-		assert.Exactly(
-			"jb10ale<br/>jb10 ale<br/>jb10-ale", sel.Find("td:nth-child(3)").Text(),
-			"should match the strain name",
-		)
-		assert.Exactly(
-			"gefA-", sel.Find("td:nth-child(4)").Text(),
-			"should match the strain descriptor",
-		)
-		testHTMLPubInfo(assert, sel)
-	})
-}
-
-func testHTMLOrderHeader(t *testing.T, doc *goquery.Document, ec *EmailContent) {
-	assert := assert.New(t)
-	assert.Regexpf(
-		"Order Confirmation",
-		doc.Find("h4").Text(),
-		"expected header to match %s got %s",
-		"Order Confirmation",
-		doc.Find("h4").Text(),
-	)
-	assert.Exactly(
-		ec.OrderTimestamp(),
-		doc.Find("div.col.s12.right-align>p:first-child>strong").Text(),
-		"should match order timestamp",
-	)
-	assert.Exactly(
-		fmt.Sprintf("Order #%s", orderID),
-		doc.Find("div.col.s12.right-align>p:last-child>strong").Text(),
-		"should match order id",
-	)
-}
-
-func testHTMLOrderAddress(t *testing.T, doc *goquery.Document, ec *EmailContent) {
-	assert := assert.New(t)
-	assert.Exactly(
-		"Shipping Address",
-		doc.Find("div.shipping-row>div:first-child>h6>strong").Text(),
-		"should match shipping header",
-	)
-	assert.Exactly(
-		"Billing Address",
-		doc.Find("div.shipping-row>div:last-child>h6>strong").Text(),
-		"should match shipping header",
-	)
-	assert.Exactly(18, doc.Find(
-		"div.row>div.col.s6>div").Length(), "expect to have 18 children",
-	)
-	selFirst := doc.Find("div.row>div.col.s6>div:first-child")
-	assert.Exactly(
-		"Harrold Pennypacker", selFirst.First().Text(),
-		"expect to matcher the consumers name",
-	)
-	assert.Exactly(
-		"Kel Varnsen", selFirst.Last().Text(),
-		"expect to matcher the payers name",
-	)
-
-	selLast := doc.Find("div.row>div.col.s6>div:last-child")
-	assert.Exactly(
-		selLast.First().Text(),
+	require.Contains(t, texts, "Shipping and Billing")
+	require.Contains(t, texts, "Information")
+	require.Contains(t, texts, "Shipping Address")
+	require.Contains(t, texts, "Billing Address")
+	require.Contains(t, texts, "Harrold Pennypacker")
+	require.Contains(t, texts, "Kel Varnsen")
+	require.Contains(
+		t,
+		texts,
 		fmt.Sprintf(
 			"%s %s",
 			ec.Order.GetData().GetAttributes().GetCourier(),
 			ec.Order.GetData().GetAttributes().GetCourierAccount(),
 		),
-		"should match courier information",
 	)
-	assert.Exactly(
-		selLast.Last().Text(),
+	require.Contains(
+		t,
+		texts,
 		fmt.Sprintf(
 			"%s %s",
 			ec.Order.GetData().GetAttributes().GetPayment(),
 			ec.Order.GetData().GetAttributes().GetPurchaseOrderNum(),
 		),
-		"should match payment information",
 	)
-
-	selHref := doc.Find("div.row>div.col.s6>div>a.blue-text.text-darken-1")
-	assert.Exactly(
-		consumer, selHref.First().Text(),
-		"should match consumers email",
-	)
-	assert.Exactly(
-		payer, selHref.Last().Text(),
-		"should match payers email",
-	)
+	require.Contains(t, entries, textEntry{
+		text: consumer,
+		href: "mailto:" + consumer,
+	})
+	require.Contains(t, entries, textEntry{
+		text: payer,
+		href: "mailto:" + payer,
+	})
+	require.Contains(t, texts, "Comment")
+	require.Contains(t, texts, ec.Order.GetData().GetAttributes().GetComments())
 }
 
-func testHTMLOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent) {
-	assert := assert.New(t)
-	th := doc.Find(
-		"div#cost.card-panel>div.section>table.striped>thead>tr",
-	).Children().Map(childrenContent)
-	assert.Lenf(th, 4, "expect %d got %d elements", 4, len(th))
-	assert.ElementsMatch(
-		th,
-		[]string{itemColumn, quantityColumn, "Unit Price ($)", "Total ($)"},
-		"should match all header elements",
-	)
+func assertPDFOrderPayment(
+	t *testing.T,
+	entries []textEntry,
+	texts []string,
+	ec *EmailContent,
+) {
+	t.Helper()
 
-	tdt := doc.Find(
-		"div#cost.card-panel>div.section>table.striped>tbody>tr:last-child",
-	).Children().Map(childrenContent)
-	assert.Lenf(tdt, 4, "expect %d got %d elements", 4, len(tdt))
-	assert.Exactly(totalColumn, tdt[0], "should have total header")
-	assert.Exactly(
-		tdt[len(tdt)-1],
-		strconv.Itoa(ec.TotalCost()),
-		"should match the total cost of the order",
-	)
-
-	pdiv := doc.Find(
-		"div#payment-info.card-panel>div.section",
-	)
-	links := pdiv.Find("p > a.blue-text.text-darken-1")
-	assert.Equal(2, links.Length(), "expect both information links")
-	assert.Equal("Order information", links.Eq(0).Text())
-	assert.Equal(
-		"https://dictycr.org/stockcenter/information/order/",
-		links.Eq(0).AttrOr("href", ""),
-	)
-	assert.Equal("Order payment information", links.Eq(1).Text())
-	assert.Equal(
-		"https://dictycr.org/stockcenter/information/payment",
-		links.Eq(1).AttrOr("href", ""),
-	)
+	require.Contains(t, texts, "Stocks Ordered")
+	require.Contains(t, texts, itemColumn)
+	require.Contains(t, texts, quantityColumn)
+	require.Contains(t, texts, "Unit Price ($)")
+	require.Contains(t, texts, "Total ($)")
+	require.Contains(t, texts, totalColumn)
+	require.Contains(t, texts, strconv.Itoa(ec.TotalCost()))
+	require.Contains(t, texts, "Order Information")
+	require.Contains(t, entries, textEntry{
+		text: "Order information",
+		href: "https://dictycr.org/stockcenter/information/order/",
+	})
+	require.Contains(t, entries, textEntry{
+		text: "Order payment information",
+		href: "https://dictycr.org/stockcenter/information/payment",
+	})
 }
 
-func testHTMLOrderPayPlasmid(t *testing.T, doc *goquery.Document, ec *EmailContent) {
-	assert := assert.New(t)
-	tds := doc.Find(
-		"div#cost.card-panel>div.section>table.striped>tbody>tr:nth-child(1)",
-	).Children().Map(childrenContent)
-	assert.Lenf(tds, 4, "expect %d got %d elements", 4, len(tds))
-	assert.ElementsMatch(
-		tds,
-		[]string{
-			"Plasmid",
-			strconv.Itoa(ec.PlasmidItems()),
-			strconv.Itoa(ec.PlasmidPrice),
-			strconv.Itoa(ec.PlasmidCost()),
+func assertPDFOrderPayPlasmid(t *testing.T, texts []string, ec *EmailContent) {
+	t.Helper()
+
+	require.Contains(t, texts, "Plasmid")
+	require.Contains(t, texts, strconv.Itoa(ec.PlasmidItems()))
+	require.Contains(t, texts, strconv.Itoa(ec.PlasmidPrice))
+	require.Contains(t, texts, strconv.Itoa(ec.PlasmidCost()))
+}
+
+func assertPDFOrderPayStrain(t *testing.T, texts []string, ec *EmailContent) {
+	t.Helper()
+
+	require.Contains(t, texts, "Strain")
+	require.Contains(t, texts, strconv.Itoa(ec.StrainItems()))
+	require.Contains(t, texts, strconv.Itoa(ec.StrainPrice))
+	require.Contains(t, texts, strconv.Itoa(ec.StrainCost()))
+}
+
+func assertPDFPlasmidInfo(
+	t *testing.T,
+	entries []textEntry,
+	texts []string,
+) {
+	t.Helper()
+
+	require.Contains(t, texts, "Plasmid Information")
+
+	for _, id := range fakePlasmidItems() {
+		require.Contains(t, texts, id)
+	}
+
+	require.Contains(t, texts, plasmidName)
+	require.Contains(
+		t,
+		texts,
+		"Thank you for citing the researchers who submitted the materials you ordered!",
+	)
+	assertPDFPubInfo(t, entries, texts)
+}
+
+func assertPDFStrainInfo(
+	t *testing.T,
+	entries []textEntry,
+	texts []string,
+) {
+	t.Helper()
+
+	require.Contains(t, texts, "Strain Information")
+
+	for _, id := range fakeStrainItems() {
+		require.Contains(t, texts, id)
+	}
+
+	require.Contains(t, texts, "gefA-")
+	require.Contains(t, texts, "JB10")
+	require.Contains(t, texts, "jb10ale, jb10 ale, jb10-ale")
+
+	for _, txt := range texts {
+		require.NotContains(t, txt, "<br/>")
+	}
+
+	assertPDFPubInfo(t, entries, texts)
+}
+
+func assertPDFPubInfo(t *testing.T, entries []textEntry, texts []string) {
+	t.Helper()
+
+	require.Contains(t, texts, "Basu S et al. (2015)")
+	require.Contains(t, entries, textEntry{
+		text: "Pubmed",
+		href: "https://pubmed.gov/26088819",
+	})
+	require.Contains(t, entries, textEntry{
+		text: "Full text",
+		href: "https://doi.org/10.1002/dvg.22867",
+	})
+}
+
+func indigoDossierFixture() *EmailContent {
+	const firstStrainID = "DBS0236922"
+
+	created := time.Date(2026, time.November, 11, 12, 0, 0, 0, time.UTC)
+
+	return &EmailContent{
+		Content: &Content{
+			StrainPrice:  30,
+			PlasmidPrice: 15,
+			Shipper: &order.UserInfo{
+				FirstName:    "Test",
+				LastName:     "Consumer",
+				Organization: "Test Lab",
+				FirstAddress: "123 Test Street",
+				City:         "Testville",
+				State:        "TS",
+				Zipcode:      "00000",
+				Country:      "USA",
+				Phone:        "555-0100",
+			},
+			Payer: &order.UserInfo{
+				FirstName:    "Test",
+				LastName:     "Payer",
+				Organization: "Test Lab",
+				FirstAddress: "123 Test Street",
+				City:         "Testville",
+				State:        "TS",
+				Zipcode:      "00000",
+				Country:      "USA",
+				Phone:        "555-0200",
+			},
+			Order: &order.Order{
+				Data: &order.Order_Data{
+					Id: "57081346",
+					Attributes: &order.OrderAttributes{
+						Consumer:         "basusiddhartha@gmail.com",
+						Payer:            "siddhartha-basu@northwestern.edu",
+						Courier:          "FedEx",
+						CourierAccount:   "FAKE-ACCT-0001",
+						Payment:          "credit_card",
+						PurchaseOrderNum: "PO-FAKE-0001",
+						Comments:         "automated CLI test order",
+						CreatedAt:        timestamppb.New(created),
+						Items: []string{
+							firstStrainID,
+							"DBS0391519",
+							"DBS0391518",
+						},
+					},
+				},
+			},
 		},
-		"should match all plasmid cost elements",
-	)
+		StrainData: []*StrainRows{
+			{
+				ID:         firstStrainID,
+				Descriptor: firstStrainID,
+				Names:      "sadA-gfp",
+				SysName:    "sadA-/[act15]:sadA:GFP",
+				PubInfo: []*datasource.PubInfo{
+					{
+						AuthorStr: "Petra Fey et al. (2002)",
+						PubmedURL: "https://pubmed.ncbi.nlm.nih.gov/12097910/",
+						DoiURL:    "https://doi.org/10.1242/jcs.115.14.2895",
+					},
+				},
+			},
+			{
+				ID:         "DBS0391519",
+				Descriptor: "[rsmJ]-",
+				Names:      "",
+				SysName:    "[rsmJ]-",
+				PubInfo: []*datasource.PubInfo{
+					{
+						AuthorStr: "Gruenheit N et al. (2019)",
+						DoiURL:    testDoiURL,
+					},
+				},
+			},
+			{
+				ID:         "DBS0391518",
+				Descriptor: "[rpa1]-",
+				Names:      "",
+				SysName:    "[rpa1]-",
+				PubInfo: []*datasource.PubInfo{
+					{
+						AuthorStr: "Gruenheit N et al. (2019)",
+						DoiURL:    testDoiURL,
+					},
+				},
+			},
+		},
+	}
 }
 
-func testHTMLOrderPayStrain(t *testing.T, doc *goquery.Document, ec *EmailContent) {
-	assert := assert.New(t)
-	tds := doc.Find(
-		"div#cost.card-panel>div.section>table.striped>tbody>tr:first-child",
-	).Children().Map(childrenContent)
-	assert.Lenf(tds, 4, "expect %d got %d elements", 4, len(tds))
-	assert.ElementsMatch(
-		tds,
-		[]string{
-			"Strain",
-			strconv.Itoa(ec.StrainItems()),
-			strconv.Itoa(ec.StrainPrice),
-			strconv.Itoa(ec.StrainCost()),
-		},
-		"should match all strain cost elements",
-	)
+func TestIndigoDossierPreviewPDF(t *testing.T) {
+	t.Parallel()
+
+	buf, err := OutputPDF(&OutputParams{Content: indigoDossierFixture()})
+	require.NoError(t, err)
+	require.True(t, bytes.HasPrefix(buf.Bytes(), []byte("%PDF-")))
+
+	if os.Getenv("WRITE_PREVIEW_PDF") != "" {
+		require.NoError(
+			t,
+			os.WriteFile("testdata-indigo-dossier-preview.pdf", buf.Bytes(), 0o600),
+		)
+	}
 }

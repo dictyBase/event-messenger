@@ -13,11 +13,6 @@ import (
 )
 
 const (
-	itemColumn        = "Item"
-	quantityColumn    = "Quantity"
-	totalColumn       = "Total"
-	systematicNameCol = "Systematic Name"
-	descriptorColumn  = "Descriptor"
 	colorColumn       = "Color"
 	issueTemplateFile = "issue.tmpl"
 	locationColumn    = "Location"
@@ -31,26 +26,6 @@ func checkSubstr(str string, slice []string, t *testing.T) {
 			"expect to have the pattern %s",
 			s,
 		)
-	}
-}
-
-func emailSubstr() []string {
-	return []string{
-		"dsc-header",
-		"shipping-row",
-		"Order Confirmation",
-		"Order #",
-		"Shipping Address",
-		"Billing Address",
-		itemColumn,
-		quantityColumn,
-		totalColumn,
-		systematicNameCol,
-		descriptorColumn,
-		"Plasmid Name",
-		"Comment",
-		"Order information",
-		"Order payment information",
 	}
 }
 
@@ -74,13 +49,9 @@ func issueSubstr() []string {
 func TestReadFromBundle(t *testing.T) {
 	t.Parallel()
 
-	str, err := ReadFromBundle("/", "email.tmpl")
-	require.NoError(t, err, "expect no error from reading email.tmpl template file")
-	checkSubstr(str, emailSubstr(), t)
-
-	str2, err := ReadFromBundle("/", issueTemplateFile)
+	str, err := ReadFromBundle("/", issueTemplateFile)
 	require.NoError(t, err, "expect no error from reading issue.tmpl template file")
-	checkSubstr(str2, issueSubstr(), t)
+	checkSubstr(str, issueSubstr(), t)
 }
 
 func TestMarkdownOutput(t *testing.T) {
@@ -99,18 +70,6 @@ func TestMarkdownOutput(t *testing.T) {
 	err = md.Convert(b.Bytes(), &out)
 	require.NoError(t, err, "expect no error from markdown conversion")
 	testHTMLtree(require.New(t), &out, "h1")
-}
-
-func TestHTMLOutput(t *testing.T) {
-	t.Parallel()
-
-	b, err := OutputHTML(&OutputParams{
-		File:    "test_html.tmpl",
-		Path:    "/",
-		Content: fakeTemplateData(),
-	})
-	require.NoError(t, err, "expect no error from reading test_html.tmpl template file")
-	testHTMLtree(require.New(t), b, "h4")
 }
 
 func childrenContent(_ int, html *goquery.Selection) string {

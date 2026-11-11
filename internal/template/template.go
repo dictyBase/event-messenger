@@ -2,14 +2,13 @@ package template
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	html "html/template"
 	"io"
 	"path/filepath"
 	"strings"
 	txt "text/template"
 
-	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	_ "github.com/dictyBase/event-messenger/internal/statik" // register embedded filesystem
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
@@ -113,49 +112,24 @@ func OutputText(args *OutputParams) (*bytes.Buffer, error) {
 }
 
 func OutputPDF(args *OutputParams) (*bytes.Buffer, error) {
-	input, err := OutputHTML(args)
+	if args == nil {
+		return new(bytes.Buffer), errors.New("empty output params")
+	}
+
+	ec, ok := args.Content.(*EmailContent)
+	if !ok || ec == nil {
+		return new(bytes.Buffer), fmt.Errorf(
+			"expected *EmailContent for pdf generation, got %T",
+			args.Content,
+		)
+	}
+
+	doc, err := BuildOrderMaroto(ec).Generate()
 	if err != nil {
-		return new(bytes.Buffer), err
+		return new(bytes.Buffer), fmt.Errorf("error in generating pdf %w", err)
 	}
 
-	pdfg, err := wkhtmltopdf.NewPDFGenerator()
-	if err != nil {
-		return new(
-				bytes.Buffer,
-			), fmt.Errorf(
-				"error in creating pdf generator %s",
-				err,
-			)
-	}
-
-	page := wkhtmltopdf.NewPageReader(input)
-	pdfg.AddPage(page)
-
-	if err := pdfg.Create(); err != nil {
-		return new(bytes.Buffer), fmt.Errorf("error in generating pdf %s", err)
-	}
-
-	return pdfg.Buffer(), nil
-}
-
-func OutputHTML(args *OutputParams) (*bytes.Buffer, error) {
-	out := bytes.NewBuffer([]byte(""))
-
-	ct, err := ReadFromBundle(args.Path, args.File)
-	if err != nil {
-		return out, err
-	}
-
-	t, err := html.New("stock-invoice").Parse(ct)
-	if err != nil {
-		return out, fmt.Errorf("error in parsing template %s", err)
-	}
-
-	if err := t.Execute(out, args.Content); err != nil {
-		return out, fmt.Errorf("error in executing template %s", err)
-	}
-
-	return out, nil
+	return bytes.NewBuffer(doc.GetBytes()), nil
 }
 
 func ReadFromBundle(path, file string) (string, error) {

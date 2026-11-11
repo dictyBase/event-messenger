@@ -4,38 +4,65 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	"github.com/stretchr/testify/require"
 )
 
-const emailTemplateFile = "email.tmpl"
+const (
+	plasmidStockType = "plasmid"
+	testDoiURL       = "https://doi.org/10.1101/582072"
+	testPubmedURL    = "https://pubmed.gov/4893433"
+)
 
-func checkPublicationLinks(t *testing.T, citation *goquery.Selection, urls []string) {
+func checkPublicationLinks(
+	t *testing.T,
+	entries []textEntry,
+	urls []string,
+	rowCount int,
+) {
 	t.Helper()
-	require.Zero(t, citation.Find(`a[href=""]`).Length())
 
-	want := 0
+	var pubLinks []textEntry
 
-	for _, url := range urls {
-		if url != "" {
-			want++
-
-			require.Equal(t, 1, citation.Find(`a[href="`+url+`"]`).Length())
+	for _, entry := range entries {
+		if entry.text == "Pubmed" || entry.text == "Full text" {
+			require.NotEmpty(t, entry.href)
+			pubLinks = append(pubLinks, entry)
 		}
 	}
 
-	require.Equal(t, want, citation.Find("a").Length())
+	var want []string
+
+	for _, url := range urls {
+		if url != "" {
+			want = append(want, url)
+		}
+	}
+
+	require.Len(t, pubLinks, len(want)*rowCount)
+
+	for _, url := range want {
+		found := false
+
+		for _, entry := range pubLinks {
+			if entry.href == url {
+				found = true
+				break
+			}
+		}
+
+		require.True(t, found, "expected link %s", url)
+	}
 }
 
 func TestEmailOptionalPublicationLinks(t *testing.T) {
 	t.Parallel()
 
-	for _, stockType := range []string{"strain", "plasmid"} {
+	for _, stockType := range []string{"strain", plasmidStockType} {
 		for _, urls := range [][]string{
-			{"", "https://doi.org/10.1101/582072"},
-			{"https://pubmed.gov/4893433", ""},
-			{"https://pubmed.gov/4893433", "https://doi.org/10.1101/582072"},
+			{"", testDoiURL},
+			{testPubmedURL, ""},
+			{testPubmedURL, testDoiURL},
 			{"", ""},
 		} {
 			name := fmt.Sprint(stockType, urls)
@@ -48,7 +75,7 @@ func TestEmailOptionalPublicationLinks(t *testing.T) {
 				pub.DoiURL = urls[1]
 
 				content := fakeStrainOnlyEmailContent()
-				if stockType == "plasmid" {
+				if stockType == plasmidStockType {
 					content = fakePlasmidOnlyEmailContent()
 				}
 
@@ -60,18 +87,15 @@ func TestEmailOptionalPublicationLinks(t *testing.T) {
 					row.PubInfo = []*datasource.PubInfo{pub}
 				}
 
-				params := new(OutputParams)
-				params.Path = "/"
-				params.File = emailTemplateFile
-				params.Content = content
-				body, err := OutputHTML(params)
-				require.NoError(t, err)
-				doc, err := goquery.NewDocumentFromReader(body)
-				require.NoError(t, err)
+				rowCount := len(content.StrainData)
+				if stockType == plasmidStockType {
+					rowCount = len(content.PlasmidData)
+				}
 
-				citation := doc.Find("div#" + stockType + " tbody tr").First().Find("td").Last()
-				require.Contains(t, citation.Text(), "Smith A (2019)")
-				checkPublicationLinks(t, citation, urls)
+				entries := collectTextEntries(BuildOrderMaroto(content).GetStructure())
+				texts := entryTexts(entries)
+				require.Contains(t, texts, "Smith A (2019)")
+				checkPublicationLinks(t, entries, urls, rowCount)
 			})
 		}
 	}
