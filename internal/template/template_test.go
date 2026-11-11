@@ -49,7 +49,8 @@ func emailSubstr() []string {
 		descriptorColumn,
 		"Plasmid Name",
 		"Comment",
-		"Payment information",
+		"Order information",
+		"Order payment information",
 	}
 }
 

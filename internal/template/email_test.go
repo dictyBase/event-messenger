@@ -246,14 +246,17 @@ func testHTMLOrderPayment(t *testing.T, doc *goquery.Document, ec *EmailContent)
 	pdiv := doc.Find(
 		"div#payment-info.card-panel>div.section",
 	)
-	assert.Regexp(
-		"Payment information",
-		pdiv.Text(),
-		"should match payment information text",
+	links := pdiv.Find("p > a.blue-text.text-darken-1")
+	assert.Equal(2, links.Length(), "expect both information links")
+	assert.Equal("Order information", links.Eq(0).Text())
+	assert.Equal(
+		"https://dictycr.org/stockcenter/information/order/",
+		links.Eq(0).AttrOr("href", ""),
 	)
-	assert.Exactly(
-		"DSC website", pdiv.Find("a.blue-text.text-darken-1").Text(),
-		"should match the text for the link",
+	assert.Equal("Order payment information", links.Eq(1).Text())
+	assert.Equal(
+		"https://dictycr.org/stockcenter/information/payment",
+		links.Eq(1).AttrOr("href", ""),
 	)
 }
 
