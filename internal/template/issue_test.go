@@ -33,8 +33,6 @@ func TestIssueStockMkdown(t *testing.T) {
 
 	ic := fakeStockIssueContent()
 	b, err := OutputText(&OutputParams{
-		File:    issueTemplateFile,
-		Path:    "/",
 		Content: ic,
 	})
 	require.NoError(t, err, "expect no error from rending issue content")
@@ -64,8 +62,6 @@ func TestIssueStrainMkdown(t *testing.T) {
 
 	ic := fakeStrainOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
-		File:    issueTemplateFile,
-		Path:    "/",
 		Content: ic,
 	})
 	require.NoError(t, err, "expect no error from rending issue content")
@@ -93,8 +89,6 @@ func TestIssuePlasmidMkdown(t *testing.T) {
 
 	ic := fakePlasmidOnlyIssueContent()
 	b, err := OutputText(&OutputParams{
-		File:    issueTemplateFile,
-		Path:    "/",
 		Content: ic,
 	})
 	require.NoError(t, err, "expect no error from rending issue content")

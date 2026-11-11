@@ -94,8 +94,6 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 	ct.PlasmidPrice = gh.plasprice
 
 	b, err := template.OutputText(&template.OutputParams{
-		File:    "issue.tmpl",
-		Path:    "/",
 		Content: ct,
 	})
 	if err != nil {

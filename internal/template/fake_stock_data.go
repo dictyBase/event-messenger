@@ -14,14 +14,6 @@ const (
 	strainPrefix = "talA-"
 )
 
-type templateData struct {
-	Header  string
-	Strains []struct {
-		ID   string
-		Name string
-	}
-}
-
 func fakeStrainItems() []string {
 	return []string{
 		"DBS0236414",
@@ -244,20 +236,5 @@ func fakeStrainOnlyEmailContent() *EmailContent {
 	return &EmailContent{
 		StrainData: fakeStrain(),
 		Content:    c,
-	}
-}
-
-func fakeTemplateData() templateData {
-	st := []struct {
-		ID   string
-		Name string
-	}{
-		{"DBS0236831", "tori"},
-		{"DBS0236415", "lori"},
-	}
-
-	return templateData{
-		Header:  "Stock information",
-		Strains: st,
 	}
 }
