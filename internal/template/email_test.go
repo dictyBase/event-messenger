@@ -13,7 +13,7 @@ import (
 func TestEmailPlasmidHtml(t *testing.T) {
 	ec := fakePlasmidOnlyEmailContent()
 	b, err := OutputHTML(&OutputParams{
-		File:    "email.tmpl",
+		File:    emailTemplateFile,
 		Path:    "/",
 		Content: ec,
 	})
@@ -30,7 +30,7 @@ func TestEmailPlasmidHtml(t *testing.T) {
 func TestEmailStrainHtml(t *testing.T) {
 	ec := fakeStrainOnlyEmailContent()
 	b, err := OutputHTML(&OutputParams{
-		File:    "email.tmpl",
+		File:    emailTemplateFile,
 		Path:    "/",
 		Content: ec,
 	})

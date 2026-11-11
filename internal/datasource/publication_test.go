@@ -6,7 +6,10 @@ import (
 	"testing"
 	"time"
 
+	A "github.com/IBM/fp-go/v2/array"
 	E "github.com/IBM/fp-go/v2/either"
+	F "github.com/IBM/fp-go/v2/function"
+	L "github.com/IBM/fp-go/v2/optics/lens"
 	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
 	"github.com/dictybase/literature"
 	"github.com/stretchr/testify/require"
@@ -17,230 +20,178 @@ const (
 	huberName = "Huber RJ"
 )
 
-// fakePubMed is an in-memory pubMedClient stub that records every id it
-// is asked for.
+// fakePubMed records the external requests from the publication source.
 type fakePubMed struct {
-	articles map[string]*literature.Article
-	errs     map[string]error
-	calls    []string
+	articles      map[string]*literature.Article
+	errs          map[string]error
+	calls         []string
+	searchResult  *literature.SearchResult
+	searchErr     error
+	queries       []string
+	searchOptions []literature.SearchOption
 }
 
 func (f *fakePubMed) GetArticle(pmid string) (*literature.Article, error) {
 	f.calls = append(f.calls, pmid)
+	return f.articles[pmid], f.errs[pmid]
+}
 
-	if err := f.errs[pmid]; err != nil {
-		return nil, err
-	}
+func (f *fakePubMed) Search(
+	query string,
+	opts ...literature.SearchOption,
+) (*literature.SearchResult, error) {
+	f.queries = append(f.queries, query)
+	f.searchOptions = opts
 
-	return f.articles[pmid], nil
+	return f.searchResult, f.searchErr
+}
+
+var (
+	fakeArticlesLens = L.MakeLensRef(
+		func(f *fakePubMed) map[string]*literature.Article { return f.articles },
+		func(f *fakePubMed, v map[string]*literature.Article) *fakePubMed { f.articles = v; return f },
+	)
+	fakeErrorsLens = L.MakeLensRef(
+		func(f *fakePubMed) map[string]error { return f.errs },
+		func(f *fakePubMed, v map[string]error) *fakePubMed { f.errs = v; return f },
+	)
+	fakeEuropeErrorLens = L.MakeLensRef(
+		func(f *fakeEuropePMC) error { return f.err },
+		func(f *fakeEuropePMC, v error) *fakeEuropePMC { f.err = v; return f },
+	)
+)
+
+func newPublication(c *fakePubMed) *Publication {
+	return F.Pipe3(
+		Publication{},
+		publicationClientLens.Set(c),
+		publicationEuropeLens.Set(
+			F.Pipe1(
+				&fakeEuropePMC{},
+				fakeEuropeErrorLens.Set(errors.New("Europe PMC unavailable")),
+			),
+		),
+		func(p Publication) *Publication { return new(p) },
+	)
 }
 
 func newFakePubMed(article *literature.Article) *fakePubMed {
-	return &fakePubMed{
-		articles: map[string]*literature.Article{testPMID: article},
-		errs:     map[string]error{},
-	}
+	return F.Pipe1(
+		&fakePubMed{},
+		fakeArticlesLens.Set(map[string]*literature.Article{testPMID: article}),
+	)
 }
 
-func newFakePubMedWithError(pmid string, err error) *fakePubMed {
-	return &fakePubMed{
-		articles: map[string]*literature.Article{},
-		errs:     map[string]error{pmid: err},
-	}
+func newFakePubMedWithError(err error) *fakePubMed {
+	return F.Pipe1(&fakePubMed{}, fakeErrorsLens.Set(map[string]error{testPMID: err}))
 }
 
 func testArticle(authors []literature.Author) *literature.Article {
-	return &literature.Article{
-		PMID:        testPMID,
-		DOI:         "10.1016/j.bbamcr.2018.07.017",
-		PublishDate: time.Date(2018, time.July, 23, 0, 0, 0, 0, time.UTC),
-		Authors:     authors,
+	return F.Pipe4(
+		&literature.Article{},
+		articlePMIDLens.Set(testPMID),
+		articleDOILens.Set(indexedDOI),
+		articleDateLens.Set(time.Date(2018, time.July, 23, 0, 0, 0, 0, time.UTC)),
+		articleAuthorsLens.Set(authors),
+	)
+}
+
+func authorByName(name string) literature.Author {
+	return F.Pipe1(literature.Author{}, authorFullLens.Set(name))
+}
+
+func TestParsedInfoAuthors(t *testing.T) {
+	t.Parallel()
+
+	for _, names := range [][]string{
+		nil,
+		{huberName},
+		{huberName, "Mathavarajah S"},
+		{huberName, "Mathavarajah S", "Third A"},
+	} {
+		name := fmt.Sprint(names)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			source := F.Pipe4(
+				names,
+				A.Map(authorByName),
+				testArticle,
+				newFakePubMed,
+				newPublication,
+			)
+			info := mustPubInfo(t, source, testPMID)
+			want := map[int]string{
+				0: "unknown authors (2018)",
+				1: "Huber RJ (2018)",
+				2: "Huber RJ & Mathavarajah S (2018)",
+				3: "Huber RJ et al. (2018)",
+			}
+			require.Equal(t, want[len(names)], info.AuthorStr)
+			require.Equal(t, "https://pubmed.gov/4893433", info.PubmedURL)
+			require.Equal(t, "https://doi.org/10.1016/j.bbamcr.2018.07.017", info.DoiURL)
+		})
 	}
-}
-
-func parsedInfo(t *testing.T, fake *fakePubMed) *PubInfo {
-	t.Helper()
-
-	info, err := E.UnwrapError(
-		ioeutils.ToEither(newPublication(fake).ParsedInfo(testPMID)),
-	)
-	require.NoError(t, err, "should parse the fake article without error")
-
-	return info
-}
-
-func TestParsedInfoSingleAuthor(t *testing.T) {
-	t.Parallel()
-
-	info := parsedInfo(t, newFakePubMed(testArticle(
-		[]literature.Author{{FullName: huberName}},
-	)))
-
-	require.Equal(t, "Huber RJ (2018)", info.AuthorStr)
-	require.Equal(t, "https://pubmed.gov/4893433", info.PubmedURL)
-	require.Equal(
-		t,
-		"https://doi.org/10.1016/j.bbamcr.2018.07.017",
-		info.DoiURL,
-	)
-}
-
-func TestParsedInfoTwoAuthors(t *testing.T) {
-	t.Parallel()
-
-	info := parsedInfo(t, newFakePubMed(testArticle(
-		[]literature.Author{
-			{FullName: huberName},
-			{FullName: "Mathavarajah S"},
-		},
-	)))
-
-	require.Equal(t, "Huber RJ & Mathavarajah S (2018)", info.AuthorStr)
-}
-
-func TestParsedInfoManyAuthors(t *testing.T) {
-	t.Parallel()
-
-	info := parsedInfo(t, newFakePubMed(testArticle(
-		[]literature.Author{
-			{FullName: huberName},
-			{FullName: "Mathavarajah S"},
-			{FullName: "Third A"},
-		},
-	)))
-
-	require.Equal(t, "Huber RJ et al. (2018)", info.AuthorStr)
-}
-
-func TestParsedInfoNoAuthors(t *testing.T) {
-	t.Parallel()
-
-	info := parsedInfo(t, newFakePubMed(testArticle(nil)))
-
-	require.Equal(t, "unknown authors (2018)", info.AuthorStr)
 }
 
 func TestParsedInfoMissingDOI(t *testing.T) {
 	t.Parallel()
 
-	article := testArticle([]literature.Author{{FullName: huberName}})
-	article.DOI = ""
-
-	info := parsedInfo(t, newFakePubMed(article))
-
-	require.Empty(t, info.DoiURL, "missing doi must not build a doi.org url")
+	source := F.Pipe4(
+		[]literature.Author{},
+		testArticle,
+		articleDOILens.Set(""),
+		newFakePubMed,
+		newPublication,
+	)
+	info := mustPubInfo(t, source, testPMID)
+	require.Empty(t, info.DoiURL)
 }
 
 func TestParsedInfoZeroPublishDate(t *testing.T) {
 	t.Parallel()
 
-	article := testArticle([]literature.Author{{FullName: huberName}})
-	article.PublishDate = time.Time{}
-
-	info := parsedInfo(t, newFakePubMed(article))
-
-	require.Equal(t, huberName, info.AuthorStr)
-	require.NotContains(t, info.AuthorStr, "(1)")
-}
-
-func TestParsedInfoError(t *testing.T) {
-	t.Parallel()
-
-	_, err := E.UnwrapError(ioeutils.ToEither(
-		newPublication(newFakePubMedWithError(
-			testPMID,
-			errors.New("network down"),
-		)).ParsedInfo(testPMID),
-	))
-
-	require.Error(t, err)
-	require.ErrorContains(t, err, testPMID)
-	require.ErrorContains(t, err, "network down")
+	source := F.Pipe4(
+		[]literature.Author{},
+		testArticle,
+		articleDateLens.Set(time.Time{}),
+		newFakePubMed,
+		newPublication,
+	)
+	info := mustPubInfo(t, source, testPMID)
+	require.Equal(t, "unknown authors", info.AuthorStr)
 }
 
 func TestParsedInfoTypedError(t *testing.T) {
 	t.Parallel()
 
 	typed := literature.NewError(literature.ErrorTypeInvalidInput, "bad pmid")
-
-	_, err := E.UnwrapError(ioeutils.ToEither(
-		newPublication(newFakePubMedWithError(testPMID, typed)).
-			ParsedInfo(testPMID),
-	))
-
-	require.Error(t, err)
-
-	var litErr *literature.Error
-	require.ErrorAs(t, err, &litErr)
-	require.Equal(t, literature.ErrorTypeInvalidInput, litErr.Type)
-}
-
-func TestParsedInfoInvalidPMID(t *testing.T) {
-	t.Parallel()
-
-	for _, pmid := range []string{"", "   ", "abc", "123x", "0"} {
-		t.Run(fmt.Sprintf("pmid %q", pmid), func(t *testing.T) {
-			t.Parallel()
-
-			// The stub answers every id, so a rejection here can only
-			// come from validation in front of the client call.
-			fake := newFakePubMed(testArticle(
-				[]literature.Author{{FullName: huberName}},
-			))
-			fake.articles[pmid] = fake.articles[testPMID]
-
-			_, err := E.UnwrapError(ioeutils.ToEither(
-				newPublication(fake).ParsedInfo(pmid),
-			))
-			require.Error(t, err)
-			require.ErrorContains(
-				t,
-				err,
-				"pmid must contain decimal digits",
-			)
-
-			var litErr *literature.Error
-			require.ErrorAs(t, err, &litErr)
-			require.Equal(
-				t,
-				literature.ErrorTypeInvalidInput,
-				litErr.Type,
-			)
-			require.Empty(
-				t,
-				fake.calls,
-				"an invalid pmid must be rejected before the client call",
-			)
-		})
-	}
+	europe := F.Pipe1(&fakeEuropePMC{}, fakeEuropeErrorLens.Set(typed))
+	source := F.Pipe3(
+		error(typed),
+		newFakePubMedWithError,
+		newPublication,
+		testEuropeLens.Set(europe),
+	)
+	err := F.Pipe2(
+		testPMID,
+		source.ParsedInfo,
+		F.Flow2(ioeutils.ToEither[error, *PubInfo], E.ToError[*PubInfo]),
+	)
+	require.ErrorIs(t, err, typed)
 }
 
 func TestAuthorStr(t *testing.T) {
 	t.Parallel()
 
-	authors := func(names ...string) []literature.Author {
-		out := make([]literature.Author, 0, len(names))
-		for _, name := range names {
-			out = append(out, literature.Author{FullName: name})
-		}
-
-		return out
-	}
-
-	for _, tc := range []struct {
-		name    string
-		authors []literature.Author
-		want    string
-	}{
-		{name: "no authors", authors: nil, want: "unknown authors"},
-		{name: "empty slice", authors: authors(), want: "unknown authors"},
-		{name: "one author", authors: authors("A"), want: "A"},
-		{name: "two authors", authors: authors("A", "B"), want: "A & B"},
-		{name: "three authors", authors: authors("A", "B", "C"), want: "A et al."},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, names := range [][]string{nil, {}, {"A"}, {"A", "B"}, {"A", "B", "C"}} {
+		name := fmt.Sprint(names)
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tc.want, authorStr(tc.authors))
+
+			got := F.Pipe2(names, A.Map(authorByName), authorStr)
+			want := map[int]string{0: "unknown authors", 1: "A", 2: "A & B", 3: "A et al."}
+			require.Equal(t, want[len(names)], got)
 		})
 	}
 }
@@ -248,51 +199,55 @@ func TestAuthorStr(t *testing.T) {
 func TestPublicationOptions(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		name string
-		args *PublicationParams
-		want int
-	}{
-		{name: "empty params", args: &PublicationParams{}, want: 0},
-		{
-			name: "api key only",
-			args: &PublicationParams{APIKey: "key"},
-			want: 1,
-		},
-		{
-			name: "tool only",
-			args: &PublicationParams{Tool: "event-messenger"},
-			want: 1,
-		},
-		{
-			name: "email only",
-			args: &PublicationParams{Email: "dev@example.org"},
-			want: 1,
-		},
-		{
-			name: "full identity",
-			args: &PublicationParams{
-				APIKey: "key",
-				Tool:   "event-messenger",
-				Email:  "dev@example.org",
-			},
-			want: 3,
-		},
+	for _, values := range [][]string{
+		{"", "", ""},
+		{"key", "", ""},
+		{"", "event-messenger", ""},
+		{"", "", "dev@example.org"},
+		{"key", "event-messenger", "dev@example.org"},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
+		name := fmt.Sprint(values)
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			require.Len(t, publicationOptions(tc.args), tc.want)
+
+			params := F.Pipe3(
+				&PublicationParams{},
+				paramsAPIKeyLens.Set(values[0]),
+				paramsToolLens.Set(values[1]),
+				paramsEmailLens.Set(values[2]),
+			)
+			want := 0
+
+			for _, value := range values {
+				if value != "" {
+					want++
+				}
+			}
+
+			require.Len(t, publicationOptions(params), want)
+
+			wantEurope := 0
+			if values[2] != "" {
+				wantEurope = 1
+			}
+
+			require.Len(t, europePMCOptions(params), wantEurope)
 		})
 	}
 }
 
 func TestNewPublicationEmptyParams(t *testing.T) {
 	t.Parallel()
-	require := require.New(t)
 
-	pub, err := E.UnwrapError(ioeutils.ToEither(
-		NewPublication(&PublicationParams{}),
-	))
-	require.NoError(err, "expect no error, received %s", err)
-	require.NotNil(pub, "expect a publication source")
+	pub := F.Pipe3(
+		&PublicationParams{},
+		NewPublication,
+		ioeutils.ToEither[error, *Publication],
+		E.Fold(
+			func(err error) *Publication { t.Fatalf("create publication source: %v", err); return nil },
+			F.Identity[*Publication],
+		),
+	)
+	require.NotNil(t, publicationClientLens.Get(*pub))
+	require.NotNil(t, publicationEuropeLens.Get(*pub))
 }

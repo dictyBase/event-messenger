@@ -1,10 +1,14 @@
 package datasource
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
+	A "github.com/IBM/fp-go/v2/array"
 	E "github.com/IBM/fp-go/v2/either"
 	F "github.com/IBM/fp-go/v2/function"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
@@ -14,228 +18,302 @@ import (
 	arrutils "github.com/dictyBase/fp-go-loom/array"
 	MO "github.com/dictyBase/fp-go-loom/matchopt"
 	predarrays "github.com/dictyBase/fp-go-loom/predicate/array"
+	"github.com/dictyBase/fp-go-loom/strutils"
 	"github.com/dictybase/literature"
 )
 
-// pubMedClient is the narrow seam over the NCBI eUtils client.
+// pubMedClient defines the NCBI operations for a citation.
 type pubMedClient interface {
 	GetArticle(pmid string) (*literature.Article, error)
+	Search(query string, opts ...literature.SearchOption) (*literature.SearchResult, error)
+}
+
+type europePMCClient interface {
+	GetArticle(pmid string) (*literature.EuropePMCArticle, error)
+	GetArticleByDOI(doi string) (*literature.EuropePMCArticle, error)
 }
 
 const (
-	// twoAuthors is the citation arity that joins both names.
-	twoAuthors = 2
-
-	// threeAuthors is the citation arity that abbreviates to "et al.".
+	twoAuthors   = 2
 	threeAuthors = 3
 )
 
-// PubInfo is the citation snippet rendered into an invoice row.
+// PubInfo contains the citation and its optional links for an invoice row.
 type PubInfo struct {
 	AuthorStr string
 	PubmedURL string
 	DoiURL    string
 }
 
-// Publication resolves PubMed identifiers into citation snippets.
+// Publication resolves PMID and DOI identifiers into citations.
 type Publication struct {
-	client pubMedClient
+	client    pubMedClient
+	europePMC europePMCClient
 }
 
-// NewPublication builds the publication source over the NCBI eUtils
-// client. Configured identity values ride on every request per the NCBI
-// usage policy.
-func NewPublication(
-	p *PublicationParams,
-) IOE.IOEither[error, *Publication] {
-	opts := publicationOptions(p)
-
-	return F.Pipe2(
-		IOE.TryCatchError(func() (*literature.Client, error) {
-			return literature.New(opts...)
-		}),
-		IOE.MapLeft[*literature.Client](func(err error) error {
-			return fmt.Errorf("error creating literature pubmed client: %w", err)
-		}),
-		IOE.Map[error](func(c *literature.Client) *Publication {
-			return &Publication{client: c}
-		}),
-	)
-}
-
-// PublicationParams carries the optional NCBI request identity. Blank
-// values leave the corresponding parameter out of every request, so an
-// all-empty struct preserves the unauthenticated behavior.
+// PublicationParams contains the optional identity for literature requests.
 type PublicationParams struct {
 	APIKey string
 	Tool   string
 	Email  string
 }
 
-// someOption lifts a configured identity value into its literature
-// option, or nothing when the value is blank.
-func someOption(
-	apply func(string) literature.Option,
-	value string,
-) O.Option[literature.Option] {
-	return F.Pipe2(
-		value,
-		O.FromPredicate(S.IsNonEmpty),
-		O.Map(apply),
+// NewPublication creates both clients as lazy effects.
+func NewPublication(p *PublicationParams) IOE.IOEither[error, *Publication] {
+	pubmed := createPubMed(p)
+	europe := createEuropePMC(p)
+
+	return F.Pipe3(
+		IOE.Of[error](Publication{}),
+		IOE.Bind(publicationClientLens.Set, F.Constant1[Publication](pubmed)),
+		IOE.Bind(publicationEuropeLens.Set, F.Constant1[Publication](europe)),
+		IOE.Map[error](func(source Publication) *Publication { return new(source) }),
 	)
 }
 
-// publicationOptions builds the client options for the configured
-// identity, dropping every blank value.
-func publicationOptions(
-	p *PublicationParams,
-) []literature.Option {
+func createPubMed(p *PublicationParams) IOE.IOEither[error, pubMedClient] {
+	opts := publicationOptions(p)
+
+	return F.Pipe1(
+		IOE.TryCatchError(func() (pubMedClient, error) { return literature.New(opts...) }),
+		IOE.MapLeft[pubMedClient](func(err error) error {
+			return fmt.Errorf("error creating literature pubmed client: %w", err)
+		}),
+	)
+}
+
+func createEuropePMC(p *PublicationParams) IOE.IOEither[error, europePMCClient] {
+	opts := europePMCOptions(p)
+
+	return F.Pipe1(
+		IOE.TryCatchError(
+			func() (europePMCClient, error) { return literature.NewEuropePMCClient(opts...) },
+		),
+		IOE.MapLeft[europePMCClient](func(err error) error {
+			return fmt.Errorf("error creating literature Europe PMC client: %w", err)
+		}),
+	)
+}
+
+func someOption(apply func(string) literature.Option, value string) O.Option[literature.Option] {
+	return F.Pipe2(value, O.FromPredicate(S.IsNonEmpty), O.Map(apply))
+}
+
+func publicationOptions(p *PublicationParams) []literature.Option {
 	return F.Pipe1(
 		[]O.Option[literature.Option]{
-			someOption(literature.WithAPIKey, p.APIKey),
-			someOption(literature.WithTool, p.Tool),
-			someOption(literature.WithEmail, p.Email),
+			F.Pipe2(p, paramsAPIKeyLens.Get, F.Bind1st(someOption, literature.WithAPIKey)),
+			F.Pipe2(p, paramsToolLens.Get, F.Bind1st(someOption, literature.WithTool)),
+			F.Pipe2(p, paramsEmailLens.Get, F.Bind1st(someOption, literature.WithEmail)),
 		},
 		arrutils.Compact[literature.Option],
 	)
 }
 
-// newPublication builds a publication source over an injected client.
-func newPublication(c pubMedClient) *Publication {
-	return &Publication{client: c}
+func europePMCOptions(p *PublicationParams) []literature.EuropePMCOption {
+	return F.Pipe5(
+		p,
+		paramsEmailLens.Get,
+		O.FromPredicate(S.IsNonEmpty),
+		O.Map(literature.WithEuropePMCEmail),
+		A.Of[O.Option[literature.EuropePMCOption]],
+		arrutils.Compact[literature.EuropePMCOption],
+	)
 }
 
-// pmidPattern matches PubMed identifiers: decimal digits with no
-// leading zero.
-var pmidPattern = regexp.MustCompile(`^[1-9][0-9]*$`)
+var (
+	pmidPattern  = regexp.MustCompile(`^[1-9][0-9]*$`)
+	validatePMID = E.FromPredicate(pmidPattern.MatchString, func(pmid string) error {
+		return F.Pipe1(
+			literature.NewErrorWithPMID(
+				literature.ErrorTypeInvalidInput,
+				pmid,
+				"pmid must contain decimal digits",
+			),
+			func(err *literature.Error) error { return fmt.Errorf("error fetching publication %s: %w", pmid, err) },
+		)
+	})
+	isResolverURL = F.Pipe1(
+		S.HasPrefix("https://doi.org/"),
+		P.Or(S.HasPrefix("http://doi.org/")),
+	)
+	isDOI              = S.Includes("/")
+	validateIdentifier = F.Pipe1(isDOI, P.Fold(validatePMID, E.Of[error, string]))
+	isNonZeroTime      = P.Not(time.Time.IsZero)
+	formatYearText     = strutils.Wrap(" (", ")")
+)
 
-// validPMID reports whether pmid is a PubMed identifier.
-func validPMID(pmid string) bool {
-	return pmidPattern.MatchString(pmid)
+// ParsedInfo validates the identifier before any client request.
+func (p *Publication) ParsedInfo(rawID string) IOE.IOEither[error, *PubInfo] {
+	return F.Pipe3(
+		IOE.Of[error](rawID),
+		IOE.ChainEitherK(normalizeID),
+		IOE.ChainEitherK(validateIdentifier),
+		IOE.Chain(p.fetchWithFallback),
+	)
 }
 
-// invalidPMIDError presents a non-identifier pmid as a typed literature
-// error.
-func invalidPMIDError(pmid string) error {
-	return fmt.Errorf(
-		"error fetching publication %s: %w",
-		pmid,
-		literature.NewErrorWithPMID(
-			literature.ErrorTypeInvalidInput,
-			pmid,
-			"pmid must contain decimal digits",
+func normalizeID(id string) E.Either[error, string] {
+	return F.Pipe3(
+		id,
+		strings.TrimSpace,
+		F.Pipe1(isResolverURL, P.Fold(E.Of[error, string], F.Flow3(
+			E.Eitherize1(url.Parse),
+			E.Map[error](F.Flow2(resolverPathLens.Get, F.Bind2nd(strings.TrimPrefix, "/"))),
+			E.MapLeft[string](func(err error) error {
+				return literature.WrapErrorWithDOI(
+					literature.ErrorTypeInvalidInput,
+					id,
+					"invalid DOI resolver URL",
+					err,
+				)
+			}),
+		))),
+		E.Map[error](F.Flow3(
+			F.Bind2nd(strings.TrimPrefix, "doi:"),
+			F.Bind2nd(strings.TrimPrefix, "DOI:"),
+			strings.TrimSpace,
+		)),
+	)
+}
+
+func (p *Publication) fetchWithFallback(id string) IOE.IOEither[error, *PubInfo] {
+	return F.Pipe3(
+		id,
+		F.Pipe1(isDOI, P.Fold(p.ncbiByPMID, p.ncbiByDOI)),
+		IOE.OrElse(func(primary error) IOE.IOEither[error, *PubInfo] {
+			return F.Pipe2(
+				id,
+				F.Pipe1(isDOI, P.Fold(p.europeByPMID, p.europeByDOI)),
+				IOE.MapLeft[*PubInfo](
+					func(secondary error) error { return errors.Join(primary, secondary) },
+				),
+			)
+		}),
+		IOE.MapLeft[*PubInfo](
+			func(err error) error { return fmt.Errorf("error fetching publication %s: %w", id, err) },
 		),
 	)
 }
 
-// validatePMID rejects anything that is not a PubMed identifier before
-// the client is called.
-var validatePMID = E.FromPredicate(validPMID, invalidPMIDError)
-
-// ParsedInfo fetches one article and formats its citation snippet.
-func (p *Publication) ParsedInfo(pmid string) IOE.IOEither[error, *PubInfo] {
-	return F.Pipe3(
-		pmid,
-		validatePMID,
-		IOE.FromEither[error, string],
-		IOE.Chain(p.fetchInfo),
-	)
-}
-
-// fetchInfo fetches one article through the client and formats it.
-func (p *Publication) fetchInfo(pmid string) IOE.IOEither[error, *PubInfo] {
-	return F.Pipe2(
+func (p *Publication) ncbiByPMID(pmid string) IOE.IOEither[error, *PubInfo] {
+	return F.Pipe1(
 		IOE.TryCatchError(func() (*literature.Article, error) {
-			return p.client.GetArticle(pmid)
-		}),
-		IOE.MapLeft[*literature.Article](func(err error) error {
-			return fmt.Errorf("error fetching publication %s: %w", pmid, err)
+			return publicationClientLens.Get(*p).GetArticle(pmid)
 		}),
 		IOE.Map[error](toPubInfo),
 	)
 }
 
-// toPubInfo formats one article into a citation snippet. The publish
-// year comes from Article.PublishDate, which the literature client fills
-// from the PubMed journal issue; a zero date renders no year at all.
-func toPubInfo(a *literature.Article) *PubInfo {
-	authors := authorStr(a.Authors)
-	year := pubYear(a.PublishDate)
-
-	return &PubInfo{
-		AuthorStr: S.Monoid.Concat(authors, year),
-		PubmedURL: fmt.Sprintf("https://pubmed.gov/%s", a.PMID),
-		DoiURL:    doiURL(a.DOI),
-	}
-}
-
-// matchAuthors formats the author list by arity, with a total fallback.
-func matchAuthors(authors []literature.Author) string {
-	isSingle := predarrays.LenEq[literature.Author](1)
-	isPair := predarrays.LenEq[literature.Author](twoAuthors)
-	isEtAl := predarrays.MinLen[literature.Author](threeAuthors)
-
-	cases := []O.Option[string]{
-		F.Pipe1(authors, MO.Case(isSingle, singleAuthor)),
-		F.Pipe1(authors, MO.Case(isPair, pairAuthors)),
-		F.Pipe1(authors, MO.Case(isEtAl, etAlAuthors)),
-	}
-
-	return MO.First("unknown authors", cases)
-}
-
-// authorStr formats the author list for the citation.
-func authorStr(authors []literature.Author) string {
-	matcher := matchAuthors
-
-	return F.Pipe1(authors, matcher)
-}
-
-// singleAuthor formats a one-author citation.
-func singleAuthor(a []literature.Author) string {
-	return displayName(a[0])
-}
-
-// pairAuthors formats a two-author citation.
-func pairAuthors(a []literature.Author) string {
-	first := displayName(a[0])
-	second := displayName(a[1])
-
-	return S.IntersperseMonoid(" & ").Concat(first, second)
-}
-
-// etAlAuthors formats a three-or-more-author citation.
-func etAlAuthors(a []literature.Author) string {
-	name := displayName(a[0])
-
-	return S.Monoid.Concat(name, " et al.")
-}
-
-// fullNameFallback joins the author's given and family names.
-func fullNameFallback(a literature.Author) string {
-	return S.IntersperseMonoid(" ").Concat(a.FirstName, a.LastName)
-}
-
-// displayName prefers the abbreviated full name over given and family names.
-func displayName(a literature.Author) string {
-	fallback := fullNameFallback(a)
-
-	return F.Pipe2(
-		a.FullName,
-		O.FromPredicate(S.IsNonEmpty),
-		O.GetOrElse(F.Constant(fallback)),
+func (p *Publication) ncbiByDOI(doi string) IOE.IOEither[error, *PubInfo] {
+	return F.Pipe3(
+		IOE.TryCatchError(func() (*literature.SearchResult, error) {
+			return publicationClientLens.Get(*p).Search(doi+"[DOI]", literature.WithLimit(1))
+		}),
+		IOE.Map[error](searchArticlesLens.Get),
+		IOE.ChainEitherK(F.Flow2(
+			A.Head[*literature.Article],
+			E.FromOption[*literature.Article](F.Constant[error](literature.NewErrorWithDOI(
+				literature.ErrorTypeArticleNotFound, doi, "no PubMed article for DOI",
+			))),
+		)),
+		IOE.Map[error](toPubInfo),
 	)
 }
 
-// isNonZeroTime reports whether the timestamp is set.
-var isNonZeroTime = P.Not(time.Time.IsZero)
-
-// formatYear renders a publish year as a citation suffix.
-func formatYear(t time.Time) string {
-	return fmt.Sprintf(" (%d)", t.Year())
+func (p *Publication) europeByPMID(pmid string) IOE.IOEither[error, *PubInfo] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*literature.EuropePMCArticle, error) {
+			return publicationEuropeLens.Get(*p).GetArticle(pmid)
+		}),
+		IOE.Map[error](toEuropePubInfo),
+	)
 }
 
-// pubYear renders the publish year, or nothing when the date is unset.
+func (p *Publication) europeByDOI(doi string) IOE.IOEither[error, *PubInfo] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*literature.EuropePMCArticle, error) {
+			return publicationEuropeLens.Get(*p).GetArticleByDOI(doi)
+		}),
+		IOE.Map[error](toEuropePubInfo),
+	)
+}
+
+func toPubInfo(a *literature.Article) *PubInfo {
+	return F.Pipe3(
+		&PubInfo{},
+		pubInfoAuthorLens.Set(strutils.JoinStrings(
+			F.Pipe1(a, F.Flow2(articleAuthorsLens.Get, authorStr)),
+			F.Pipe1(a, F.Flow2(articleDateLens.Get, pubYear)),
+		)),
+		pubInfoPMIDLens.Set(F.Pipe1(a, F.Flow2(articlePMIDLens.Get, pubmedURL))),
+		pubInfoDOILens.Set(F.Pipe1(a, F.Flow2(articleDOILens.Get, doiURL))),
+	)
+}
+
+func toEuropePubInfo(a *literature.EuropePMCArticle) *PubInfo {
+	return F.Pipe3(
+		&PubInfo{},
+		pubInfoAuthorLens.Set(strutils.JoinStrings(
+			F.Pipe3(
+				a,
+				europeAuthorsLens.Get,
+				A.Map(func(author literature.EuropePMCAuthor) literature.Author {
+					return F.Pipe3(
+						literature.Author{},
+						F.Pipe2(author, europeAuthorFullLens.Get, authorFullLens.Set),
+						F.Pipe2(author, europeAuthorFirstLens.Get, authorFirstLens.Set),
+						F.Pipe2(author, europeAuthorLastLens.Get, authorLastLens.Set),
+					)
+				}),
+				authorStr,
+			),
+			F.Pipe5(
+				a,
+				europeDateLens.Get,
+				O.FromNillable2[time.Time],
+				O.Chain(O.FromPredicate(isNonZeroTime)),
+				O.Map(pubYear),
+				O.GetOrElse(F.Constant(F.Pipe2(
+					a, europeYearLens.Get, strutils.MapNonEmpty(formatYearText),
+				))),
+			),
+		)),
+		pubInfoPMIDLens.Set(F.Pipe1(a, F.Flow2(europePMIDLens.Get, pubmedURL))),
+		pubInfoDOILens.Set(F.Pipe1(a, F.Flow2(europeDOILens.Get, doiURL))),
+	)
+}
+
+func authorStr(authors []literature.Author) string {
+	return MO.First("unknown authors", []O.Option[string]{
+		F.Pipe1(authors, MO.Case(predarrays.LenEq[literature.Author](1), singleAuthor)),
+		F.Pipe1(authors, MO.Case(predarrays.LenEq[literature.Author](twoAuthors),
+			F.Flow3(A.Map(displayName), A.Intersperse(" & "), A.Fold(S.Monoid)))),
+		F.Pipe1(authors, MO.Case(predarrays.MinLen[literature.Author](threeAuthors),
+			F.Flow2(singleAuthor, S.Append(" et al.")))),
+	})
+}
+
+func singleAuthor(a []literature.Author) string { return displayName(a[0]) }
+
+func displayName(a literature.Author) string {
+	return F.Pipe3(
+		a,
+		authorFullLens.Get,
+		O.FromPredicate(S.IsNonEmpty),
+		O.GetOrElse(
+			F.Constant(
+				F.Pipe1(
+					[]string{authorFirstLens.Get(a), authorLastLens.Get(a)},
+					strutils.JoinSpace,
+				),
+			),
+		),
+	)
+}
+
+func formatYear(t time.Time) string { return fmt.Sprintf(" (%d)", t.Year()) }
+
 func pubYear(t time.Time) string {
 	return F.Pipe3(
 		t,
@@ -245,17 +323,15 @@ func pubYear(t time.Time) string {
 	)
 }
 
-// formatDOI renders a DOI as a resolvable url.
-func formatDOI(doi string) string {
-	return fmt.Sprintf("https://doi.org/%s", doi)
+func pubmedURL(pmid string) string {
+	return F.Pipe1(pmid, strutils.MapNonEmpty(S.Prepend("https://pubmed.gov/")))
 }
 
-// doiURL renders the DOI url, or nothing when the DOI is missing.
 func doiURL(doi string) string {
 	return F.Pipe3(
 		doi,
-		O.FromPredicate(S.IsNonEmpty),
-		O.Map(formatDOI),
-		O.GetOrElse(F.Constant("")),
+		normalizeID,
+		E.GetOrElse(F.Constant1[error]("")),
+		strutils.MapNonEmpty(S.Prepend("https://doi.org/")),
 	)
 }

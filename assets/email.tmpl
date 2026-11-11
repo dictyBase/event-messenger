@@ -175,7 +175,7 @@
                                 <td>{{.Descriptor}}</td>
                                 <td>
                                 {{- range $pub := .PubInfo}}
-                                    {{$pub.AuthorStr}} &nbsp; <a href="{{$pub.PubmedURL}}">Pubmed</a> &nbsp; <a href="{{$pub.DoiURL}}">Full text</a> <br/>
+                                    {{$pub.AuthorStr}} &nbsp; {{if $pub.PubmedURL}}<a href="{{$pub.PubmedURL}}">Pubmed</a> &nbsp; {{end}}{{if $pub.DoiURL}}<a href="{{$pub.DoiURL}}">Full text</a>{{end}} <br/>
                                 {{- end}}
                                 </td>
                             </tr>
@@ -205,7 +205,7 @@
                                 <td>{{.Name}}</td>
                                 <td>
                                 {{- range $pub := .PubInfo}}
-                                    {{$pub.AuthorStr}} &nbsp; <a href="{{$pub.PubmedURL}}">Pubmed</a> &nbsp; <a href="{{$pub.DoiURL}}">Full text</a> <br/>
+                                    {{$pub.AuthorStr}} &nbsp; {{if $pub.PubmedURL}}<a href="{{$pub.PubmedURL}}">Pubmed</a> &nbsp; {{end}}{{if $pub.DoiURL}}<a href="{{$pub.DoiURL}}">Full text</a>{{end}} <br/>
                                 {{- end}}
                                 </td>
                             </tr>
