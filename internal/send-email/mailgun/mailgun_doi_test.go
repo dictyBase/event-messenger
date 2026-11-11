@@ -18,11 +18,22 @@ type doiPDFRenderer struct {
 
 func (r *doiPDFRenderer) OutputPDF(args *template.OutputParams) (*bytes.Buffer, error) {
 	r.calls++
-	body, err := template.OutputHTML(args)
+	ec, ok := args.Content.(*template.EmailContent)
+	require.True(r.t, ok)
+	require.NotNil(r.t, ec)
+	require.Len(r.t, ec.StrainData, 1)
+	require.Len(r.t, ec.StrainData[0].PubInfo, 1)
+	require.Equal(r.t, "Smith A (2019)", ec.StrainData[0].PubInfo[0].AuthorStr)
+	require.Equal(
+		r.t,
+		"https://doi.org/10.1101/582072",
+		ec.StrainData[0].PubInfo[0].DoiURL,
+	)
+	require.Empty(r.t, ec.StrainData[0].PubInfo[0].PubmedURL)
+
+	body, err := template.OutputPDF(args)
 	require.NoError(r.t, err)
-	require.Contains(r.t, body.String(), "https://doi.org/10.1101/582072")
-	require.Contains(r.t, body.String(), "Smith A (2019)")
-	require.NotContains(r.t, body.String(), `href=""`)
+	require.True(r.t, bytes.HasPrefix(body.Bytes(), []byte("%PDF-")))
 
 	return bytes.NewBufferString("doi-invoice-pdf"), nil
 }
