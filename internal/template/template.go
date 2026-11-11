@@ -2,22 +2,20 @@ package template
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"fmt"
-	"io"
-	"path/filepath"
 	"strings"
 	txt "text/template"
 
 	"github.com/dictyBase/event-messenger/internal/datasource"
-	_ "github.com/dictyBase/event-messenger/internal/statik" // register embedded filesystem
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
-	"github.com/rakyll/statik/fs"
 )
 
+//go:embed assets/issue.tmpl
+var issueTemplate string
+
 type OutputParams struct {
-	File    string
-	Path    string
 	Content any
 }
 
@@ -93,13 +91,11 @@ func (c *Content) TotalCost() int {
 
 func OutputText(args *OutputParams) (*bytes.Buffer, error) {
 	out := bytes.NewBuffer([]byte(""))
-
-	ct, err := ReadFromBundle(args.Path, args.File)
-	if err != nil {
-		return out, err
+	if args == nil {
+		return out, errors.New("empty output params")
 	}
 
-	t, err := txt.New("stock-invoice").Parse(ct)
+	t, err := txt.New("stock-invoice").Parse(issueTemplate)
 	if err != nil {
 		return out, fmt.Errorf("error in parsing template %s", err)
 	}
@@ -130,29 +126,4 @@ func OutputPDF(args *OutputParams) (*bytes.Buffer, error) {
 	}
 
 	return bytes.NewBuffer(doc.GetBytes()), nil
-}
-
-func ReadFromBundle(path, file string) (string, error) {
-	statikFs, err := fs.New()
-	if err != nil {
-		return "", fmt.Errorf("error in getting embedded filesystem %s", err)
-	}
-
-	input := filepath.Join(path, file)
-
-	r, err := statikFs.Open(input)
-	if err != nil {
-		return "", fmt.Errorf(
-			"error in reading template file from path %s %s",
-			input,
-			err,
-		)
-	}
-
-	b, err := io.ReadAll(r)
-	if err != nil {
-		return "", fmt.Errorf("error in reading content of file %s", err)
-	}
-
-	return string(b), nil
 }

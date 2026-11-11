@@ -1,21 +1,15 @@
 package template
 
 import (
-	"bytes"
-	"io"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/extension"
 )
 
 const (
-	colorColumn       = "Color"
-	issueTemplateFile = "issue.tmpl"
-	locationColumn    = "Location"
+	colorColumn    = "Color"
+	locationColumn = "Location"
 )
 
 func checkSubstr(str string, slice []string, t *testing.T) {
@@ -46,56 +40,12 @@ func issueSubstr() []string {
 	}
 }
 
-func TestReadFromBundle(t *testing.T) {
+func TestIssueTemplate(t *testing.T) {
 	t.Parallel()
 
-	str, err := ReadFromBundle("/", issueTemplateFile)
-	require.NoError(t, err, "expect no error from reading issue.tmpl template file")
-	checkSubstr(str, issueSubstr(), t)
-}
-
-func TestMarkdownOutput(t *testing.T) {
-	t.Parallel()
-
-	b, err := OutputText(&OutputParams{
-		File:    "test_markdown.tmpl",
-		Path:    "/",
-		Content: fakeTemplateData(),
-	})
-	require.NoError(t, err, "expect no error from reading test_html.tmpl template file")
-
-	var out bytes.Buffer
-
-	md := goldmark.New(goldmark.WithExtensions(extension.GFM))
-	err = md.Convert(b.Bytes(), &out)
-	require.NoError(t, err, "expect no error from markdown conversion")
-	testHTMLtree(require.New(t), &out, "h1")
+	checkSubstr(issueTemplate, issueSubstr(), t)
 }
 
 func childrenContent(_ int, html *goquery.Selection) string {
 	return html.Text()
-}
-
-func testHTMLtree(assert *require.Assertions, r io.Reader, tag string) {
-	doc, err := goquery.NewDocumentFromReader(r)
-	assert.NoError(err, "expect no error from reading html output")
-	assert.Exactlyf(
-		"Stock information", doc.Find(tag).Text(),
-		"expected header %s got %s",
-		"Stock information",
-		doc.Find(tag).Text(),
-	)
-	th := doc.Find("thead>tr").Children().Map(childrenContent)
-	assert.Lenf(th, 2, "expect %d th elements got %d", 2, len(th))
-	assert.Exactly("ID", th[0], "expect first th value to be ID")
-	assert.Exactly("Name", th[1], "expect second th value to be Name")
-
-	tr := doc.Find("tbody").Children()
-	assert.Exactlyf(2, tr.Size(), "expect %d tr element got %d", 2, tr.Size())
-	tr.Find("td:first-child").Each(func(_ int, html *goquery.Selection) {
-		assert.Regexp("DBS", html.Text(), "expect the value of first child to match DBS")
-	})
-	tr.Find("td:last-child").Each(func(_ int, html *goquery.Selection) {
-		assert.Regexp("ori", html.Text(), "expect the value of first child to match ori")
-	})
 }
