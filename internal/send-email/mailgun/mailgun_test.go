@@ -437,9 +437,12 @@ func TestPrepareSendDescription(t *testing.T) {
 
 	clientFake := newFakeMailgunClient(nil, false)
 	email := sendingEmailer(clientFake)
+	pkg := preparedPackage(t, email)
+	state := email.initMessageState(pkg)
+	require.Equal(t, "order-information-ORD123.pdf", state.Filename)
 
 	desc, err := E.UnwrapError(ioeutils.ToEither(
-		email.prepareSendDescription(preparedPackage(t, email)),
+		email.prepareSendDescription(pkg),
 	))
 	require.NoError(t, err)
 	require.Equal(
