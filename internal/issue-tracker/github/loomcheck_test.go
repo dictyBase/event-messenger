@@ -9,5 +9,10 @@ import (
 func TestNoHandRolledPredicates(t *testing.T) {
 	t.Parallel()
 
-	loomcheck.Require(t, loomcheck.Config{Roots: []string{"."}})
+	loomcheck.Require(t, loomcheck.Config{
+		Roots: []string{
+			".",
+			"../../app/github",
+		},
+	})
 }
