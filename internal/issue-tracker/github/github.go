@@ -43,15 +43,20 @@ type githubIssue struct {
 	stk        *datasource.Stock
 	strprice   int
 	plasprice  int
+	decisions  DecisionsClient
+	jevModel   string
 }
 
 type IssueParams struct {
-	Token        string
-	Owner        string
-	Repository   string
-	StrainPrice  int
-	PlasmidPrice int
-	Logger       *logrus.Entry
+	Token           string
+	Owner           string
+	Repository      string
+	OpenRouterToken string
+	JevModel        string
+	Decisions       DecisionsClient
+	StrainPrice     int
+	PlasmidPrice    int
+	Logger          *logrus.Entry
 	*datasource.Sources
 }
 
@@ -68,6 +73,11 @@ func NewIssueCreator(args *IssueParams) issue.Tracker {
 		oauth2.StaticTokenSource(&oauth2.Token{AccessToken: args.Token}),
 	)
 
+	decisions := args.Decisions
+	if decisions == nil {
+		decisions = newDecisionsClient(args.OpenRouterToken)
+	}
+
 	return &githubIssue{
 		client:     github.NewClient(tc),
 		token:      args.Token,
@@ -78,6 +88,8 @@ func NewIssueCreator(args *IssueParams) issue.Tracker {
 		stk:        args.StockSource,
 		strprice:   args.StrainPrice,
 		plasprice:  args.PlasmidPrice,
+		decisions:  decisions,
+		jevModel:   resolveJevModel(args.JevModel),
 	}
 }
 
@@ -117,10 +129,7 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 
 func (gh *githubIssue) newPostIssueParams(all *allData, ord *order.Order) *postIssueParams {
 	return &postIssueParams{
-		labels: gh.labels(
-			all.strains,
-			all.plasmids,
-		),
+		labels: gh.resolveLabels(all, ord),
 		title: fmt.Sprintf(
 			"Order ID:%s %s",
 			ord.GetData().GetId(),
@@ -146,19 +155,6 @@ func (gh *githubIssue) orderData(ord *order.Order) (*allData, error) {
 	all.plasmidData = plasData
 
 	return all, nil
-}
-
-func (gh *githubIssue) labels(strains []*stock.Strain, plasmids []*stock.Plasmid) []string {
-	var labels []string
-	if len(strains) > 0 {
-		labels = append(labels, "Strain")
-	}
-
-	if len(plasmids) > 0 {
-		labels = append(labels, "Plasmid")
-	}
-
-	return labels
 }
 
 func (gh *githubIssue) postIssue(args *postIssueParams) (*github.Issue, error) {

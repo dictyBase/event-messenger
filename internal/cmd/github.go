@@ -32,6 +32,17 @@ func ghRepoFlags() []cli.Flag {
 			Usage:    "Subject name for nats subscription",
 			Required: true,
 		},
+		&cli.StringFlag{
+			Name:    "openrouter-token",
+			Usage:   "OpenRouter API key for automated Jev issue labeling",
+			Sources: cli.EnvVars("OPENROUTER_API_KEY"),
+		},
+		&cli.StringFlag{
+			Name:    "jev-model",
+			Usage:   "OpenRouter Jev decisions model identifier",
+			Sources: cli.EnvVars("JEV_MODEL"),
+			Value:   "~typesafe/jev-latest",
+		},
 	}
 }
 
