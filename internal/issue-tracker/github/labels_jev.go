@@ -371,15 +371,6 @@ var (
 	rowsHaveBact        = A.Any(rowHasBact)
 	rowsHaveGoldenBraid = A.Any(rowHasGoldenBraid)
 
-	hasClientState = F.Pipe1(isNonNilDecisions, P.ContraMap(resolveClientLens.Get))
-
-	baseOrJevFold = P.Fold(
-		F.Flow2(resolveBaseLens.Get, IOE.Of[error, []string]),
-		jevLabelPipeline,
-	)
-
-	jevOrBaseBranch = F.Pipe1(hasClientState, baseOrJevFold)
-
 	prependLabels  = F.Flip(A.Concat[string])
 	mapCriteriaPtr = R.Map[string](
 		F.Flow2(components.CreateCriteriaStr, F.Ref[components.Criteria]),
@@ -456,6 +447,21 @@ func resolveJevModel(model string) string {
 		strings.TrimSpace,
 		O.FromPredicate(S.IsNonEmpty),
 		O.GetOrElse(F.Constant(defaultJevModel)),
+	)
+}
+
+func jevOrBaseBranch(s labelResolveState) IOE.IOEither[error, []string] {
+	return F.Pipe3(
+		isNonNilDecisions,
+		P.ContraMap(resolveClientLens.Get),
+		P.Fold(
+			F.Flow2(resolveBaseLens.Get, IOE.Of[error, []string]),
+			jevLabelPipeline,
+		),
+		F.Bind1st(
+			F.Pipe1[func(labelResolveState) IOE.IOEither[error, []string]],
+			s,
+		),
 	)
 }
 
