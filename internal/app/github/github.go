@@ -27,7 +27,6 @@ const exitCode = 2
 // IssueSetupState accumulates the logger, subscriber, data sources, and
 // GitHub issue tracker as the setup pipeline runs.
 type IssueSetupState struct {
-	Context    context.Context
 	Command    *cli.Command
 	Logger     *logrus.Entry
 	Subscriber *nats.GithubSubscriber
@@ -37,14 +36,6 @@ type IssueSetupState struct {
 
 var (
 	issueRequiredServices = []string{"stock", "annotation"}
-
-	setupContextLens = L.MakeLens(
-		func(s IssueSetupState) context.Context { return s.Context },
-		func(s IssueSetupState, v context.Context) IssueSetupState {
-			s.Context = v
-			return s
-		},
-	)
 
 	setupCommandLens = L.MakeLens(
 		func(s IssueSetupState) *cli.Command { return s.Command },
@@ -85,78 +76,6 @@ var (
 			return s
 		},
 	)
-
-	paramsLoggerLens = L.MakeLensRef(
-		func(p *gh.IssueParams) *logrus.Entry { return p.Logger },
-		func(p *gh.IssueParams, v *logrus.Entry) *gh.IssueParams {
-			p.Logger = v
-			return p
-		},
-	)
-
-	paramsTokenLens = L.MakeLensRef(
-		func(p *gh.IssueParams) string { return p.Token },
-		func(p *gh.IssueParams, v string) *gh.IssueParams {
-			p.Token = v
-			return p
-		},
-	)
-
-	paramsOwnerLens = L.MakeLensRef(
-		func(p *gh.IssueParams) string { return p.Owner },
-		func(p *gh.IssueParams, v string) *gh.IssueParams {
-			p.Owner = v
-			return p
-		},
-	)
-
-	paramsRepoLens = L.MakeLensRef(
-		func(p *gh.IssueParams) string { return p.Repository },
-		func(p *gh.IssueParams, v string) *gh.IssueParams {
-			p.Repository = v
-			return p
-		},
-	)
-
-	paramsOpenRouterLens = L.MakeLensRef(
-		func(p *gh.IssueParams) string { return p.OpenRouterToken },
-		func(p *gh.IssueParams, v string) *gh.IssueParams {
-			p.OpenRouterToken = v
-			return p
-		},
-	)
-
-	paramsJevModelLens = L.MakeLensRef(
-		func(p *gh.IssueParams) string { return p.JevModel },
-		func(p *gh.IssueParams, v string) *gh.IssueParams {
-			p.JevModel = v
-			return p
-		},
-	)
-
-	paramsSourcesLens = L.MakeLensRef(
-		func(p *gh.IssueParams) *datasource.Sources { return p.Sources },
-		func(p *gh.IssueParams, v *datasource.Sources) *gh.IssueParams {
-			p.Sources = v
-			return p
-		},
-	)
-
-	paramsStrainPriceLens = L.MakeLensRef(
-		func(p *gh.IssueParams) int { return p.StrainPrice },
-		func(p *gh.IssueParams, v int) *gh.IssueParams {
-			p.StrainPrice = v
-			return p
-		},
-	)
-
-	paramsPlasmidPriceLens = L.MakeLensRef(
-		func(p *gh.IssueParams) int { return p.PlasmidPrice },
-		func(p *gh.IssueParams, v int) *gh.IssueParams {
-			p.PlasmidPrice = v
-			return p
-		},
-	)
 )
 
 func toCLIExit(err error) error {
@@ -167,10 +86,9 @@ func toCLIExit(err error) error {
 
 // RunCreateIssue connects to nats and creates a GitHub issue based on
 // received order data.
-func RunCreateIssue(ctx context.Context, c *cli.Command) error {
-	return F.Pipe13(
+func RunCreateIssue(_ context.Context, c *cli.Command) error {
+	return F.Pipe12(
 		IssueSetupState{},
-		setupContextLens.Set(ctx),
 		setupCommandLens.Set(c),
 		IOE.Of[error],
 		IOE.Bind(setupLoggerLens.Set, createIssueLogger),
@@ -234,18 +152,49 @@ func createIssueSources(
 func createIssueTracker(s IssueSetupState) issue.Tracker {
 	return F.Pipe10(
 		&gh.IssueParams{},
-		paramsLoggerLens.Set(setupLoggerLens.Get(s)),
-		paramsTokenLens.Set(setupCommandLens.Get(s).String("token")),
-		paramsOwnerLens.Set(setupCommandLens.Get(s).String("owner")),
-		paramsRepoLens.Set(setupCommandLens.Get(s).String("repository")),
-		paramsOpenRouterLens.Set(
-			setupCommandLens.Get(s).String("openrouter-token"),
+		F.Pipe2(s, setupLoggerLens.Get, gh.IssueParamsLoggerLens.Set),
+		F.Pipe3(
+			s,
+			setupCommandLens.Get,
+			F.Bind2nd((*cli.Command).String, "token"),
+			gh.IssueParamsTokenLens.Set,
 		),
-		paramsJevModelLens.Set(setupCommandLens.Get(s).String("jev-model")),
-		paramsSourcesLens.Set(setupSourcesLens.Get(s)),
-		paramsStrainPriceLens.Set(setupCommandLens.Get(s).Int("strain-price")),
-		paramsPlasmidPriceLens.Set(
-			setupCommandLens.Get(s).Int("plasmid-price"),
+		F.Pipe3(
+			s,
+			setupCommandLens.Get,
+			F.Bind2nd((*cli.Command).String, "owner"),
+			gh.IssueParamsOwnerLens.Set,
+		),
+		F.Pipe3(
+			s,
+			setupCommandLens.Get,
+			F.Bind2nd((*cli.Command).String, "repository"),
+			gh.IssueParamsRepoLens.Set,
+		),
+		F.Pipe3(
+			s,
+			setupCommandLens.Get,
+			F.Bind2nd((*cli.Command).String, "openrouter-token"),
+			gh.IssueParamsOpenRouterLens.Set,
+		),
+		F.Pipe3(
+			s,
+			setupCommandLens.Get,
+			F.Bind2nd((*cli.Command).String, "jev-model"),
+			gh.IssueParamsJevModelLens.Set,
+		),
+		F.Pipe2(s, setupSourcesLens.Get, gh.IssueParamsSourcesLens.Set),
+		F.Pipe3(
+			s,
+			setupCommandLens.Get,
+			F.Bind2nd((*cli.Command).Int, "strain-price"),
+			gh.IssueParamsStrainPriceLens.Set,
+		),
+		F.Pipe3(
+			s,
+			setupCommandLens.Get,
+			F.Bind2nd((*cli.Command).Int, "plasmid-price"),
+			gh.IssueParamsPlasmidPriceLens.Set,
 		),
 		gh.NewIssueCreator,
 	)

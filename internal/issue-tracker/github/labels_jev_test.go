@@ -831,34 +831,20 @@ func TestBuildDecisionsStatePayloadAndQuestions(t *testing.T) {
 	require.Contains(t, questions, questionAxenicMedium)
 }
 
-func TestPreparePostParamsIsPureWithoutJevCall(t *testing.T) {
+func TestPrepareIssueRequestBuildsIssueRequest(t *testing.T) {
 	t.Parallel()
 
-	resp := F.Pipe1(
-		components.DecisionsResponse{},
-		respAnswersLens.Set(map[string]components.DecisionsResponseAnswers{
-			questionInstitutionType: makeChoiceAns(labelResearchInst, 0.95),
-		}),
-	)
-	fakeVal := F.Pipe1(fakeDecisionsClient{}, fakeRespLens.Set(new(resp)))
-	fakeClient := new(fakeVal)
-
-	gh := F.Pipe2(
-		githubIssue{},
-		ghLoggerLens.Set(testLogger()),
-		ghDecisionsLens.Set(DecisionsClient(fakeClient)),
-	)
 	state := F.Pipe3(
 		issueCreateState{},
 		createStateOrderLens.Set(sampleOrder()),
-		createStateDataLens.Set(&allData{}),
 		createStateBodyLens.Set(bytes.NewBufferString("rendered body")),
+		createStateLabelsLens.Set([]string{labelStrainOrder}),
 	)
 
-	params := gh.preparePostParams(state)
-	require.Equal(t, "Order ID:18776 Michael Edgar", postTitleLens.Get(*params))
-	require.Equal(t, "rendered body", postBodyLens.Get(*params))
-	require.Equal(t, 0, fakeCallsLens.Get(*fakeClient))
+	req := prepareIssueRequest(state)
+	require.Equal(t, "Order ID:18776 Michael Edgar", req.GetTitle())
+	require.Equal(t, "rendered body", req.GetBody())
+	require.Equal(t, []string{labelStrainOrder}, *req.Labels)
 }
 
 func TestResolveLabelsIsLazyUntilForced(t *testing.T) {
@@ -995,14 +981,6 @@ var (
 			return s
 		},
 	)
-
-	testParamsSourcesLens = L.MakeLens(
-		func(p *IssueParams) *datasource.Sources { return p.Sources },
-		func(p *IssueParams, v *datasource.Sources) *IssueParams {
-			p.Sources = v
-			return p
-		},
-	)
 )
 
 func testSources() *datasource.Sources {
@@ -1028,15 +1006,15 @@ func newTestIssueTracker(
 
 	params := F.Pipe9(
 		new(IssueParams),
-		issueParamsTokenLens.Set("gh-test-token"),
-		issueParamsOwnerLens.Set("dictyBase"),
-		issueParamsRepoLens.Set("Stock-Center-Orders"),
-		issueParamsOpenRouterLens.Set("ignored-when-decisions-injected"),
-		issueParamsDecisionsLens.Set(decisions),
-		issueParamsLoggerLens.Set(testLogger()),
-		issueParamsStrainPriceLens.Set(30),
-		issueParamsPlasmidPriceLens.Set(15),
-		testParamsSourcesLens.Set(testSources()),
+		IssueParamsTokenLens.Set("gh-test-token"),
+		IssueParamsOwnerLens.Set("dictyBase"),
+		IssueParamsRepoLens.Set("Stock-Center-Orders"),
+		IssueParamsOpenRouterLens.Set("ignored-when-decisions-injected"),
+		IssueParamsDecisionsLens.Set(decisions),
+		IssueParamsLoggerLens.Set(testLogger()),
+		IssueParamsStrainPriceLens.Set(30),
+		IssueParamsPlasmidPriceLens.Set(15),
+		IssueParamsSourcesLens.Set(testSources()),
 	)
 	tracker := NewIssueCreator(params)
 	gh, ok := tracker.(*githubIssue)
@@ -1177,4 +1155,24 @@ func TestCreateIssueRecoversJevFailureAndPostsOnce(t *testing.T) {
 		[]string{labelStrainOrder, labelPlasmidOrder, labelAxenicMedium},
 		*gotReq.Labels,
 	)
+}
+
+func TestIssueParamsLensesPreserveOriginalStruct(t *testing.T) {
+	t.Parallel()
+
+	orig := F.Pipe2(
+		new(IssueParams),
+		IssueParamsTokenLens.Set("orig-token"),
+		IssueParamsOwnerLens.Set("orig-owner"),
+	)
+	updated := F.Pipe2(
+		orig,
+		IssueParamsTokenLens.Set("updated-token"),
+		IssueParamsOwnerLens.Set("updated-owner"),
+	)
+
+	require.Equal(t, "orig-token", IssueParamsTokenLens.Get(orig))
+	require.Equal(t, "orig-owner", IssueParamsOwnerLens.Get(orig))
+	require.Equal(t, "updated-token", IssueParamsTokenLens.Get(updated))
+	require.Equal(t, "updated-owner", IssueParamsOwnerLens.Get(updated))
 }
