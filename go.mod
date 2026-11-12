@@ -25,6 +25,7 @@ require (
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 // indirect
+	github.com/OpenRouterTeam/go-sdk v0.9.116 // indirect
 	github.com/andybalholm/cascadia v1.3.4 // indirect
 	github.com/arangodb/go-driver v1.6.9 // indirect
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
@@ -51,6 +52,7 @@ require (
 	github.com/pdfcpu/pdfcpu v0.16.2 // indirect
 	github.com/phpdave11/gofpdf v1.4.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/spyzhov/ajson v0.9.6 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
@@ -62,4 +64,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260817212433-ac3dfec99bb1 // indirect
 )
 
-go 1.26.1
+go 1.26.10
