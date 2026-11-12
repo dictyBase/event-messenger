@@ -6,10 +6,30 @@ import (
 	"time"
 
 	A "github.com/IBM/fp-go/v2/array"
+	E "github.com/IBM/fp-go/v2/either"
+	F "github.com/IBM/fp-go/v2/function"
+	IO "github.com/IBM/fp-go/v2/io"
+	IOE "github.com/IBM/fp-go/v2/ioeither"
+	M "github.com/IBM/fp-go/v2/monoid"
+	N "github.com/IBM/fp-go/v2/number"
+	L "github.com/IBM/fp-go/v2/optics/lens"
+	O "github.com/IBM/fp-go/v2/option"
+	PR "github.com/IBM/fp-go/v2/pair"
+	P "github.com/IBM/fp-go/v2/predicate"
+	R "github.com/IBM/fp-go/v2/record"
+	S "github.com/IBM/fp-go/v2/string"
 	openrouter "github.com/OpenRouterTeam/go-sdk"
 	"github.com/OpenRouterTeam/go-sdk/models/components"
 	"github.com/OpenRouterTeam/go-sdk/models/operations"
+	mapset "github.com/deckarep/golang-set/v2"
+	arrutils "github.com/dictyBase/fp-go-loom/array"
+	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
+	predarrays "github.com/dictyBase/fp-go-loom/predicate/array"
+	predord "github.com/dictyBase/fp-go-loom/predicate/ord"
+	"github.com/dictyBase/fp-go-loom/strutils"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
+	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -55,179 +75,629 @@ type DecisionsClient interface {
 	) (*components.DecisionsResponse, error)
 }
 
-func newDecisionsClient(token string) DecisionsClient {
-	trimmed := strings.TrimSpace(token)
-	if trimmed == "" {
-		return nil
+type labelResolveState struct {
+	Client   DecisionsClient
+	Logger   *logrus.Entry
+	Model    string
+	Data     *allData
+	Order    *order.Order
+	Base     []string
+	Request  components.DecisionsRequest
+	Response *components.DecisionsResponse
+}
+
+type noulLabelSpec struct {
+	key   string
+	label string
+}
+
+var (
+	resolveClientLens = L.MakeLens(
+		func(s labelResolveState) DecisionsClient { return s.Client },
+		func(s labelResolveState, v DecisionsClient) labelResolveState {
+			s.Client = v
+			return s
+		},
+	)
+
+	resolveLoggerLens = L.MakeLens(
+		func(s labelResolveState) *logrus.Entry { return s.Logger },
+		func(s labelResolveState, v *logrus.Entry) labelResolveState {
+			s.Logger = v
+			return s
+		},
+	)
+
+	resolveModelLens = L.MakeLens(
+		func(s labelResolveState) string { return s.Model },
+		func(s labelResolveState, v string) labelResolveState {
+			s.Model = v
+			return s
+		},
+	)
+
+	resolveDataLens = L.MakeLens(
+		func(s labelResolveState) *allData { return s.Data },
+		func(s labelResolveState, v *allData) labelResolveState {
+			s.Data = v
+			return s
+		},
+	)
+
+	resolveOrderLens = L.MakeLens(
+		func(s labelResolveState) *order.Order { return s.Order },
+		func(s labelResolveState, v *order.Order) labelResolveState {
+			s.Order = v
+			return s
+		},
+	)
+
+	resolveBaseLens = L.MakeLens(
+		func(s labelResolveState) []string { return s.Base },
+		func(s labelResolveState, v []string) labelResolveState {
+			s.Base = v
+			return s
+		},
+	)
+
+	resolveReqLens = L.MakeLens(
+		func(s labelResolveState) components.DecisionsRequest { return s.Request },
+		func(s labelResolveState, v components.DecisionsRequest) labelResolveState {
+			s.Request = v
+			return s
+		},
+	)
+
+	resolveRespLens = L.MakeLens(
+		func(s labelResolveState) *components.DecisionsResponse { return s.Response },
+		func(s labelResolveState, v *components.DecisionsResponse) labelResolveState {
+			s.Response = v
+			return s
+		},
+	)
+
+	decReqModelLens = L.MakeLens(
+		func(r components.DecisionsRequest) string { return r.Model },
+		func(r components.DecisionsRequest, v string) components.DecisionsRequest {
+			r.Model = v
+			return r
+		},
+	)
+
+	decReqStateLens = L.MakeLens(
+		func(r components.DecisionsRequest) components.State { return r.State },
+		func(r components.DecisionsRequest, v components.State) components.DecisionsRequest {
+			r.State = v
+			return r
+		},
+	)
+
+	decReqQuestionsLens = L.MakeLens(
+		func(r components.DecisionsRequest) map[string]components.Questions { return r.Questions },
+		func(
+			r components.DecisionsRequest,
+			v map[string]components.Questions,
+		) components.DecisionsRequest {
+			r.Questions = v
+			return r
+		},
+	)
+
+	choiceQCriteriaLens = L.MakeLens(
+		func(q components.DecisionsChoiceQuestion) map[string]*components.Criteria {
+			return q.Criteria
+		},
+		func(
+			q components.DecisionsChoiceQuestion,
+			v map[string]*components.Criteria,
+		) components.DecisionsChoiceQuestion {
+			q.Criteria = v
+			return q
+		},
+	)
+
+	choiceQInstructionsLens = L.MakeLens(
+		func(
+			q components.DecisionsChoiceQuestion,
+		) components.DecisionsChoiceQuestionInstructions {
+			return q.Instructions
+		},
+		func(
+			q components.DecisionsChoiceQuestion,
+			v components.DecisionsChoiceQuestionInstructions,
+		) components.DecisionsChoiceQuestion {
+			q.Instructions = v
+			return q
+		},
+	)
+
+	choiceQTypeLens = L.MakeLens(
+		func(q components.DecisionsChoiceQuestion) components.DecisionsChoiceQuestionType {
+			return q.Type
+		},
+		func(
+			q components.DecisionsChoiceQuestion,
+			v components.DecisionsChoiceQuestionType,
+		) components.DecisionsChoiceQuestion {
+			q.Type = v
+			return q
+		},
+	)
+
+	noulQCriteriaLens = L.MakeLens(
+		func(q components.DecisionsNoulQuestion) *components.DecisionsNoulQuestionCriteria {
+			return q.Criteria
+		},
+		func(
+			q components.DecisionsNoulQuestion,
+			v *components.DecisionsNoulQuestionCriteria,
+		) components.DecisionsNoulQuestion {
+			q.Criteria = v
+			return q
+		},
+	)
+
+	noulQInstructionsLens = L.MakeLens(
+		func(
+			q components.DecisionsNoulQuestion,
+		) components.DecisionsNoulQuestionInstructions {
+			return q.Instructions
+		},
+		func(
+			q components.DecisionsNoulQuestion,
+			v components.DecisionsNoulQuestionInstructions,
+		) components.DecisionsNoulQuestion {
+			q.Instructions = v
+			return q
+		},
+	)
+
+	noulQTypeLens = L.MakeLens(
+		func(q components.DecisionsNoulQuestion) components.DecisionsNoulQuestionType {
+			return q.Type
+		},
+		func(
+			q components.DecisionsNoulQuestion,
+			v components.DecisionsNoulQuestionType,
+		) components.DecisionsNoulQuestion {
+			q.Type = v
+			return q
+		},
+	)
+
+	noulCriteriaTrueLens = L.MakeLens(
+		func(c components.DecisionsNoulQuestionCriteria) components.True { return c.True },
+		func(
+			c components.DecisionsNoulQuestionCriteria,
+			v components.True,
+		) components.DecisionsNoulQuestionCriteria {
+			c.True = v
+			return c
+		},
+	)
+
+	noulCriteriaFalseLens = L.MakeLens(
+		func(c components.DecisionsNoulQuestionCriteria) components.False { return c.False },
+		func(
+			c components.DecisionsNoulQuestionCriteria,
+			v components.False,
+		) components.DecisionsNoulQuestionCriteria {
+			c.False = v
+			return c
+		},
+	)
+
+	noulSpecKeyLens = L.MakeLens(
+		func(s noulLabelSpec) string { return s.key },
+		func(s noulLabelSpec, v string) noulLabelSpec {
+			s.key = v
+			return s
+		},
+	)
+
+	noulSpecLabelLens = L.MakeLens(
+		func(s noulLabelSpec) string { return s.label },
+		func(s noulLabelSpec, v string) noulLabelSpec {
+			s.label = v
+			return s
+		},
+	)
+
+	ansChoiceLens = L.MakeLens(
+		func(a components.DecisionsResponseAnswers) *components.DecisionsChoiceAnswer {
+			return a.DecisionsChoiceAnswer
+		},
+		func(
+			a components.DecisionsResponseAnswers,
+			v *components.DecisionsChoiceAnswer,
+		) components.DecisionsResponseAnswers {
+			a.DecisionsChoiceAnswer = v
+			return a
+		},
+	)
+
+	ansNoulLens = L.MakeLens(
+		func(a components.DecisionsResponseAnswers) *components.DecisionsNoulAnswer {
+			return a.DecisionsNoulAnswer
+		},
+		func(
+			a components.DecisionsResponseAnswers,
+			v *components.DecisionsNoulAnswer,
+		) components.DecisionsResponseAnswers {
+			a.DecisionsNoulAnswer = v
+			return a
+		},
+	)
+
+	isNonNilAllData     = P.IsNonZero[*allData]()
+	isNonNilStrainData  = P.IsNonZero[*strainData]()
+	isNonNilPlasmidData = P.IsNonZero[*plasmidData]()
+	isNonNilLogger      = P.IsNonZero[*logrus.Entry]()
+	isNonNilSDK         = P.IsNonZero[*openrouter.OpenRouter]()
+	isNonNilAlpha       = P.IsNonZero[*openrouter.Alpha]()
+	isNonNilDecisionsP  = P.IsNonZero[*openrouter.Decisions]()
+	isNonNilResp        = P.IsNonZero[*components.DecisionsResponse]()
+	isNonNilChoiceAns   = P.IsNonZero[*components.DecisionsChoiceAnswer]()
+	isNonNilNoulAns     = P.IsNonZero[*components.DecisionsNoulAnswer]()
+	isNonNilFloatPtr    = P.IsNonZero[*float64]()
+
+	meetsThreshold = P.Not(N.LessThan(jevConfidenceThreshold))
+
+	isValidChoiceStr = F.Pipe1(
+		S.IsNonEmpty,
+		P.And(predord.NotEqualStr(choiceNone)),
+	)
+
+	containsAxenic = F.Flow2(strings.ToLower, S.Includes("axenic"))
+	containsGWDI   = F.Flow2(strings.ToUpper, S.Includes("GWDI"))
+	containsBact   = F.Flow2(
+		strings.ToLower,
+		F.Pipe2(
+			S.Includes("bacterial stock"),
+			P.Or(S.Includes("k. aerogenes")),
+			P.Or(S.Includes("klebsiella")),
+		),
+	)
+	containsGoldenBraid = F.Flow2(
+		strings.ToLower,
+		F.Pipe1(
+			S.Includes("pdgb"),
+			P.Or(S.Includes("goldenbraid")),
+		),
+	)
+
+	rowHasAxenic      = A.Any(containsAxenic)
+	rowHasGWDI        = A.Any(containsGWDI)
+	rowHasBact        = A.Any(containsBact)
+	rowHasGoldenBraid = A.Any(containsGoldenBraid)
+
+	rowsHaveAxenic      = A.Any(rowHasAxenic)
+	rowsHaveGWDI        = A.Any(rowHasGWDI)
+	rowsHaveBact        = A.Any(rowHasBact)
+	rowsHaveGoldenBraid = A.Any(rowHasGoldenBraid)
+
+	hasClientState = F.Pipe1(isNonNilDecisions, P.ContraMap(resolveClientLens.Get))
+	hasLoggerState = F.Pipe1(isNonNilLogger, P.ContraMap(resolveLoggerLens.Get))
+
+	baseFromState = F.Flow2(resolveBaseLens.Get, IOE.Of[error, []string])
+
+	baseOrJevFold = P.Fold(baseFromState, jevLabelPipeline)
+
+	jevOrBaseBranch = F.Pipe1(hasClientState, baseOrJevFold)
+
+	choiceQuestionKeys = []string{
+		questionInstitutionType,
+		questionPaymentLabel,
+		questionLocationLabel,
 	}
 
-	sdk := openrouter.New(openrouter.WithSecurity(trimmed))
-	if sdk == nil || sdk.Alpha == nil || sdk.Alpha.Decisions == nil {
-		return nil
+	noulQuestionSpecs = []noulLabelSpec{
+		F.Pipe2(
+			noulLabelSpec{},
+			noulSpecKeyLens.Set(questionIsMSI),
+			noulSpecLabelLens.Set(labelMSI),
+		),
+		F.Pipe2(
+			noulLabelSpec{},
+			noulSpecKeyLens.Set(questionBacterialFood),
+			noulSpecLabelLens.Set(labelBacterialFood),
+		),
+		F.Pipe2(
+			noulLabelSpec{},
+			noulSpecKeyLens.Set(questionGoldenBraid),
+			noulSpecLabelLens.Set(labelGoldenBraid),
+		),
+		F.Pipe2(
+			noulLabelSpec{},
+			noulSpecKeyLens.Set(questionGWDI),
+			noulSpecLabelLens.Set(labelGWDI),
+		),
+		F.Pipe2(
+			noulLabelSpec{},
+			noulSpecKeyLens.Set(questionAxenicMedium),
+			noulSpecLabelLens.Set(labelAxenicMedium),
+		),
 	}
+)
 
-	return sdk.Alpha.Decisions
+func sdkAlpha(sdk *openrouter.OpenRouter) O.Option[*openrouter.Alpha] {
+	return F.Pipe1(sdk.Alpha, O.FromPredicate(isNonNilAlpha))
+}
+
+func alphaDecisions(alpha *openrouter.Alpha) O.Option[DecisionsClient] {
+	return F.Pipe2(
+		alpha.Decisions,
+		O.FromPredicate(isNonNilDecisionsP),
+		O.Map(func(d *openrouter.Decisions) DecisionsClient { return d }),
+	)
 }
 
 func resolveJevModel(model string) string {
-	trimmed := strings.TrimSpace(model)
-	if trimmed == "" {
-		return defaultJevModel
-	}
-
-	return trimmed
+	return F.Pipe3(
+		model,
+		strings.TrimSpace,
+		O.FromPredicate(S.IsNonEmpty),
+		O.GetOrElse(F.Constant(defaultJevModel)),
+	)
 }
 
 func (gh *githubIssue) resolveLabels(all *allData, ord *order.Order) []string {
 	base := deterministicLabels(all)
-	if gh.decisions == nil {
-		return base
-	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), jevRequestTimeout)
-	defer cancel()
-
-	req := components.DecisionsRequest{
-		Model:     resolveJevModel(gh.jevModel),
-		State:     components.CreateStateMapOfAny(buildDecisionsState(all, ord)),
-		Questions: buildDecisionsQuestions(),
-	}
-
-	resp, err := gh.decisions.Create(ctx, req)
-	if err != nil {
-		if gh.logger != nil {
-			gh.logger.Warnf("openrouter jev label classification failed: %v", err)
-		}
-
-		return base
-	}
-
-	return deduplicateLabels(A.ArrayConcatAll(base, extractJevLabels(resp)))
+	return F.Pipe9(
+		labelResolveState{},
+		resolveClientLens.Set(ghDecisionsLens.Get(*gh)),
+		resolveLoggerLens.Set(ghLoggerLens.Get(*gh)),
+		resolveModelLens.Set(resolveJevModel(ghJevModelLens.Get(*gh))),
+		resolveDataLens.Set(all),
+		resolveOrderLens.Set(ord),
+		resolveBaseLens.Set(base),
+		jevOrBaseBranch,
+		ioeutils.ToEither[error, []string],
+		E.GetOrElse(F.Constant1[error](base)),
+	)
 }
 
-func deterministicLabels(all *allData) []string {
-	if all == nil {
-		return nil
+func buildStateRequest(s labelResolveState) components.DecisionsRequest {
+	stateMap := buildDecisionsState(
+		resolveDataLens.Get(s),
+		resolveOrderLens.Get(s),
+	)
+
+	return F.Pipe3(
+		components.DecisionsRequest{},
+		decReqModelLens.Set(resolveModelLens.Get(s)),
+		decReqStateLens.Set(components.CreateStateMapOfAny(stateMap)),
+		decReqQuestionsLens.Set(buildDecisionsQuestions()),
+	)
+}
+
+func executeDecisionsCall(
+	s labelResolveState,
+) IOE.IOEither[error, *components.DecisionsResponse] {
+	client := resolveClientLens.Get(s)
+	req := resolveReqLens.Get(s)
+
+	return IOE.TryCatchError(func() (*components.DecisionsResponse, error) {
+		ctx, cancel := context.WithTimeout(
+			context.Background(),
+			jevRequestTimeout,
+		)
+		defer cancel()
+
+		return client.Create(ctx, req)
+	})
+}
+
+func logJevWarning(s labelResolveState, err error) IO.IO[IO.Void] {
+	warn := func(st labelResolveState) IO.IO[IO.Void] {
+		return IO.FromImpure(func() {
+			resolveLoggerLens.Get(st).Warnf(
+				"openrouter jev label classification failed: %v",
+				err,
+			)
+		})
 	}
 
-	var labels []string
+	return F.Pipe2(
+		s,
+		O.FromPredicate(hasLoggerState),
+		O.Fold(F.Constant(IO.Of(IO.Void{})), warn),
+	)
+}
 
-	if all.strainData != nil && len(all.strains) > 0 {
-		labels = append(labels, labelStrainOrder)
+func fallbackBaseLabels(
+	s labelResolveState,
+) func(error) IOE.IOEither[error, []string] {
+	base := resolveBaseLens.Get(s)
+
+	return func(err error) IOE.IOEither[error, []string] {
+		return F.Pipe2(
+			logJevWarning(s, err),
+			IOE.FromIO[error],
+			IOE.MapTo[error, IO.Void](base),
+		)
 	}
+}
 
-	if all.plasmidData != nil && len(all.plasmids) > 0 {
-		labels = append(labels, labelPlasmidOrder)
-	}
+func jevLabelPipeline(
+	s labelResolveState,
+) IOE.IOEither[error, []string] {
+	return F.Pipe5(
+		s,
+		IOE.Of[error],
+		IOE.Let[error](resolveReqLens.Set, buildStateRequest),
+		IOE.Bind(resolveRespLens.Set, executeDecisionsCall),
+		IOE.Map[error](func(st labelResolveState) []string {
+			return F.Pipe6(
+				st,
+				resolveRespLens.Get,
+				O.FromPredicate(isNonNilResp),
+				O.Map(
+					func(r *components.DecisionsResponse) map[string]components.DecisionsResponseAnswers {
+						return r.GetAnswers()
+					},
+				),
+				O.Fold(
+					F.Constant([]string(nil)),
+					extractAnswersLabels,
+				),
+				func(jevLabels []string) []string {
+					return A.ArrayConcatAll(resolveBaseLens.Get(st), jevLabels)
+				},
+				deduplicateLabels,
+			)
+		}),
+		IOE.OrElse(fallbackBaseLabels(s)),
+	)
+}
 
-	if hasAxenicStorage(all) {
-		labels = append(labels, labelAxenicMedium)
-	}
+func optStrainData(all *allData) O.Option[*strainData] {
+	return F.Pipe3(
+		all,
+		O.FromPredicate(isNonNilAllData),
+		O.Map(func(d *allData) *strainData { return allStrainDataLens.Get(*d) }),
+		O.Chain(O.FromPredicate(isNonNilStrainData)),
+	)
+}
 
-	if hasGWDIStrains(all) {
-		labels = append(labels, labelGWDI)
-	}
+func optPlasmidData(all *allData) O.Option[*plasmidData] {
+	return F.Pipe3(
+		all,
+		O.FromPredicate(isNonNilAllData),
+		O.Map(func(d *allData) *plasmidData { return allPlasmidDataLens.Get(*d) }),
+		O.Chain(O.FromPredicate(isNonNilPlasmidData)),
+	)
+}
 
-	if hasBacterialFoodSource(all) {
-		labels = append(labels, labelBacterialFood)
-	}
+func strainRowsCombined(sd *strainData) [][]string {
+	return A.ArrayConcatAll(
+		strainDataInfoLens.Get(*sd),
+		strainDataInvsLens.Get(*sd),
+	)
+}
 
-	if hasGoldenBraidPlasmids(all) {
-		labels = append(labels, labelGoldenBraid)
-	}
+func hasStrains(all *allData) bool {
+	return F.Pipe3(
+		all,
+		optStrainData,
+		O.Map(func(sd *strainData) []*stock.Strain {
+			return strainDataItemsLens.Get(*sd)
+		}),
+		O.Fold(F.Constant(false), predarrays.IsNonEmpty[*stock.Strain]()),
+	)
+}
 
-	return deduplicateLabels(labels)
+func hasPlasmids(all *allData) bool {
+	return F.Pipe3(
+		all,
+		optPlasmidData,
+		O.Map(func(pd *plasmidData) []*stock.Plasmid {
+			return plasmidDataItemsLens.Get(*pd)
+		}),
+		O.Fold(F.Constant(false), predarrays.IsNonEmpty[*stock.Plasmid]()),
+	)
 }
 
 func hasAxenicStorage(all *allData) bool {
-	if all.strainData == nil {
-		return false
-	}
-
-	for _, row := range all.strainData.invs {
-		for _, cell := range row {
-			lower := strings.ToLower(cell)
-			if strings.Contains(lower, "axenic") {
-				return true
-			}
-		}
-	}
-
-	return false
+	return F.Pipe3(
+		all,
+		optStrainData,
+		O.Map(func(sd *strainData) [][]string {
+			return strainDataInvsLens.Get(*sd)
+		}),
+		O.Fold(F.Constant(false), rowsHaveAxenic),
+	)
 }
 
 func hasGWDIStrains(all *allData) bool {
-	if all.strainData == nil {
-		return false
-	}
-
-	for _, row := range A.ArrayConcatAll(all.info, all.strainData.invs) {
-		for _, cell := range row {
-			if strings.Contains(strings.ToUpper(cell), "GWDI") {
-				return true
-			}
-		}
-	}
-
-	return false
+	return F.Pipe3(
+		all,
+		optStrainData,
+		O.Map(strainRowsCombined),
+		O.Fold(F.Constant(false), rowsHaveGWDI),
+	)
 }
 
 func hasBacterialFoodSource(all *allData) bool {
-	if all.strainData == nil {
-		return false
-	}
-
-	for _, row := range A.ArrayConcatAll(all.info, all.strainData.invs) {
-		for _, cell := range row {
-			lower := strings.ToLower(cell)
-			if strings.Contains(lower, "bacterial stock") ||
-				strings.Contains(lower, "k. aerogenes") ||
-				strings.Contains(lower, "klebsiella") {
-				return true
-			}
-		}
-	}
-
-	return false
+	return F.Pipe3(
+		all,
+		optStrainData,
+		O.Map(strainRowsCombined),
+		O.Fold(F.Constant(false), rowsHaveBact),
+	)
 }
 
 func hasGoldenBraidPlasmids(all *allData) bool {
-	if all.plasmidData == nil {
-		return false
-	}
+	return F.Pipe3(
+		all,
+		optPlasmidData,
+		O.Map(func(pd *plasmidData) [][]string {
+			return plasmidDataInvsLens.Get(*pd)
+		}),
+		O.Fold(F.Constant(false), rowsHaveGoldenBraid),
+	)
+}
 
-	for _, row := range all.plasmidData.invs {
-		for _, cell := range row {
-			lower := strings.ToLower(cell)
-			if strings.Contains(lower, "pdgb") ||
-				strings.Contains(lower, "goldenbraid") {
-				return true
-			}
-		}
-	}
+func labelIf(pred func(*allData) bool, label string) func(*allData) O.Option[string] {
+	return F.Flow2(
+		O.FromPredicate(pred),
+		O.Map(F.Constant1[*allData](label)),
+	)
+}
 
-	return false
+func deterministicLabels(all *allData) []string {
+	return F.Pipe2(
+		[]O.Option[string]{
+			F.Pipe1(all, labelIf(hasStrains, labelStrainOrder)),
+			F.Pipe1(all, labelIf(hasPlasmids, labelPlasmidOrder)),
+			F.Pipe1(all, labelIf(hasAxenicStorage, labelAxenicMedium)),
+			F.Pipe1(all, labelIf(hasGWDIStrains, labelGWDI)),
+			F.Pipe1(all, labelIf(hasBacterialFoodSource, labelBacterialFood)),
+			F.Pipe1(all, labelIf(hasGoldenBraidPlasmids, labelGoldenBraid)),
+		},
+		arrutils.Compact[string],
+		deduplicateLabels,
+	)
+}
+
+func extractStrainInfoRows(all *allData) [][]string {
+	return F.Pipe3(
+		all,
+		optStrainData,
+		O.Map(func(sd *strainData) [][]string {
+			return strainDataInfoLens.Get(*sd)
+		}),
+		O.GetOrElse(F.Constant([][]string(nil))),
+	)
+}
+
+func extractStrainInvRows(all *allData) [][]string {
+	return F.Pipe3(
+		all,
+		optStrainData,
+		O.Map(func(sd *strainData) [][]string {
+			return strainDataInvsLens.Get(*sd)
+		}),
+		O.GetOrElse(F.Constant([][]string(nil))),
+	)
+}
+
+func extractPlasmidInvRows(all *allData) [][]string {
+	return F.Pipe3(
+		all,
+		optPlasmidData,
+		O.Map(func(pd *plasmidData) [][]string {
+			return plasmidDataInvsLens.Get(*pd)
+		}),
+		O.GetOrElse(F.Constant([][]string(nil))),
+	)
 }
 
 func buildDecisionsState(all *allData, ord *order.Order) map[string]any {
 	attr := ord.GetData().GetAttributes()
 	shipper := attr.GetConsumerInfo()
 	payer := attr.GetPayerInfo()
-
-	var (
-		strainRows  [][]string
-		strainInvs  [][]string
-		plasmidInvs [][]string
-	)
-
-	if all != nil && all.strainData != nil {
-		strainRows = all.info
-		strainInvs = all.strainData.invs
-	}
-
-	if all != nil && all.plasmidData != nil {
-		plasmidInvs = all.plasmidData.invs
-	}
 
 	return map[string]any{
 		"order_id":           ord.GetData().GetId(),
@@ -256,9 +726,9 @@ func buildDecisionsState(all *allData, ord *order.Order) map[string]any {
 			"state":        payer.GetState(),
 			"country":      payer.GetCountry(),
 		},
-		"strain_info":       strainRows,
-		"strain_inventory":  strainInvs,
-		"plasmid_inventory": plasmidInvs,
+		"strain_info":       extractStrainInfoRows(all),
+		"strain_inventory":  extractStrainInvRows(all),
+		"plasmid_inventory": extractPlasmidInvRows(all),
 	}
 }
 
@@ -315,35 +785,39 @@ func institutionCriteriaMap() map[string]string {
 }
 
 func paymentCriteriaMap() map[string]string {
-	out := make(map[string]string)
-	out[labelCreditCard] = "Credit card or procard payment."
-	out[labelPurchaseOrder] = "Purchase order (PO) payment."
-	out[labelWireTransfer] = "Wire transfer or bank transfer payment."
-	out[labelChartString] = "Northwestern University internal chart string payment."
-	out[labelWaiverNoPay] = "Fee waiver requested or no payment."
-	out[labelNoCharge] = "Free of charge or replacement order at no charge."
-	out[choiceNone] = "Payment method is unspecified."
+	return R.FromEntries([]PR.Pair[string, string]{
+		PR.MakePair(labelCreditCard, "Credit card or procard payment."),
+		PR.MakePair(labelPurchaseOrder, "Purchase order (PO) payment."),
+		PR.MakePair(labelWireTransfer, "Wire transfer or bank transfer payment."),
+		PR.MakePair(
+			labelChartString,
+			"Northwestern University internal chart string payment.",
+		),
+		PR.MakePair(labelWaiverNoPay, "Fee waiver requested or no payment."),
+		PR.MakePair(
+			labelNoCharge,
+			"Free of charge or replacement order at no charge.",
+		),
+		PR.MakePair(choiceNone, "Payment method is unspecified."),
+	})
+}
 
-	return out
+func toCriteriaPtr(desc string) *components.Criteria {
+	return new(components.CreateCriteriaStr(desc))
 }
 
 func choiceQuestion(
 	instructions string,
 	options map[string]string,
 ) components.Questions {
-	criteria := make(map[string]*components.Criteria, len(options))
-	for label, desc := range options {
-		criteria[label] = new(components.CreateCriteriaStr(desc))
-	}
+	inst := components.CreateDecisionsChoiceQuestionInstructionsStr(instructions)
 
-	return components.CreateQuestionsChoice(
-		components.DecisionsChoiceQuestion{
-			Criteria: criteria,
-			Instructions: components.CreateDecisionsChoiceQuestionInstructionsStr(
-				instructions,
-			),
-			Type: components.DecisionsChoiceQuestionTypeChoice,
-		},
+	return F.Pipe4(
+		components.DecisionsChoiceQuestion{},
+		choiceQCriteriaLens.Set(F.Pipe1(options, R.Map[string](toCriteriaPtr))),
+		choiceQInstructionsLens.Set(inst),
+		choiceQTypeLens.Set(components.DecisionsChoiceQuestionTypeChoice),
+		components.CreateQuestionsChoice,
 	)
 }
 
@@ -352,118 +826,154 @@ func noulQuestion(
 	trueDesc string,
 	falseDesc string,
 ) components.Questions {
-	return components.CreateQuestionsNoul(
-		components.DecisionsNoulQuestion{
-			Criteria: &components.DecisionsNoulQuestionCriteria{
-				True:  components.CreateTrueStr(trueDesc),
-				False: components.CreateFalseStr(falseDesc),
-			},
-			Instructions: components.CreateDecisionsNoulQuestionInstructionsStr(
-				instructions,
-			),
-			Type: components.DecisionsNoulQuestionTypeNoul,
-		},
+	crit := F.Pipe2(
+		components.DecisionsNoulQuestionCriteria{},
+		noulCriteriaTrueLens.Set(components.CreateTrueStr(trueDesc)),
+		noulCriteriaFalseLens.Set(components.CreateFalseStr(falseDesc)),
+	)
+	inst := components.CreateDecisionsNoulQuestionInstructionsStr(instructions)
+
+	return F.Pipe4(
+		components.DecisionsNoulQuestion{},
+		noulQCriteriaLens.Set(new(crit)),
+		noulQInstructionsLens.Set(inst),
+		noulQTypeLens.Set(components.DecisionsNoulQuestionTypeNoul),
+		components.CreateQuestionsNoul,
 	)
 }
 
-func extractJevLabels(resp *components.DecisionsResponse) []string {
-	if resp == nil {
-		return nil
-	}
+func choiceConfidenceScore(ans *components.DecisionsChoiceAnswer) float64 {
+	choice := strings.TrimSpace(ans.GetChoice())
+	probs := ans.GetProbabilities()
 
-	answers := resp.GetAnswers()
-	if len(answers) == 0 {
-		return nil
-	}
-
-	var out []string
-
-	for _, qKey := range []string{
-		questionInstitutionType,
-		questionPaymentLabel,
-		questionLocationLabel,
-	} {
-		if label := extractChoiceLabel(answers[qKey]); label != "" {
-			out = append(out, label)
-		}
-	}
-
-	noulMappings := []struct {
-		key   string
-		label string
-	}{
-		{key: questionIsMSI, label: labelMSI},
-		{key: questionBacterialFood, label: labelBacterialFood},
-		{key: questionGoldenBraid, label: labelGoldenBraid},
-		{key: questionGWDI, label: labelGWDI},
-		{key: questionAxenicMedium, label: labelAxenicMedium},
-	}
-
-	for _, m := range noulMappings {
-		if isHighConfidenceNoul(answers[m.key]) {
-			out = append(out, m.label)
-		}
-	}
-
-	return out
+	return F.Pipe3(
+		ans.GetConfidence(),
+		O.FromPredicate(isNonNilFloatPtr),
+		O.Map(func(v *float64) float64 { return *v }),
+		O.GetOrElse(func() float64 {
+			return F.Pipe2(
+				probs,
+				R.Lookup[float64](choice),
+				O.GetOrElse(F.Constant(0.0)),
+			)
+		}),
+	)
 }
 
-func extractChoiceLabel(ans components.DecisionsResponseAnswers) string {
-	if ans.DecisionsChoiceAnswer == nil {
-		return ""
-	}
+func isConfidentChoiceAns(ans *components.DecisionsChoiceAnswer) bool {
+	return F.Pipe2(
+		ans,
+		choiceConfidenceScore,
+		meetsThreshold,
+	)
+}
 
-	choice := strings.TrimSpace(ans.DecisionsChoiceAnswer.GetChoice())
-	if choice == "" || choice == choiceNone {
-		return ""
-	}
+func extractChoiceOption(
+	ans components.DecisionsResponseAnswers,
+) O.Option[string] {
+	return F.Pipe5(
+		ans,
+		ansChoiceLens.Get,
+		O.FromPredicate(isNonNilChoiceAns),
+		O.Chain(O.FromPredicate(isConfidentChoiceAns)),
+		O.Map(func(a *components.DecisionsChoiceAnswer) string {
+			return strings.TrimSpace(a.GetChoice())
+		}),
+		O.Chain(O.FromPredicate(isValidChoiceStr)),
+	)
+}
 
-	conf := ans.DecisionsChoiceAnswer.GetConfidence()
-	if conf != nil && *conf < jevConfidenceThreshold {
-		return ""
-	}
-
-	if conf == nil {
-		probs := ans.DecisionsChoiceAnswer.GetProbabilities()
-		if probs[choice] < jevConfidenceThreshold {
-			return ""
-		}
-	}
-
-	return choice
+func lookupChoiceLabel(
+	answers map[string]components.DecisionsResponseAnswers,
+	key string,
+) O.Option[string] {
+	return F.Pipe2(
+		answers,
+		R.Lookup[components.DecisionsResponseAnswers](key),
+		O.Chain(extractChoiceOption),
+	)
 }
 
 func isHighConfidenceNoul(ans components.DecisionsResponseAnswers) bool {
-	if ans.DecisionsNoulAnswer == nil {
-		return false
-	}
+	return F.Pipe3(
+		ans,
+		ansNoulLens.Get,
+		O.FromPredicate(isNonNilNoulAns),
+		O.Fold(
+			F.Constant(false),
+			F.Flow2(
+				func(a *components.DecisionsNoulAnswer) float64 {
+					return a.GetNoul()
+				},
+				meetsThreshold,
+			),
+		),
+	)
+}
 
-	return ans.DecisionsNoulAnswer.GetNoul() >= jevConfidenceThreshold
+func lookupNoulLabel(
+	answers map[string]components.DecisionsResponseAnswers,
+	spec noulLabelSpec,
+) O.Option[string] {
+	return F.Pipe3(
+		answers,
+		R.Lookup[components.DecisionsResponseAnswers](noulSpecKeyLens.Get(spec)),
+		O.Chain(O.FromPredicate(isHighConfidenceNoul)),
+		O.Map(
+			F.Constant1[components.DecisionsResponseAnswers](
+				noulSpecLabelLens.Get(spec),
+			),
+		),
+	)
+}
+
+func extractAnswersLabels(
+	answers map[string]components.DecisionsResponseAnswers,
+) []string {
+	choiceLabels := F.Pipe2(
+		choiceQuestionKeys,
+		A.Map(F.Bind1st(lookupChoiceLabel, answers)),
+		arrutils.Compact[string],
+	)
+	noulLabels := F.Pipe2(
+		noulQuestionSpecs,
+		A.Map(F.Bind1st(lookupNoulLabel, answers)),
+		arrutils.Compact[string],
+	)
+
+	return A.ArrayConcatAll(choiceLabels, noulLabels)
 }
 
 func deduplicateLabels(labels []string) []string {
-	seen := make(map[string]struct{}, len(labels))
-	out := make([]string, 0, len(labels))
-
-	for _, label := range labels {
-		trimmed := strings.TrimSpace(label)
-		if trimmed == "" {
-			continue
-		}
-
-		if _, exists := seen[trimmed]; exists {
-			continue
-		}
-
-		seen[trimmed] = struct{}{}
-		out = append(out, trimmed)
+	seen := mapset.NewThreadUnsafeSet[string]()
+	isFreshLabel := func(label string) bool {
+		return seen.Add(label)
 	}
 
-	return out
+	return F.Pipe3(
+		labels,
+		A.Map(strings.TrimSpace),
+		A.Filter(S.IsNonEmpty),
+		A.Filter(isFreshLabel),
+	)
+}
+
+func formatUSStateDescription(entry PR.Pair[string, string]) PR.Pair[string, string] {
+	code := PR.Head(entry)
+	stateName := PR.Tail(entry)
+	desc := strutils.JoinStrings(
+		"US shipping address in ",
+		stateName,
+		" ",
+		strutils.Parens(code),
+		".",
+	)
+
+	return PR.MakePair(code, desc)
 }
 
 func locationCriteriaMap() map[string]string {
-	criteria := map[string]string{
+	intl := map[string]string{
 		"Washington D.C":                        "US shipping address in Washington, D.C.",
 		"Canada":                                "Shipping address in Canada.",
 		"Germany":                               "Shipping address in Germany.",
@@ -501,11 +1011,17 @@ func locationCriteriaMap() map[string]string {
 		choiceNone:                              "Location does not match any listed US state or country.",
 	}
 
-	for code, stateName := range usStateLabels() {
-		criteria[code] = "US shipping address in " + stateName + " (" + code + ")."
-	}
+	states := F.Pipe3(
+		usStateLabels(),
+		R.ToEntries[string, string],
+		A.Map(formatUSStateDescription),
+		R.FromEntries[string, string],
+	)
 
-	return criteria
+	return F.Pipe1(
+		[]map[string]string{states, intl},
+		M.ConcatAll(R.UnionLastMonoid[string, string]()),
+	)
 }
 
 func usStateLabels() map[string]string {
