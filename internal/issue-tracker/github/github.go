@@ -11,10 +11,12 @@ import (
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	L "github.com/IBM/fp-go/v2/optics/lens"
 	P "github.com/IBM/fp-go/v2/predicate"
+	S "github.com/IBM/fp-go/v2/string"
 	"github.com/dictyBase/event-messenger/internal/datasource"
 	issue "github.com/dictyBase/event-messenger/internal/issue-tracker"
 	"github.com/dictyBase/event-messenger/internal/template"
 	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
+	"github.com/dictyBase/fp-go-loom/strutils"
 	"github.com/dictyBase/go-genproto/dictybaseapis/order"
 	"github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/google/go-github/v32/github"
@@ -39,16 +41,15 @@ type plasmidData struct {
 }
 
 type issueCreateState struct {
-	Order  *order.Order
-	Data   *allData
-	Body   *bytes.Buffer
-	Labels []string
-	Params *postIssueParams
+	Order   *order.Order
+	Data    *allData
+	Body    *bytes.Buffer
+	Labels  []string
+	Request *github.IssueRequest
 }
 
 // githubIssue includes all of the data needed to create an issue.
 type githubIssue struct {
-	token      string
 	owner      string
 	repository string
 	client     *github.Client
@@ -74,14 +75,8 @@ type IssueParams struct {
 	*datasource.Sources
 }
 
-type postIssueParams struct {
-	title  string
-	body   string
-	labels []string
-}
-
 var (
-	issueParamsTokenLens = L.MakeLens(
+	IssueParamsTokenLens = L.MakeLensRef(
 		func(p *IssueParams) string { return p.Token },
 		func(p *IssueParams, v string) *IssueParams {
 			p.Token = v
@@ -89,7 +84,7 @@ var (
 		},
 	)
 
-	issueParamsOwnerLens = L.MakeLens(
+	IssueParamsOwnerLens = L.MakeLensRef(
 		func(p *IssueParams) string { return p.Owner },
 		func(p *IssueParams, v string) *IssueParams {
 			p.Owner = v
@@ -97,7 +92,7 @@ var (
 		},
 	)
 
-	issueParamsRepoLens = L.MakeLens(
+	IssueParamsRepoLens = L.MakeLensRef(
 		func(p *IssueParams) string { return p.Repository },
 		func(p *IssueParams, v string) *IssueParams {
 			p.Repository = v
@@ -105,7 +100,7 @@ var (
 		},
 	)
 
-	issueParamsOpenRouterLens = L.MakeLens(
+	IssueParamsOpenRouterLens = L.MakeLensRef(
 		func(p *IssueParams) string { return p.OpenRouterToken },
 		func(p *IssueParams, v string) *IssueParams {
 			p.OpenRouterToken = v
@@ -113,7 +108,7 @@ var (
 		},
 	)
 
-	issueParamsJevModelLens = L.MakeLens(
+	IssueParamsJevModelLens = L.MakeLensRef(
 		func(p *IssueParams) string { return p.JevModel },
 		func(p *IssueParams, v string) *IssueParams {
 			p.JevModel = v
@@ -121,7 +116,7 @@ var (
 		},
 	)
 
-	issueParamsDecisionsLens = L.MakeLens(
+	IssueParamsDecisionsLens = L.MakeLensRef(
 		func(p *IssueParams) DecisionsClient { return p.Decisions },
 		func(p *IssueParams, v DecisionsClient) *IssueParams {
 			p.Decisions = v
@@ -129,7 +124,7 @@ var (
 		},
 	)
 
-	issueParamsStrainPriceLens = L.MakeLens(
+	IssueParamsStrainPriceLens = L.MakeLensRef(
 		func(p *IssueParams) int { return p.StrainPrice },
 		func(p *IssueParams, v int) *IssueParams {
 			p.StrainPrice = v
@@ -137,7 +132,7 @@ var (
 		},
 	)
 
-	issueParamsPlasmidPriceLens = L.MakeLens(
+	IssueParamsPlasmidPriceLens = L.MakeLensRef(
 		func(p *IssueParams) int { return p.PlasmidPrice },
 		func(p *IssueParams, v int) *IssueParams {
 			p.PlasmidPrice = v
@@ -145,10 +140,18 @@ var (
 		},
 	)
 
-	issueParamsLoggerLens = L.MakeLens(
+	IssueParamsLoggerLens = L.MakeLensRef(
 		func(p *IssueParams) *logrus.Entry { return p.Logger },
 		func(p *IssueParams, v *logrus.Entry) *IssueParams {
 			p.Logger = v
+			return p
+		},
+	)
+
+	IssueParamsSourcesLens = L.MakeLensRef(
+		func(p *IssueParams) *datasource.Sources { return p.Sources },
+		func(p *IssueParams, v *datasource.Sources) *IssueParams {
+			p.Sources = v
 			return p
 		},
 	)
@@ -165,14 +168,6 @@ var (
 		func(g githubIssue) *github.Client { return g.client },
 		func(g githubIssue, v *github.Client) githubIssue {
 			g.client = v
-			return g
-		},
-	)
-
-	ghTokenLens = L.MakeLens(
-		func(g githubIssue) string { return g.token },
-		func(g githubIssue, v string) githubIssue {
-			g.token = v
 			return g
 		},
 	)
@@ -337,35 +332,11 @@ var (
 		},
 	)
 
-	createStateParamsLens = L.MakeLens(
-		func(s issueCreateState) *postIssueParams { return s.Params },
-		func(s issueCreateState, v *postIssueParams) issueCreateState {
-			s.Params = v
+	createStateReqLens = L.MakeLens(
+		func(s issueCreateState) *github.IssueRequest { return s.Request },
+		func(s issueCreateState, v *github.IssueRequest) issueCreateState {
+			s.Request = v
 			return s
-		},
-	)
-
-	postTitleLens = L.MakeLens(
-		func(p postIssueParams) string { return p.title },
-		func(p postIssueParams, v string) postIssueParams {
-			p.title = v
-			return p
-		},
-	)
-
-	postBodyLens = L.MakeLens(
-		func(p postIssueParams) string { return p.body },
-		func(p postIssueParams, v string) postIssueParams {
-			p.body = v
-			return p
-		},
-	)
-
-	postLabelsLens = L.MakeLens(
-		func(p postIssueParams) []string { return p.labels },
-		func(p postIssueParams, v []string) postIssueParams {
-			p.labels = v
-			return p
 		},
 	)
 
@@ -503,63 +474,56 @@ var (
 
 	isNonNilDecisions = P.IsNonZero[DecisionsClient]()
 
-	stateOrderAttrs = F.Flow3(
+	formatOrderTitle = F.Pipe1(
+		[]func(issueCreateState) string{
+			F.Constant1[issueCreateState]("Order ID:"),
+			F.Flow3(
+				createStateOrderLens.Get,
+				(*order.Order).GetData,
+				(*order.Order_Data).GetId,
+			),
+			F.Constant1[issueCreateState](" "),
+			F.Flow2(stateOrderAttrs, (*order.OrderAttributes).GetPurchaser),
+		},
+		strutils.ConcatFields[issueCreateState](S.Monoid),
+	)
+)
+
+func stateOrderAttrs(s issueCreateState) *order.OrderAttributes {
+	return F.Pipe3(
+		s,
 		createStateOrderLens.Get,
 		(*order.Order).GetData,
 		(*order.Order_Data).GetAttributes,
-	)
-
-	stateShipperInfo = F.Flow2(
-		stateOrderAttrs,
-		(*order.OrderAttributes).GetConsumerInfo,
-	)
-
-	statePayerInfo = F.Flow2(
-		stateOrderAttrs,
-		(*order.OrderAttributes).GetPayerInfo,
-	)
-
-	stateBodyText = F.Flow2(createStateBodyLens.Get, (*bytes.Buffer).String)
-
-	stateStrainInvRows  = F.Flow2(createStateDataLens.Get, extractStrainInvRows)
-	statePlasmidInvRows = F.Flow2(createStateDataLens.Get, extractPlasmidInvRows)
-	stateStrainInfoRows = F.Flow2(createStateDataLens.Get, extractStrainInfoRows)
-)
-
-func stateOrderTitle(s issueCreateState) string {
-	return fmt.Sprintf(
-		"Order ID:%s %s",
-		createStateOrderLens.Get(s).GetData().GetId(),
-		stateOrderAttrs(s).GetPurchaser(),
-	)
-}
-
-func newGitHubOAuthClient(args *IssueParams) *github.Client {
-	return F.Pipe4(
-		&oauth2.Token{},
-		oauthTokenAccessLens.Set(issueParamsTokenLens.Get(args)),
-		oauth2.StaticTokenSource,
-		F.Bind1st(oauth2.NewClient, context.Background()),
-		github.NewClient,
 	)
 }
 
 // NewIssueCreator acts as a constructor for Github issue creation.
 func NewIssueCreator(args *IssueParams) issue.Tracker {
-	return F.Pipe13(
+	return F.Pipe11(
 		githubIssue{},
-		ghClientLens.Set(newGitHubOAuthClient(args)),
-		ghTokenLens.Set(issueParamsTokenLens.Get(args)),
-		ghOwnerLens.Set(issueParamsOwnerLens.Get(args)),
-		ghRepoLens.Set(issueParamsRepoLens.Get(args)),
-		ghLoggerLens.Set(issueParamsLoggerLens.Get(args)),
+		F.Pipe5(
+			&oauth2.Token{},
+			F.Pipe2(args, IssueParamsTokenLens.Get, oauthTokenAccessLens.Set),
+			oauth2.StaticTokenSource,
+			F.Bind1st(oauth2.NewClient, context.Background()),
+			github.NewClient,
+			ghClientLens.Set,
+		),
+		F.Pipe2(args, IssueParamsOwnerLens.Get, ghOwnerLens.Set),
+		F.Pipe2(args, IssueParamsRepoLens.Get, ghRepoLens.Set),
+		F.Pipe2(args, IssueParamsLoggerLens.Get, ghLoggerLens.Set),
 		ghAnnoLens.Set(args.AnnoSource),
 		ghStockLens.Set(args.StockSource),
-		ghStrainPriceLens.Set(issueParamsStrainPriceLens.Get(args)),
-		ghPlasmidPriceLens.Set(issueParamsPlasmidPriceLens.Get(args)),
-		ghDecisionsLens.Set(resolveParamsDecisions(args)),
-		ghJevModelLens.Set(issueParamsJevModelLens.Get(args)),
-		ghJevModelLens.Modify(resolveJevModel),
+		F.Pipe2(args, IssueParamsStrainPriceLens.Get, ghStrainPriceLens.Set),
+		F.Pipe2(args, IssueParamsPlasmidPriceLens.Get, ghPlasmidPriceLens.Set),
+		F.Pipe2(args, resolveParamsDecisions, ghDecisionsLens.Set),
+		F.Pipe3(
+			args,
+			IssueParamsJevModelLens.Get,
+			resolveJevModel,
+			ghJevModelLens.Set,
+		),
 		func(g githubIssue) issue.Tracker { return new(g) },
 	)
 }
@@ -573,7 +537,7 @@ func (gh *githubIssue) CreateIssue(ord *order.Order) error {
 		IOE.Bind(createStateDataLens.Set, gh.loadAllOrderData),
 		IOE.Bind(createStateBodyLens.Set, gh.renderIssueBody),
 		IOE.Bind(createStateLabelsLens.Set, gh.resolveLabels),
-		IOE.Let[error](createStateParamsLens.Set, gh.preparePostParams),
+		IOE.Let[error](createStateReqLens.Set, prepareIssueRequest),
 		IOE.Chain(gh.executePostIssue),
 		IOE.ChainFirstIOK[error](gh.logIssueCreated),
 		IOE.TapLeft[string](F.Flow2(gh.logIssueError, IOE.FromIO[error, IO.Void])),
@@ -589,45 +553,82 @@ func (gh *githubIssue) loadAllOrderData(
 		IOE.Of[error](allData{}),
 		IOE.ApS(allStrainDataLens.Set, gh.loadStrainData(s)),
 		IOE.ApS(allPlasmidDataLens.Set, gh.loadPlasmidData(s)),
-		IOE.Map[error](func(d allData) *allData { return new(d) }),
+		IOE.Map[error](F.Ref[allData]),
 	)
 }
 
 func (gh *githubIssue) renderIssueBody(
 	s issueCreateState,
 ) IOE.IOEither[error, *bytes.Buffer] {
-	return F.Pipe2(
-		&template.OutputParams{},
-		outputParamsContentLens.Set(gh.buildIssueContent(s)),
+	return F.Pipe12(
+		&template.IssueContent{},
+		issueContentBaseLens.Set(&template.Content{}),
+		F.Pipe3(
+			s,
+			stateOrderAttrs,
+			(*order.OrderAttributes).GetConsumerInfo,
+			issueContentShipperLens.Set,
+		),
+		F.Pipe3(
+			s,
+			stateOrderAttrs,
+			(*order.OrderAttributes).GetPayerInfo,
+			issueContentPayerLens.Set,
+		),
+		F.Pipe2(s, createStateOrderLens.Get, issueContentOrderLens.Set),
+		F.Pipe2(*gh, ghStrainPriceLens.Get, issueContentStrainPriceLens.Set),
+		F.Pipe2(*gh, ghPlasmidPriceLens.Get, issueContentPlasmidPriceLens.Set),
+		F.Pipe3(
+			s,
+			createStateDataLens.Get,
+			extractStrainInvRows,
+			issueContentStrainInvLens.Set,
+		),
+		F.Pipe3(
+			s,
+			createStateDataLens.Get,
+			extractPlasmidInvRows,
+			issueContentPlasmidInvLens.Set,
+		),
+		F.Pipe3(
+			s,
+			createStateDataLens.Get,
+			extractStrainInfoRows,
+			issueContentStrainInfoLens.Set,
+		),
+		F.ToAny[*template.IssueContent],
+		F.Pipe1(&template.OutputParams{}, F.Flip(outputParamsContentLens.Set)),
 		IOE.Eitherize1(template.OutputText),
 	)
 }
 
-func (gh *githubIssue) preparePostParams(s issueCreateState) *postIssueParams {
-	return F.Pipe4(
-		postIssueParams{},
-		postTitleLens.Set(stateOrderTitle(s)),
-		postBodyLens.Set(stateBodyText(s)),
-		postLabelsLens.Set(createStateLabelsLens.Get(s)),
-		func(p postIssueParams) *postIssueParams { return new(p) },
+func prepareIssueRequest(s issueCreateState) *github.IssueRequest {
+	return F.Pipe3(
+		&github.IssueRequest{},
+		F.Pipe3(s, formatOrderTitle, F.Ref[string], issueReqTitleLens.Set),
+		F.Pipe4(
+			s,
+			createStateBodyLens.Get,
+			(*bytes.Buffer).String,
+			F.Ref[string],
+			issueReqBodyLens.Set,
+		),
+		F.Pipe3(
+			s,
+			createStateLabelsLens.Get,
+			F.Ref[[]string],
+			issueReqLabelsLens.Set,
+		),
 	)
 }
 
 func (gh *githubIssue) executePostIssue(
 	s issueCreateState,
 ) IOE.IOEither[error, string] {
-	return F.Pipe6(
-		&github.IssueRequest{},
-		issueReqTitleLens.Set(
-			new(postTitleLens.Get(*createStateParamsLens.Get(s))),
-		),
-		issueReqBodyLens.Set(
-			new(postBodyLens.Get(*createStateParamsLens.Get(s))),
-		),
-		issueReqLabelsLens.Set(
-			new(postLabelsLens.Get(*createStateParamsLens.Get(s))),
-		),
-		IOE.Eitherize1(gh.postIssue),
+	return F.Pipe2(
+		IOE.TryCatchError(func() (*github.Issue, error) {
+			return gh.postIssue(createStateReqLens.Get(s))
+		}),
 		IOE.MapLeft[*github.Issue](func(err error) error {
 			return fmt.Errorf("error in posting issue to github %s", err)
 		}),
@@ -719,7 +720,7 @@ func (gh *githubIssue) loadStrainData(
 		),
 		IOE.Bind(strainDataInvsLens.Set, gh.fetchIssueStrainInvs),
 		IOE.Bind(strainDataInfoLens.Set, gh.fetchIssueStrainInfo),
-		IOE.Map[error](func(d strainData) *strainData { return new(d) }),
+		IOE.Map[error](F.Ref[strainData]),
 	)
 }
 
@@ -766,23 +767,6 @@ func (gh *githubIssue) loadPlasmidData(
 			F.Constant1[plasmidData](gh.fetchIssuePlasmids(s)),
 		),
 		IOE.Bind(plasmidDataInvsLens.Set, gh.fetchIssuePlasmidInvs),
-		IOE.Map[error](func(d plasmidData) *plasmidData { return new(d) }),
-	)
-}
-
-func (gh *githubIssue) buildIssueContent(
-	s issueCreateState,
-) *template.IssueContent {
-	return F.Pipe9(
-		&template.IssueContent{},
-		issueContentBaseLens.Set(&template.Content{}),
-		issueContentShipperLens.Set(stateShipperInfo(s)),
-		issueContentPayerLens.Set(statePayerInfo(s)),
-		issueContentOrderLens.Set(createStateOrderLens.Get(s)),
-		issueContentStrainPriceLens.Set(ghStrainPriceLens.Get(*gh)),
-		issueContentPlasmidPriceLens.Set(ghPlasmidPriceLens.Get(*gh)),
-		issueContentStrainInvLens.Set(stateStrainInvRows(s)),
-		issueContentPlasmidInvLens.Set(statePlasmidInvRows(s)),
-		issueContentStrainInfoLens.Set(stateStrainInfoRows(s)),
+		IOE.Map[error](F.Ref[plasmidData]),
 	)
 }
