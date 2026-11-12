@@ -24,12 +24,6 @@ import (
 
 const exitCode = 2
 
-// IssueActionInput is the boundary input of the gh-issue action.
-type IssueActionInput struct {
-	Context context.Context
-	Command *cli.Command
-}
-
 // IssueSetupState accumulates the logger, subscriber, data sources, and
 // GitHub issue tracker as the setup pipeline runs.
 type IssueSetupState struct {
@@ -42,21 +36,7 @@ type IssueSetupState struct {
 }
 
 var (
-	actionContextLens = L.MakeLens(
-		func(in IssueActionInput) context.Context { return in.Context },
-		func(in IssueActionInput, v context.Context) IssueActionInput {
-			in.Context = v
-			return in
-		},
-	)
-
-	actionCommandLens = L.MakeLens(
-		func(in IssueActionInput) *cli.Command { return in.Command },
-		func(in IssueActionInput, v *cli.Command) IssueActionInput {
-			in.Command = v
-			return in
-		},
-	)
+	issueRequiredServices = []string{"stock", "annotation"}
 
 	setupContextLens = L.MakeLens(
 		func(s IssueSetupState) context.Context { return s.Context },
@@ -106,73 +86,73 @@ var (
 		},
 	)
 
-	paramsLoggerLens = L.MakeLens(
-		func(p gh.IssueParams) *logrus.Entry { return p.Logger },
-		func(p gh.IssueParams, v *logrus.Entry) gh.IssueParams {
+	paramsLoggerLens = L.MakeLensRef(
+		func(p *gh.IssueParams) *logrus.Entry { return p.Logger },
+		func(p *gh.IssueParams, v *logrus.Entry) *gh.IssueParams {
 			p.Logger = v
 			return p
 		},
 	)
 
-	paramsTokenLens = L.MakeLens(
-		func(p gh.IssueParams) string { return p.Token },
-		func(p gh.IssueParams, v string) gh.IssueParams {
+	paramsTokenLens = L.MakeLensRef(
+		func(p *gh.IssueParams) string { return p.Token },
+		func(p *gh.IssueParams, v string) *gh.IssueParams {
 			p.Token = v
 			return p
 		},
 	)
 
-	paramsOwnerLens = L.MakeLens(
-		func(p gh.IssueParams) string { return p.Owner },
-		func(p gh.IssueParams, v string) gh.IssueParams {
+	paramsOwnerLens = L.MakeLensRef(
+		func(p *gh.IssueParams) string { return p.Owner },
+		func(p *gh.IssueParams, v string) *gh.IssueParams {
 			p.Owner = v
 			return p
 		},
 	)
 
-	paramsRepoLens = L.MakeLens(
-		func(p gh.IssueParams) string { return p.Repository },
-		func(p gh.IssueParams, v string) gh.IssueParams {
+	paramsRepoLens = L.MakeLensRef(
+		func(p *gh.IssueParams) string { return p.Repository },
+		func(p *gh.IssueParams, v string) *gh.IssueParams {
 			p.Repository = v
 			return p
 		},
 	)
 
-	paramsOpenRouterLens = L.MakeLens(
-		func(p gh.IssueParams) string { return p.OpenRouterToken },
-		func(p gh.IssueParams, v string) gh.IssueParams {
+	paramsOpenRouterLens = L.MakeLensRef(
+		func(p *gh.IssueParams) string { return p.OpenRouterToken },
+		func(p *gh.IssueParams, v string) *gh.IssueParams {
 			p.OpenRouterToken = v
 			return p
 		},
 	)
 
-	paramsJevModelLens = L.MakeLens(
-		func(p gh.IssueParams) string { return p.JevModel },
-		func(p gh.IssueParams, v string) gh.IssueParams {
+	paramsJevModelLens = L.MakeLensRef(
+		func(p *gh.IssueParams) string { return p.JevModel },
+		func(p *gh.IssueParams, v string) *gh.IssueParams {
 			p.JevModel = v
 			return p
 		},
 	)
 
-	paramsSourcesLens = L.MakeLens(
-		func(p gh.IssueParams) *datasource.Sources { return p.Sources },
-		func(p gh.IssueParams, v *datasource.Sources) gh.IssueParams {
+	paramsSourcesLens = L.MakeLensRef(
+		func(p *gh.IssueParams) *datasource.Sources { return p.Sources },
+		func(p *gh.IssueParams, v *datasource.Sources) *gh.IssueParams {
 			p.Sources = v
 			return p
 		},
 	)
 
-	paramsStrainPriceLens = L.MakeLens(
-		func(p gh.IssueParams) int { return p.StrainPrice },
-		func(p gh.IssueParams, v int) gh.IssueParams {
+	paramsStrainPriceLens = L.MakeLensRef(
+		func(p *gh.IssueParams) int { return p.StrainPrice },
+		func(p *gh.IssueParams, v int) *gh.IssueParams {
 			p.StrainPrice = v
 			return p
 		},
 	)
 
-	paramsPlasmidPriceLens = L.MakeLens(
-		func(p gh.IssueParams) int { return p.PlasmidPrice },
-		func(p gh.IssueParams, v int) gh.IssueParams {
+	paramsPlasmidPriceLens = L.MakeLensRef(
+		func(p *gh.IssueParams) int { return p.PlasmidPrice },
+		func(p *gh.IssueParams, v int) *gh.IssueParams {
 			p.PlasmidPrice = v
 			return p
 		},
@@ -188,9 +168,11 @@ func toCLIExit(err error) error {
 // RunCreateIssue connects to nats and creates a GitHub issue based on
 // received order data.
 func RunCreateIssue(ctx context.Context, c *cli.Command) error {
-	return F.Pipe11(
-		IssueActionInput{Context: ctx, Command: c},
-		seedIssueSetupState,
+	return F.Pipe13(
+		IssueSetupState{},
+		setupContextLens.Set(ctx),
+		setupCommandLens.Set(c),
+		IOE.Of[error],
 		IOE.Bind(setupLoggerLens.Set, createIssueLogger),
 		IOE.Bind(setupSubLens.Set, createIssueSubscriber),
 		IOE.Bind(setupSourcesLens.Set, createIssueSources),
@@ -204,23 +186,10 @@ func RunCreateIssue(ctx context.Context, c *cli.Command) error {
 	)
 }
 
-func seedIssueSetupState(
-	in IssueActionInput,
-) IOE.IOEither[error, IssueSetupState] {
-	return F.Pipe3(
-		IssueSetupState{},
-		setupContextLens.Set(actionContextLens.Get(in)),
-		setupCommandLens.Set(actionCommandLens.Get(in)),
-		IOE.Of[error],
-	)
-}
-
 func createIssueLogger(s IssueSetupState) IOE.IOEither[error, *logrus.Entry] {
-	cmd := setupCommandLens.Get(s)
-
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*logrus.Entry, error) {
-			return logger.NewLogger(cmd)
+			return logger.NewLogger(setupCommandLens.Get(s))
 		}),
 		IOE.MapLeft[*logrus.Entry](func(err error) error {
 			return fmt.Errorf("error creating logger: %w", err)
@@ -231,14 +200,13 @@ func createIssueLogger(s IssueSetupState) IOE.IOEither[error, *logrus.Entry] {
 func createIssueSubscriber(
 	s IssueSetupState,
 ) IOE.IOEither[error, *nats.GithubSubscriber] {
-	cmd := setupCommandLens.Get(s)
-	logEntry := setupLoggerLens.Get(s)
-	host := cmd.String("nats-host")
-	port := cmd.String("nats-port")
-
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*nats.GithubSubscriber, error) {
-			return nats.NewGithubSubscriber(host, port, logEntry)
+			return nats.NewGithubSubscriber(
+				setupCommandLens.Get(s).String("nats-host"),
+				setupCommandLens.Get(s).String("nats-port"),
+				setupLoggerLens.Get(s),
+			)
 		}),
 		IOE.MapLeft[*nats.GithubSubscriber](func(err error) error {
 			return fmt.Errorf("error creating github nats subscriber: %w", err)
@@ -249,12 +217,12 @@ func createIssueSubscriber(
 func createIssueSources(
 	s IssueSetupState,
 ) IOE.IOEither[error, *datasource.Sources] {
-	cmd := setupCommandLens.Get(s)
-	services := []string{"stock", "annotation"}
-
 	return F.Pipe2(
 		IOE.TryCatchError(func() (map[string]*grpc.ClientConn, error) {
-			return service.ClientConn(cmd, services)
+			return service.ClientConn(
+				setupCommandLens.Get(s),
+				issueRequiredServices,
+			)
 		}),
 		IOE.MapLeft[map[string]*grpc.ClientConn](func(err error) error {
 			return fmt.Errorf("error connecting to grpc services: %w", err)
@@ -264,31 +232,30 @@ func createIssueSources(
 }
 
 func createIssueTracker(s IssueSetupState) issue.Tracker {
-	cmd := setupCommandLens.Get(s)
-
 	return F.Pipe10(
-		gh.IssueParams{},
+		&gh.IssueParams{},
 		paramsLoggerLens.Set(setupLoggerLens.Get(s)),
-		paramsTokenLens.Set(cmd.String("token")),
-		paramsOwnerLens.Set(cmd.String("owner")),
-		paramsRepoLens.Set(cmd.String("repository")),
-		paramsOpenRouterLens.Set(cmd.String("openrouter-token")),
-		paramsJevModelLens.Set(cmd.String("jev-model")),
+		paramsTokenLens.Set(setupCommandLens.Get(s).String("token")),
+		paramsOwnerLens.Set(setupCommandLens.Get(s).String("owner")),
+		paramsRepoLens.Set(setupCommandLens.Get(s).String("repository")),
+		paramsOpenRouterLens.Set(
+			setupCommandLens.Get(s).String("openrouter-token"),
+		),
+		paramsJevModelLens.Set(setupCommandLens.Get(s).String("jev-model")),
 		paramsSourcesLens.Set(setupSourcesLens.Get(s)),
-		paramsStrainPriceLens.Set(cmd.Int("strain-price")),
-		paramsPlasmidPriceLens.Set(cmd.Int("plasmid-price")),
-		func(p gh.IssueParams) issue.Tracker {
-			return gh.NewIssueCreator(new(p))
-		},
+		paramsStrainPriceLens.Set(setupCommandLens.Get(s).Int("strain-price")),
+		paramsPlasmidPriceLens.Set(
+			setupCommandLens.Get(s).Int("plasmid-price"),
+		),
+		gh.NewIssueCreator,
 	)
 }
 
-func rawStartIssueSubscription(
-	sub *nats.GithubSubscriber,
-	subject string,
-	tracker issue.Tracker,
-) (IO.Void, error) {
-	err := sub.Start(subject, tracker)
+func rawStartIssueSubscription(s IssueSetupState) (IO.Void, error) {
+	err := setupSubLens.Get(s).Start(
+		setupCommandLens.Get(s).String("subject"),
+		setupTrackerLens.Get(s),
+	)
 
 	return struct{}{}, err
 }
@@ -296,13 +263,9 @@ func rawStartIssueSubscription(
 func startIssueSubscription(
 	s IssueSetupState,
 ) IOE.IOEither[error, IssueSetupState] {
-	subject := setupCommandLens.Get(s).String("subject")
-	sub := setupSubLens.Get(s)
-	tracker := setupTrackerLens.Get(s)
-
 	return F.Pipe2(
 		IOE.TryCatchError(func() (IO.Void, error) {
-			return rawStartIssueSubscription(sub, subject, tracker)
+			return rawStartIssueSubscription(s)
 		}),
 		IOE.MapLeft[IO.Void](func(err error) error {
 			return fmt.Errorf("error starting github subscriber: %w", err)

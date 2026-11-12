@@ -6,11 +6,9 @@ import (
 	"time"
 
 	A "github.com/IBM/fp-go/v2/array"
-	E "github.com/IBM/fp-go/v2/either"
 	F "github.com/IBM/fp-go/v2/function"
 	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
-	M "github.com/IBM/fp-go/v2/monoid"
 	N "github.com/IBM/fp-go/v2/number"
 	L "github.com/IBM/fp-go/v2/optics/lens"
 	O "github.com/IBM/fp-go/v2/option"
@@ -21,9 +19,8 @@ import (
 	openrouter "github.com/OpenRouterTeam/go-sdk"
 	"github.com/OpenRouterTeam/go-sdk/models/components"
 	"github.com/OpenRouterTeam/go-sdk/models/operations"
-	mapset "github.com/deckarep/golang-set/v2"
 	arrutils "github.com/dictyBase/fp-go-loom/array"
-	ioeutils "github.com/dictyBase/fp-go-loom/ioeitherutils"
+	MO "github.com/dictyBase/fp-go-loom/matchopt"
 	predarrays "github.com/dictyBase/fp-go-loom/predicate/array"
 	predord "github.com/dictyBase/fp-go-loom/predicate/ord"
 	"github.com/dictyBase/fp-go-loom/strutils"
@@ -75,20 +72,18 @@ type DecisionsClient interface {
 	) (*components.DecisionsResponse, error)
 }
 
-type labelResolveState struct {
-	Client   DecisionsClient
-	Logger   *logrus.Entry
-	Model    string
-	Data     *allData
-	Order    *order.Order
-	Base     []string
-	Request  components.DecisionsRequest
-	Response *components.DecisionsResponse
-}
+type answersMap = map[string]components.DecisionsResponseAnswers
 
-type noulLabelSpec struct {
-	key   string
-	label string
+type questionsMap = map[string]components.Questions
+
+type labelResolveState struct {
+	Client  DecisionsClient
+	Logger  *logrus.Entry
+	Model   string
+	Data    *allData
+	Order   *order.Order
+	Base    []string
+	Request components.DecisionsRequest
 }
 
 var (
@@ -148,14 +143,6 @@ var (
 		},
 	)
 
-	resolveRespLens = L.MakeLens(
-		func(s labelResolveState) *components.DecisionsResponse { return s.Response },
-		func(s labelResolveState, v *components.DecisionsResponse) labelResolveState {
-			s.Response = v
-			return s
-		},
-	)
-
 	decReqModelLens = L.MakeLens(
 		func(r components.DecisionsRequest) string { return r.Model },
 		func(r components.DecisionsRequest, v string) components.DecisionsRequest {
@@ -173,10 +160,10 @@ var (
 	)
 
 	decReqQuestionsLens = L.MakeLens(
-		func(r components.DecisionsRequest) map[string]components.Questions { return r.Questions },
+		func(r components.DecisionsRequest) questionsMap { return r.Questions },
 		func(
 			r components.DecisionsRequest,
-			v map[string]components.Questions,
+			v questionsMap,
 		) components.DecisionsRequest {
 			r.Questions = v
 			return r
@@ -265,42 +252,36 @@ var (
 		},
 	)
 
-	noulCriteriaTrueLens = L.MakeLens(
-		func(c components.DecisionsNoulQuestionCriteria) components.True { return c.True },
+	noulCriteriaTrueLens = L.MakeLensRef(
+		func(c *components.DecisionsNoulQuestionCriteria) components.True { return c.True },
 		func(
-			c components.DecisionsNoulQuestionCriteria,
+			c *components.DecisionsNoulQuestionCriteria,
 			v components.True,
-		) components.DecisionsNoulQuestionCriteria {
+		) *components.DecisionsNoulQuestionCriteria {
 			c.True = v
 			return c
 		},
 	)
 
-	noulCriteriaFalseLens = L.MakeLens(
-		func(c components.DecisionsNoulQuestionCriteria) components.False { return c.False },
+	noulCriteriaFalseLens = L.MakeLensRef(
+		func(c *components.DecisionsNoulQuestionCriteria) components.False { return c.False },
 		func(
-			c components.DecisionsNoulQuestionCriteria,
+			c *components.DecisionsNoulQuestionCriteria,
 			v components.False,
-		) components.DecisionsNoulQuestionCriteria {
+		) *components.DecisionsNoulQuestionCriteria {
 			c.False = v
 			return c
 		},
 	)
 
-	noulSpecKeyLens = L.MakeLens(
-		func(s noulLabelSpec) string { return s.key },
-		func(s noulLabelSpec, v string) noulLabelSpec {
-			s.key = v
-			return s
-		},
+	noulQTrueLens = F.Pipe1(
+		noulQCriteriaLens,
+		L.Compose[components.DecisionsNoulQuestion](noulCriteriaTrueLens),
 	)
 
-	noulSpecLabelLens = L.MakeLens(
-		func(s noulLabelSpec) string { return s.label },
-		func(s noulLabelSpec, v string) noulLabelSpec {
-			s.label = v
-			return s
-		},
+	noulQFalseLens = F.Pipe1(
+		noulQCriteriaLens,
+		L.Compose[components.DecisionsNoulQuestion](noulCriteriaFalseLens),
 	)
 
 	ansChoiceLens = L.MakeLens(
@@ -329,17 +310,29 @@ var (
 		},
 	)
 
-	isNonNilAllData     = P.IsNonZero[*allData]()
-	isNonNilStrainData  = P.IsNonZero[*strainData]()
-	isNonNilPlasmidData = P.IsNonZero[*plasmidData]()
-	isNonNilLogger      = P.IsNonZero[*logrus.Entry]()
-	isNonNilSDK         = P.IsNonZero[*openrouter.OpenRouter]()
-	isNonNilAlpha       = P.IsNonZero[*openrouter.Alpha]()
-	isNonNilDecisionsP  = P.IsNonZero[*openrouter.Decisions]()
-	isNonNilResp        = P.IsNonZero[*components.DecisionsResponse]()
-	isNonNilChoiceAns   = P.IsNonZero[*components.DecisionsChoiceAnswer]()
-	isNonNilNoulAns     = P.IsNonZero[*components.DecisionsNoulAnswer]()
-	isNonNilFloatPtr    = P.IsNonZero[*float64]()
+	sdkAlphaLens = L.MakeLensRef(
+		func(s *openrouter.OpenRouter) *openrouter.Alpha { return s.Alpha },
+		func(s *openrouter.OpenRouter, v *openrouter.Alpha) *openrouter.OpenRouter {
+			s.Alpha = v
+			return s
+		},
+	)
+
+	alphaDecisionsLens = L.MakeLensRef(
+		func(a *openrouter.Alpha) *openrouter.Decisions { return a.Decisions },
+		func(a *openrouter.Alpha, v *openrouter.Decisions) *openrouter.Alpha {
+			a.Decisions = v
+			return a
+		},
+	)
+
+	isNonNilLogger     = P.IsNonZero[*logrus.Entry]()
+	isNonNilSDK        = P.IsNonZero[*openrouter.OpenRouter]()
+	isNonNilAlpha      = P.IsNonZero[*openrouter.Alpha]()
+	isNonNilDecisionsP = P.IsNonZero[*openrouter.Decisions]()
+	isNonNilResp       = P.IsNonZero[*components.DecisionsResponse]()
+	isNonNilChoiceAns  = P.IsNonZero[*components.DecisionsChoiceAnswer]()
+	isNonNilNoulAns    = P.IsNonZero[*components.DecisionsNoulAnswer]()
 
 	meetsThreshold = P.Not(N.LessThan(jevConfidenceThreshold))
 
@@ -348,22 +341,23 @@ var (
 		P.And(predord.NotEqualStr(choiceNone)),
 	)
 
-	containsAxenic = F.Flow2(strings.ToLower, S.Includes("axenic"))
-	containsGWDI   = F.Flow2(strings.ToUpper, S.Includes("GWDI"))
-	containsBact   = F.Flow2(
-		strings.ToLower,
-		F.Pipe2(
-			S.Includes("bacterial stock"),
-			P.Or(S.Includes("k. aerogenes")),
-			P.Or(S.Includes("klebsiella")),
-		),
+	containsAxenic = F.Pipe1(S.Includes("axenic"), P.ContraMap(strings.ToLower))
+	containsGWDI   = F.Pipe1(S.Includes("GWDI"), P.ContraMap(strings.ToUpper))
+
+	hasBacterialTerm = F.Pipe2(
+		S.Includes("bacterial stock"),
+		P.Or(S.Includes("k. aerogenes")),
+		P.Or(S.Includes("klebsiella")),
 	)
-	containsGoldenBraid = F.Flow2(
-		strings.ToLower,
-		F.Pipe1(
-			S.Includes("pdgb"),
-			P.Or(S.Includes("goldenbraid")),
-		),
+	containsBact = F.Pipe1(hasBacterialTerm, P.ContraMap(strings.ToLower))
+
+	hasGoldenBraidTerm = F.Pipe1(
+		S.Includes("pdgb"),
+		P.Or(S.Includes("goldenbraid")),
+	)
+	containsGoldenBraid = F.Pipe1(
+		hasGoldenBraidTerm,
+		P.ContraMap(strings.ToLower),
 	)
 
 	rowHasAxenic      = A.Any(containsAxenic)
@@ -377,7 +371,6 @@ var (
 	rowsHaveGoldenBraid = A.Any(rowHasGoldenBraid)
 
 	hasClientState = F.Pipe1(isNonNilDecisions, P.ContraMap(resolveClientLens.Get))
-	hasLoggerState = F.Pipe1(isNonNilLogger, P.ContraMap(resolveLoggerLens.Get))
 
 	baseFromState = F.Flow2(resolveBaseLens.Get, IOE.Of[error, []string])
 
@@ -385,51 +378,85 @@ var (
 
 	jevOrBaseBranch = F.Pipe1(hasClientState, baseOrJevFold)
 
-	choiceQuestionKeys = []string{
-		questionInstitutionType,
-		questionPaymentLabel,
-		questionLocationLabel,
+	prependLabels  = F.Flip(A.Concat[string])
+	mapCriteriaPtr = R.Map[string](toCriteriaPtr)
+	lookupProbByK  = F.Flip(R.Lookup[float64, string])
+
+	trimmedChoiceText = F.Flow2(
+		(*components.DecisionsChoiceAnswer).GetChoice,
+		strings.TrimSpace,
+	)
+
+	responseToLabels = F.Flow3(
+		O.FromPredicate(isNonNilResp),
+		O.Map((*components.DecisionsResponse).GetAnswers),
+		O.Fold(F.Constant([]string(nil)), extractAnswersLabels),
+	)
+
+	choiceConfidenceScore = MO.Match(
+		0.0,
+		[]O.Kleisli[*components.DecisionsChoiceAnswer, float64]{
+			F.Flow2(
+				(*components.DecisionsChoiceAnswer).GetConfidence,
+				O.FromNillable2[float64],
+			),
+			choiceProbabilityOpt,
+		},
+	)
+
+	isConfidentChoiceAns = F.Flow2(choiceConfidenceScore, meetsThreshold)
+
+	deterministicLabelRules = []func(*allData) O.Option[string]{
+		MO.Const(hasStrains, labelStrainOrder),
+		MO.Const(hasPlasmids, labelPlasmidOrder),
+		MO.Const(hasAxenicStorage, labelAxenicMedium),
+		MO.Const(hasGWDIStrains, labelGWDI),
+		MO.Const(hasBacterialFoodSource, labelBacterialFood),
+		MO.Const(hasGoldenBraidPlasmids, labelGoldenBraid),
 	}
 
-	noulQuestionSpecs = []noulLabelSpec{
-		F.Pipe2(
-			noulLabelSpec{},
-			noulSpecKeyLens.Set(questionIsMSI),
-			noulSpecLabelLens.Set(labelMSI),
-		),
-		F.Pipe2(
-			noulLabelSpec{},
-			noulSpecKeyLens.Set(questionBacterialFood),
-			noulSpecLabelLens.Set(labelBacterialFood),
-		),
-		F.Pipe2(
-			noulLabelSpec{},
-			noulSpecKeyLens.Set(questionGoldenBraid),
-			noulSpecLabelLens.Set(labelGoldenBraid),
-		),
-		F.Pipe2(
-			noulLabelSpec{},
-			noulSpecKeyLens.Set(questionGWDI),
-			noulSpecLabelLens.Set(labelGWDI),
-		),
-		F.Pipe2(
-			noulLabelSpec{},
-			noulSpecKeyLens.Set(questionAxenicMedium),
-			noulSpecLabelLens.Set(labelAxenicMedium),
-		),
+	jevAnswerExtractors = []func(answersMap) O.Option[string]{
+		choiceExtractor(questionInstitutionType),
+		choiceExtractor(questionPaymentLabel),
+		choiceExtractor(questionLocationLabel),
+		noulExtractor(questionIsMSI, labelMSI),
+		noulExtractor(questionBacterialFood, labelBacterialFood),
+		noulExtractor(questionGoldenBraid, labelGoldenBraid),
+		noulExtractor(questionGWDI, labelGWDI),
+		noulExtractor(questionAxenicMedium, labelAxenicMedium),
 	}
+
+	injectedDecisionsCase = F.Flow2(
+		issueParamsDecisionsLens.Get,
+		O.FromPredicate(isNonNilDecisions),
+	)
+
+	openRouterDecisionsCase = F.Flow12(
+		issueParamsOpenRouterLens.Get,
+		strings.TrimSpace,
+		O.FromPredicate(S.IsNonEmpty),
+		O.Map(openrouter.WithSecurity),
+		O.Map(A.Of[openrouter.SDKOption]),
+		O.Map(F.Unvariadic0(openrouter.New)),
+		O.Chain(O.FromPredicate(isNonNilSDK)),
+		O.Map(sdkAlphaLens.Get),
+		O.Chain(O.FromPredicate(isNonNilAlpha)),
+		O.Map(alphaDecisionsLens.Get),
+		O.Chain(O.FromPredicate(isNonNilDecisionsP)),
+		O.Map(toDecisionsClient),
+	)
+
+	resolveParamsDecisions = MO.Match(
+		DecisionsClient(nil),
+		[]O.Kleisli[*IssueParams, DecisionsClient]{
+			injectedDecisionsCase,
+			openRouterDecisionsCase,
+		},
+	)
 )
 
-func sdkAlpha(sdk *openrouter.OpenRouter) O.Option[*openrouter.Alpha] {
-	return F.Pipe1(sdk.Alpha, O.FromPredicate(isNonNilAlpha))
-}
-
-func alphaDecisions(alpha *openrouter.Alpha) O.Option[DecisionsClient] {
-	return F.Pipe2(
-		alpha.Decisions,
-		O.FromPredicate(isNonNilDecisionsP),
-		O.Map(func(d *openrouter.Decisions) DecisionsClient { return d }),
-	)
+func toDecisionsClient(d *openrouter.Decisions) DecisionsClient {
+	return d
 }
 
 func resolveJevModel(model string) string {
@@ -441,33 +468,40 @@ func resolveJevModel(model string) string {
 	)
 }
 
-func (gh *githubIssue) resolveLabels(all *allData, ord *order.Order) []string {
-	base := deterministicLabels(all)
-
+func (gh *githubIssue) resolveLabels(
+	s issueCreateState,
+) IOE.IOEither[error, []string] {
 	return F.Pipe9(
 		labelResolveState{},
 		resolveClientLens.Set(ghDecisionsLens.Get(*gh)),
 		resolveLoggerLens.Set(ghLoggerLens.Get(*gh)),
-		resolveModelLens.Set(resolveJevModel(ghJevModelLens.Get(*gh))),
-		resolveDataLens.Set(all),
-		resolveOrderLens.Set(ord),
-		resolveBaseLens.Set(base),
-		jevOrBaseBranch,
-		ioeutils.ToEither[error, []string],
-		E.GetOrElse(F.Constant1[error](base)),
+		resolveModelLens.Set(ghJevModelLens.Get(*gh)),
+		resolveModelLens.Modify(resolveJevModel),
+		resolveDataLens.Set(createStateDataLens.Get(s)),
+		resolveOrderLens.Set(createStateOrderLens.Get(s)),
+		IOE.Of[error],
+		IOE.Let[error](
+			resolveBaseLens.Set,
+			F.Flow2(resolveDataLens.Get, deterministicLabels),
+		),
+		IOE.Chain(jevOrBaseBranch),
+	)
+}
+
+func stateDecisionsPayload(s labelResolveState) components.State {
+	return components.CreateStateMapOfAny(
+		buildDecisionsState(
+			resolveDataLens.Get(s),
+			resolveOrderLens.Get(s),
+		),
 	)
 }
 
 func buildStateRequest(s labelResolveState) components.DecisionsRequest {
-	stateMap := buildDecisionsState(
-		resolveDataLens.Get(s),
-		resolveOrderLens.Get(s),
-	)
-
 	return F.Pipe3(
 		components.DecisionsRequest{},
 		decReqModelLens.Set(resolveModelLens.Get(s)),
-		decReqStateLens.Set(components.CreateStateMapOfAny(stateMap)),
+		decReqStateLens.Set(stateDecisionsPayload(s)),
 		decReqQuestionsLens.Set(buildDecisionsQuestions()),
 	)
 }
@@ -475,9 +509,6 @@ func buildStateRequest(s labelResolveState) components.DecisionsRequest {
 func executeDecisionsCall(
 	s labelResolveState,
 ) IOE.IOEither[error, *components.DecisionsResponse] {
-	client := resolveClientLens.Get(s)
-	req := resolveReqLens.Get(s)
-
 	return IOE.TryCatchError(func() (*components.DecisionsResponse, error) {
 		ctx, cancel := context.WithTimeout(
 			context.Background(),
@@ -485,95 +516,77 @@ func executeDecisionsCall(
 		)
 		defer cancel()
 
-		return client.Create(ctx, req)
+		return resolveClientLens.Get(s).Create(ctx, resolveReqLens.Get(s))
 	})
 }
 
-func logJevWarning(s labelResolveState, err error) IO.IO[IO.Void] {
-	warn := func(st labelResolveState) IO.IO[IO.Void] {
-		return IO.FromImpure(func() {
-			resolveLoggerLens.Get(st).Warnf(
-				"openrouter jev label classification failed: %v",
-				err,
-			)
-		})
-	}
+func emitJevWarning(err error, lg *logrus.Entry) IO.IO[IO.Void] {
+	return IO.FromImpure(func() {
+		lg.Warnf("openrouter jev label classification failed: %v", err)
+	})
+}
 
-	return F.Pipe2(
+func logJevWarning(err error, s labelResolveState) IO.IO[IO.Void] {
+	return F.Pipe3(
 		s,
-		O.FromPredicate(hasLoggerState),
-		O.Fold(F.Constant(IO.Of(IO.Void{})), warn),
+		resolveLoggerLens.Get,
+		O.FromPredicate(isNonNilLogger),
+		O.Fold(
+			F.Constant(IO.Of(IO.Void{})),
+			F.Bind1st(emitJevWarning, err),
+		),
 	)
 }
 
-func fallbackBaseLabels(
+func recoverBaseLabels(
 	s labelResolveState,
-) func(error) IOE.IOEither[error, []string] {
-	base := resolveBaseLens.Get(s)
-
-	return func(err error) IOE.IOEither[error, []string] {
-		return F.Pipe2(
-			logJevWarning(s, err),
-			IOE.FromIO[error],
-			IOE.MapTo[error, IO.Void](base),
-		)
-	}
+	err error,
+) IOE.IOEither[error, []string] {
+	return F.Pipe3(
+		s,
+		F.Bind1st(logJevWarning, err),
+		IOE.FromIO[error],
+		IOE.MapTo[error, IO.Void](resolveBaseLens.Get(s)),
+	)
 }
 
 func jevLabelPipeline(
 	s labelResolveState,
 ) IOE.IOEither[error, []string] {
-	return F.Pipe5(
+	return F.Pipe7(
 		s,
 		IOE.Of[error],
 		IOE.Let[error](resolveReqLens.Set, buildStateRequest),
-		IOE.Bind(resolveRespLens.Set, executeDecisionsCall),
-		IOE.Map[error](func(st labelResolveState) []string {
-			return F.Pipe6(
-				st,
-				resolveRespLens.Get,
-				O.FromPredicate(isNonNilResp),
-				O.Map(
-					func(r *components.DecisionsResponse) map[string]components.DecisionsResponseAnswers {
-						return r.GetAnswers()
-					},
-				),
-				O.Fold(
-					F.Constant([]string(nil)),
-					extractAnswersLabels,
-				),
-				func(jevLabels []string) []string {
-					return A.ArrayConcatAll(resolveBaseLens.Get(st), jevLabels)
-				},
-				deduplicateLabels,
-			)
-		}),
-		IOE.OrElse(fallbackBaseLabels(s)),
+		IOE.Chain(executeDecisionsCall),
+		IOE.Map[error](responseToLabels),
+		IOE.Map[error](prependLabels(resolveBaseLens.Get(s))),
+		IOE.Map[error](deduplicateLabels),
+		IOE.OrElse(F.Bind1st(recoverBaseLabels, s)),
 	)
 }
 
-func optStrainData(all *allData) O.Option[*strainData] {
+func optStrainData(all *allData) O.Option[strainData] {
 	return F.Pipe3(
 		all,
-		O.FromPredicate(isNonNilAllData),
-		O.Map(func(d *allData) *strainData { return allStrainDataLens.Get(*d) }),
-		O.Chain(O.FromPredicate(isNonNilStrainData)),
+		O.FromNillable2[allData],
+		O.Map(allStrainDataLens.Get),
+		O.Chain(O.FromNillable2[strainData]),
 	)
 }
 
-func optPlasmidData(all *allData) O.Option[*plasmidData] {
+func optPlasmidData(all *allData) O.Option[plasmidData] {
 	return F.Pipe3(
 		all,
-		O.FromPredicate(isNonNilAllData),
-		O.Map(func(d *allData) *plasmidData { return allPlasmidDataLens.Get(*d) }),
-		O.Chain(O.FromPredicate(isNonNilPlasmidData)),
+		O.FromNillable2[allData],
+		O.Map(allPlasmidDataLens.Get),
+		O.Chain(O.FromNillable2[plasmidData]),
 	)
 }
 
-func strainRowsCombined(sd *strainData) [][]string {
+func strainRowsCombined(sd strainData) [][]string {
 	return A.ArrayConcatAll(
-		strainDataInfoLens.Get(*sd),
-		strainDataInvsLens.Get(*sd),
+		strainDataInfoLens.Get(sd),
+		strainDataInvsLens.Get(sd),
 	)
 }
 
@@ -581,9 +594,7 @@ func hasStrains(all *allData) bool {
 	return F.Pipe3(
 		all,
 		optStrainData,
-		O.Map(func(sd *strainData) []*stock.Strain {
-			return strainDataItemsLens.Get(*sd)
-		}),
+		O.Map(strainDataItemsLens.Get),
 		O.Fold(F.Constant(false), predarrays.IsNonEmpty[*stock.Strain]()),
 	)
 }
@@ -592,9 +603,7 @@ func hasPlasmids(all *allData) bool {
 	return F.Pipe3(
 		all,
 		optPlasmidData,
-		O.Map(func(pd *plasmidData) []*stock.Plasmid {
-			return plasmidDataItemsLens.Get(*pd)
-		}),
+		O.Map(plasmidDataItemsLens.Get),
 		O.Fold(F.Constant(false), predarrays.IsNonEmpty[*stock.Plasmid]()),
 	)
 }
@@ -603,9 +612,7 @@ func hasAxenicStorage(all *allData) bool {
 	return F.Pipe3(
 		all,
 		optStrainData,
-		O.Map(func(sd *strainData) [][]string {
-			return strainDataInvsLens.Get(*sd)
-		}),
+		O.Map(strainDataInvsLens.Get),
 		O.Fold(F.Constant(false), rowsHaveAxenic),
 	)
 }
@@ -632,30 +639,15 @@ func hasGoldenBraidPlasmids(all *allData) bool {
 	return F.Pipe3(
 		all,
 		optPlasmidData,
-		O.Map(func(pd *plasmidData) [][]string {
-			return plasmidDataInvsLens.Get(*pd)
-		}),
+		O.Map(plasmidDataInvsLens.Get),
 		O.Fold(F.Constant(false), rowsHaveGoldenBraid),
 	)
 }
 
-func labelIf(pred func(*allData) bool, label string) func(*allData) O.Option[string] {
-	return F.Flow2(
-		O.FromPredicate(pred),
-		O.Map(F.Constant1[*allData](label)),
-	)
-}
-
 func deterministicLabels(all *allData) []string {
-	return F.Pipe2(
-		[]O.Option[string]{
-			F.Pipe1(all, labelIf(hasStrains, labelStrainOrder)),
-			F.Pipe1(all, labelIf(hasPlasmids, labelPlasmidOrder)),
-			F.Pipe1(all, labelIf(hasAxenicStorage, labelAxenicMedium)),
-			F.Pipe1(all, labelIf(hasGWDIStrains, labelGWDI)),
-			F.Pipe1(all, labelIf(hasBacterialFoodSource, labelBacterialFood)),
-			F.Pipe1(all, labelIf(hasGoldenBraidPlasmids, labelGoldenBraid)),
-		},
+	return F.Pipe3(
+		deterministicLabelRules,
+		A.Flap[O.Option[string]](all),
 		arrutils.Compact[string],
 		deduplicateLabels,
 	)
@@ -665,9 +657,7 @@ func extractStrainInfoRows(all *allData) [][]string {
 	return F.Pipe3(
 		all,
 		optStrainData,
-		O.Map(func(sd *strainData) [][]string {
-			return strainDataInfoLens.Get(*sd)
-		}),
+		O.Map(strainDataInfoLens.Get),
 		O.GetOrElse(F.Constant([][]string(nil))),
 	)
 }
@@ -676,9 +666,7 @@ func extractStrainInvRows(all *allData) [][]string {
 	return F.Pipe3(
 		all,
 		optStrainData,
-		O.Map(func(sd *strainData) [][]string {
-			return strainDataInvsLens.Get(*sd)
-		}),
+		O.Map(strainDataInvsLens.Get),
 		O.GetOrElse(F.Constant([][]string(nil))),
 	)
 }
@@ -687,9 +675,7 @@ func extractPlasmidInvRows(all *allData) [][]string {
 	return F.Pipe3(
 		all,
 		optPlasmidData,
-		O.Map(func(pd *plasmidData) [][]string {
-			return plasmidDataInvsLens.Get(*pd)
-		}),
+		O.Map(plasmidDataInvsLens.Get),
 		O.GetOrElse(F.Constant([][]string(nil))),
 	)
 }
@@ -732,8 +718,8 @@ func buildDecisionsState(all *allData, ord *order.Order) map[string]any {
 	}
 }
 
-func buildDecisionsQuestions() map[string]components.Questions {
-	return map[string]components.Questions{
+func buildDecisionsQuestions() questionsMap {
+	return questionsMap{
 		questionInstitutionType: choiceQuestion(
 			"Classify the customer's shipping organization into the Stock-Center-Orders institution category.",
 			institutionCriteriaMap(),
@@ -810,12 +796,12 @@ func choiceQuestion(
 	instructions string,
 	options map[string]string,
 ) components.Questions {
-	inst := components.CreateDecisionsChoiceQuestionInstructionsStr(instructions)
-
 	return F.Pipe4(
 		components.DecisionsChoiceQuestion{},
-		choiceQCriteriaLens.Set(F.Pipe1(options, R.Map[string](toCriteriaPtr))),
-		choiceQInstructionsLens.Set(inst),
+		choiceQCriteriaLens.Set(mapCriteriaPtr(options)),
+		choiceQInstructionsLens.Set(
+			components.CreateDecisionsChoiceQuestionInstructionsStr(instructions),
+		),
 		choiceQTypeLens.Set(components.DecisionsChoiceQuestionTypeChoice),
 		components.CreateQuestionsChoice,
 	)
@@ -826,45 +812,26 @@ func noulQuestion(
 	trueDesc string,
 	falseDesc string,
 ) components.Questions {
-	crit := F.Pipe2(
-		components.DecisionsNoulQuestionCriteria{},
-		noulCriteriaTrueLens.Set(components.CreateTrueStr(trueDesc)),
-		noulCriteriaFalseLens.Set(components.CreateFalseStr(falseDesc)),
-	)
-	inst := components.CreateDecisionsNoulQuestionInstructionsStr(instructions)
-
-	return F.Pipe4(
+	return F.Pipe6(
 		components.DecisionsNoulQuestion{},
-		noulQCriteriaLens.Set(new(crit)),
-		noulQInstructionsLens.Set(inst),
+		noulQCriteriaLens.Set(&components.DecisionsNoulQuestionCriteria{}),
+		noulQTrueLens.Set(components.CreateTrueStr(trueDesc)),
+		noulQFalseLens.Set(components.CreateFalseStr(falseDesc)),
+		noulQInstructionsLens.Set(
+			components.CreateDecisionsNoulQuestionInstructionsStr(instructions),
+		),
 		noulQTypeLens.Set(components.DecisionsNoulQuestionTypeNoul),
 		components.CreateQuestionsNoul,
 	)
 }
 
-func choiceConfidenceScore(ans *components.DecisionsChoiceAnswer) float64 {
-	choice := strings.TrimSpace(ans.GetChoice())
-	probs := ans.GetProbabilities()
-
-	return F.Pipe3(
-		ans.GetConfidence(),
-		O.FromPredicate(isNonNilFloatPtr),
-		O.Map(func(v *float64) float64 { return *v }),
-		O.GetOrElse(func() float64 {
-			return F.Pipe2(
-				probs,
-				R.Lookup[float64](choice),
-				O.GetOrElse(F.Constant(0.0)),
-			)
-		}),
-	)
-}
-
-func isConfidentChoiceAns(ans *components.DecisionsChoiceAnswer) bool {
+func choiceProbabilityOpt(
+	ans *components.DecisionsChoiceAnswer,
+) O.Option[float64] {
 	return F.Pipe2(
 		ans,
-		choiceConfidenceScore,
-		meetsThreshold,
+		trimmedChoiceText,
+		lookupProbByK(ans.GetProbabilities()),
 	)
 }
 
@@ -876,19 +843,13 @@ func extractChoiceOption(
 		ansChoiceLens.Get,
 		O.FromPredicate(isNonNilChoiceAns),
 		O.Chain(O.FromPredicate(isConfidentChoiceAns)),
-		O.Map(func(a *components.DecisionsChoiceAnswer) string {
-			return strings.TrimSpace(a.GetChoice())
-		}),
+		O.Map(trimmedChoiceText),
 		O.Chain(O.FromPredicate(isValidChoiceStr)),
 	)
 }
 
-func lookupChoiceLabel(
-	answers map[string]components.DecisionsResponseAnswers,
-	key string,
-) O.Option[string] {
-	return F.Pipe2(
-		answers,
+func choiceExtractor(key string) func(answersMap) O.Option[string] {
+	return F.Flow2(
 		R.Lookup[components.DecisionsResponseAnswers](key),
 		O.Chain(extractChoiceOption),
 	)
@@ -901,79 +862,51 @@ func isHighConfidenceNoul(ans components.DecisionsResponseAnswers) bool {
 		O.FromPredicate(isNonNilNoulAns),
 		O.Fold(
 			F.Constant(false),
-			F.Flow2(
-				func(a *components.DecisionsNoulAnswer) float64 {
-					return a.GetNoul()
-				},
-				meetsThreshold,
-			),
+			F.Flow2((*components.DecisionsNoulAnswer).GetNoul, meetsThreshold),
 		),
 	)
 }
 
-func lookupNoulLabel(
-	answers map[string]components.DecisionsResponseAnswers,
-	spec noulLabelSpec,
-) O.Option[string] {
-	return F.Pipe3(
-		answers,
-		R.Lookup[components.DecisionsResponseAnswers](noulSpecKeyLens.Get(spec)),
+func noulExtractor(
+	key string,
+	label string,
+) func(answersMap) O.Option[string] {
+	return F.Flow3(
+		R.Lookup[components.DecisionsResponseAnswers](key),
 		O.Chain(O.FromPredicate(isHighConfidenceNoul)),
-		O.Map(
-			F.Constant1[components.DecisionsResponseAnswers](
-				noulSpecLabelLens.Get(spec),
-			),
-		),
+		O.Map(F.Constant1[components.DecisionsResponseAnswers](label)),
 	)
 }
 
-func extractAnswersLabels(
-	answers map[string]components.DecisionsResponseAnswers,
-) []string {
-	choiceLabels := F.Pipe2(
-		choiceQuestionKeys,
-		A.Map(F.Bind1st(lookupChoiceLabel, answers)),
+func extractAnswersLabels(answers answersMap) []string {
+	return F.Pipe2(
+		jevAnswerExtractors,
+		A.Flap[O.Option[string]](answers),
 		arrutils.Compact[string],
 	)
-	noulLabels := F.Pipe2(
-		noulQuestionSpecs,
-		A.Map(F.Bind1st(lookupNoulLabel, answers)),
-		arrutils.Compact[string],
-	)
-
-	return A.ArrayConcatAll(choiceLabels, noulLabels)
 }
 
 func deduplicateLabels(labels []string) []string {
-	seen := mapset.NewThreadUnsafeSet[string]()
-	isFreshLabel := func(label string) bool {
-		return seen.Add(label)
-	}
-
 	return F.Pipe3(
 		labels,
 		A.Map(strings.TrimSpace),
 		A.Filter(S.IsNonEmpty),
-		A.Filter(isFreshLabel),
+		A.StrictUniq[string],
 	)
 }
 
-func formatUSStateDescription(entry PR.Pair[string, string]) PR.Pair[string, string] {
-	code := PR.Head(entry)
-	stateName := PR.Tail(entry)
-	desc := strutils.JoinStrings(
+func formatUSStateDescription(code, stateName string) string {
+	return strutils.JoinStrings(
 		"US shipping address in ",
 		stateName,
 		" ",
 		strutils.Parens(code),
 		".",
 	)
-
-	return PR.MakePair(code, desc)
 }
 
-func locationCriteriaMap() map[string]string {
-	intl := map[string]string{
+func intlLocationLabels() map[string]string {
+	return map[string]string{
 		"Washington D.C":                        "US shipping address in Washington, D.C.",
 		"Canada":                                "Shipping address in Canada.",
 		"Germany":                               "Shipping address in Germany.",
@@ -1010,17 +943,16 @@ func locationCriteriaMap() map[string]string {
 		"Czech Republic":                        "Shipping address in the Czech Republic.",
 		choiceNone:                              "Location does not match any listed US state or country.",
 	}
+}
 
-	states := F.Pipe3(
+func locationCriteriaMap() map[string]string {
+	return F.Pipe2(
 		usStateLabels(),
-		R.ToEntries[string, string],
-		A.Map(formatUSStateDescription),
-		R.FromEntries[string, string],
-	)
-
-	return F.Pipe1(
-		[]map[string]string{states, intl},
-		M.ConcatAll(R.UnionLastMonoid[string, string]()),
+		R.MapWithIndex(formatUSStateDescription),
+		F.Bind2nd(
+			R.UnionLastMonoid[string, string]().Concat,
+			intlLocationLabels(),
+		),
 	)
 }
 
