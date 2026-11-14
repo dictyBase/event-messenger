@@ -1,7 +1,7 @@
 module github.com/dictyBase/event-messenger
 
 require (
-	github.com/IBM/fp-go/v2 v2.13.1
+	github.com/IBM/fp-go/v2 v2.13.2
 	github.com/OpenRouterTeam/go-sdk v0.9.116
 	github.com/PuerkitoBio/goquery v1.13.0
 	github.com/dictyBase/fp-go-loom v0.3.0

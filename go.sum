@@ -1,7 +1,7 @@
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 h1:s6hzCXtND/ICdGPTMGk7C+/BFlr2Jg5GyH0NKf4XGXg=
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1/go.mod h1:tvtbpgaVXZX4g6Pn+AnzFycuRK3MOz5HJfEGeEllXYM=
-github.com/IBM/fp-go/v2 v2.13.1 h1:qPXKhzAq1swAJ/48VG9ID+0ZB3XBQoht5XgZmjVnWPY=
-github.com/IBM/fp-go/v2 v2.13.1/go.mod h1:FOIrMSfoFLsaZ3tjFoo2EX1CjdbSm0l0047RcuLHGSw=
+github.com/IBM/fp-go/v2 v2.13.2 h1:FOm4F66qfVtYPlIVsSJ0hRY8m4Z8LNxw9TezMNcBy9k=
+github.com/IBM/fp-go/v2 v2.13.2/go.mod h1:FOIrMSfoFLsaZ3tjFoo2EX1CjdbSm0l0047RcuLHGSw=
 github.com/OpenRouterTeam/go-sdk v0.9.116 h1:svJi4iZX+t1jriXOjErMAFuEZ9Zz37DKrrgDPH9g5qg=
 github.com/OpenRouterTeam/go-sdk v0.9.116/go.mod h1:4a0ze9dCIvO81DQGO5ZmCZsHLCmglMwwp8pZfKkEicE=
 github.com/PuerkitoBio/goquery v1.13.0 h1:mqHbjD7Jmnul4DTR24LKTjo1uUmHUh072kteGV+xpFM=
