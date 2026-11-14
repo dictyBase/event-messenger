@@ -4,7 +4,7 @@ require (
 	github.com/IBM/fp-go/v2 v2.13.1
 	github.com/OpenRouterTeam/go-sdk v0.9.116
 	github.com/PuerkitoBio/goquery v1.13.0
-	github.com/dictyBase/fp-go-loom v0.3.0
+	github.com/dictyBase/fp-go-loom v0.5.0
 	github.com/dictyBase/go-genproto v0.0.0-20260928171459-163a42bcacab
 	github.com/dictyBase/go-obograph v1.6.1
 	github.com/dictybase/literature v0.3.0
